@@ -17,6 +17,8 @@ return [
     'brand' => [
         'name' => env('APP_NAME', 'WISPCONTROL'),
         'tagline' => 'Tu WISP bajo control',
+        // Enlace "Agenda una demo" del login (WhatsApp, Calendly, formulario...). Vacío = no se muestra.
+        'sales_url' => env('WISP_SALES_URL'),
     ],
 
     'roles' => [
