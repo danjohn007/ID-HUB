@@ -1,0 +1,204 @@
+REQUERIMIENTOS FUNCIONALES ID HUB Plataforma integral de gestión para WISP y comunidades Versión: 1.0 Fecha: 30 de septiembre de 2026 Modalidad: Plataforma Web + App Técnico/Cobrador + App Cliente Modelo: SaaS Multiempresa / Multi-WISP
+1. OBJETIVO GENERAL WISPCONTROL será una plataforma de gestión especializada para proveedores de Internet inalámbrico (WISP) que permita administrar de manera centralizada:
+• Clientes. • Planes y servicios. • Cobranza. • Pagos. • Cortes y reconexiones. • Antenas y CPE. • Repetidores y torres. • Equipamiento MikroTik. • Tickets de soporte. • Técnicos y cobradores. • Rutas de trabajo. • Evidencias fotográﬁcas. • Geolocalización. • Portal cautivo. • Promociones. • Referidos. • Indicadores ﬁnancieros. • Crecimiento y cobertura. • Aplicación móvil del cliente. El sistema deberá sustituir procesos realizados actualmente mediante cuadernos, hojas de cálculo, mensajes de WhatsApp y controles manuales.
+2. ARQUITECTURA GENERAL La plataforma estará compuesta por: A. Panel administrativo web Para propietarios, administradores, cobranza, soporte y supervisores. B. Motor de integración de red Comunicación con equipos MikroTik y demás infraestructura compatible. C. Aplicación móvil de técnicos/cobradores Para ejecución y seguimiento de actividades en campo. D. Aplicación móvil del cliente Para consulta, pago, soporte y administración de su servicio.
+
+E. Portal cautivo Para autenticación de usuarios y promoción/publicidad. F. Motor de automatizaciones Encargado de cortes, reconexiones, notiﬁcaciones, cobranza y alertas. G. Sistema GIS / mapa operativo Visualización geográﬁca de infraestructura, clientes, técnicos, incidencias y cobertura.
+3. MULTIEMPRESA / MULTI-WISP El sistema deberá soportar múltiples proveedores WISP dentro de una misma plataforma. Funciones
+• Alta de empresas WISP. • Datos ﬁscales y comerciales. • Logotipo. • Colores corporativos. • Dominio/subdominio. • Conﬁguración de moneda. • Zona horaria. • Métodos de pago. • WhatsApp. • Plantillas de mensajes. • Conﬁguración de MikroTik. • Conﬁguración de portal cautivo. • Conﬁguración de planes. • Conﬁguración de políticas de corte. • Conﬁguración de comisiones. Cada WISP deberá operar con información completamente independiente. Superadministrador SaaS Permitirá: • Crear WISP. • Suspender WISP. • Conﬁgurar suscripción. • Consultar consumo. • Consultar número de clientes. • Consultar equipos conectados. • Administrar planes SaaS. • Gestionar comisiones. • Consultar métricas generales.
+
+4. MÓDULO DE CLIENTES 4.1 Alta de cliente El administrador podrá registrar:
+• ID de cliente. • Nombre. • Apellidos. • Teléfono. • WhatsApp. • Correo electrónico. • CURP/RFC opcional. • Dirección. • Referencias. • Coordenadas GPS. • Zona. • Comunidad. • Colonia. • Plan contratado. • Fecha de instalación. • Técnico responsable. • Antena/CPE. • Repetidor asociado. • IP. • MAC Address. • Usuario PPPoE. • Contraseña. • Estado del servicio. Estados • Prospecto. • Instalación pendiente. • Activo. • Suspendido. • Moroso. • Cancelado. • En revisión.
+
+
+
+5. GESTIÓN DE PLANES DE INTERNET El administrador podrá crear diferentes paquetes. Ejemplo: Plan Velocidad Precio Periodicidad Básico 10 Mbps $250 Mensual Hogar 20 Mbps $350 Mensual Plus 30 Mbps $450 Mensual Premium 50 Mbps $600 Mensual Conﬁguración:
+• Velocidad descarga. • Velocidad subida. • Precio. • IVA. • Periodicidad. • Límite de consumo. • Política de suspensión. • Política de reconexión. • Promociones. • Equipo permitido.
+6. MÓDULO DE MONETIZACIÓN Y COBRANZA Este será uno de los módulos principales del sistema. 6.1 Estados de cuenta Cada cliente tendrá:
+• Saldo actual. • Fecha de corte. • Fecha límite de pago. • Saldo vencido. • Próximo pago. • Historial de pagos. • Cargos. • Descuentos. • Boniﬁcaciones. • Recargos.
+6.2 Cobranza automática El sistema generará automáticamente:
+• Recordatorio previo al vencimiento. • Aviso de vencimiento. • Aviso de pago pendiente. • Aviso de suspensión.
+
+• Aviso de suspensión ejecutada. • Aviso de reconexión. Los mensajes podrán enviarse mediante: • WhatsApp. • SMS. • Correo electrónico. • Notiﬁcación push.
+7. PAGOS EN LÍNEA Integración conﬁgurable con:
+• Mercado Pago. • PayPal. • Stripe. • OXXO Pay. • Otros gateways mediante API. El cliente podrá recibir un enlace: "Pagar ahora" Al completar el pago: 1. Gateway conﬁrma operación. 2. WISPCONTROL registra el pago. 3. Actualiza estado de cuenta. 4. Genera comprobante. 5. Ejecuta reconexión si corresponde. 6. Envía conﬁrmación al cliente.
+8. CORTE Y RECONEXIÓN AUTOMÁTICA Integración con MikroTik. Flujo: Fecha límite vencida → Periodo de gracia → Suspensión → MikroTik bloquea servicio Cuando el pago sea conﬁrmado: Pago recibido → Validación → Aplicación de pago → MikroTik habilita servicio El administrador podrá conﬁgurar:
+• Días de tolerancia. • Hora de corte. • Días de reconexión. • Recargo. • Bloqueo parcial. • Bloqueo total. • Reconexión automática.
+
+9. PREDICCIÓN DE MOROSIDAD El sistema almacenará el comportamiento histórico de cada cliente. Variables:
+• Días promedio de retraso. • Número de retrasos. • Pagos vencidos. • Frecuencia de reconexiones. • Historial de suspensión. • Monto pendiente. Se generará un indicador: Riesgo de morosidad • Bajo. • Medio. • Alto. El sistema podrá generar alertas: "Cliente con alta probabilidad de retraso en próximo pago." La predicción deberá presentarse como indicador basado en comportamiento histórico, no como garantía de incumplimiento.
+10. MÓDULO DE RED 10.1 Equipos Registro de:
+• MikroTik. • Antenas. • CPE. • Access Points. • Routers. • Repetidores. • Torres. • Switches. • UPS. • Fuentes. • Otros dispositivos. Datos: • Fabricante. • Modelo. • MAC. • IP. • Firmware. • Ubicación. • Coordenadas. • Responsable.
+
+• Estado. • Fecha de instalación.
+11. INTEGRACIÓN MIKROTIK El sistema deberá permitir registrar múltiples dispositivos MikroTik. Funciones:
+• Conexión API. • Autenticación. • Consulta de clientes. • Consulta de interfaces. • Tráﬁco. • CPU. • Memoria. • Estado. • Señal. • Usuarios PPPoE. • Hotspot. • DHCP. • Direcciones IP. • Active connections. Automatizaciones • Crear usuario. • Suspender usuario. • Reactivar usuario. • Cambiar velocidad. • Cambiar plan. • Aplicar reglas. • Consultar conexión.
+12. GESTIÓN DE REPETIDORES Cada repetidor tendrá:
+• Nombre. • ID. • Ubicación. • Coordenadas. • Torre. • Capacidad. • Clientes conectados. • Capacidad utilizada. • Estado. • Equipo MikroTik asociado.
+
+Indicador de capacidad Ejemplo: Repetidor R-07 87 / 100 clientes 87% utilización El sistema generará alerta al alcanzar determinados porcentajes.
+13. BALANCEO DE CLIENTES El sistema deberá permitir detectar:
+• Repetidores saturados. • Clientes mal distribuidos. • Sectores con alta utilización. • Posibles migraciones. Podrá sugerir: "12 clientes podrían migrarse al repetidor R-08 para reducir saturación." La decisión ﬁnal podrá quedar a cargo del administrador/técnico.
+14. MONITOREO DE ANTENAS Se deberá detectar:
+• Antena desconectada. • Pérdida de señal. • Señal fuera de rango. • Cliente sin conexión. • Latencia elevada. • Packet loss. • CPE desconectado. • Problemas recurrentes.
+15. DETECCIÓN DE CLIENTES PROBLEMÁTICOS El sistema deberá identiﬁcar posibles anomalías como:
+• MAC no registrada. • Dispositivo no autorizado. • Múltiples dispositivos no esperados. • Cambios de CPE. • IP duplicada. • Consumo anormal. • Desconexiones frecuentes. El sistema deberá generar una alerta para revisión técnica, evitando asumir automáticamente que existe fraude.
+
+16. MAPA INTELIGENTE Mapa geográﬁco de toda la operación. Capas:
+• Clientes. • Torres. • Repetidores. • Antenas. • Técnicos. • Cobradores. • Tickets. • Instalaciones. • Prospectos. • Zonas de cobertura. Colores/estados • ������ Operativo. • ������ Advertencia. • ������ Fallo. • ⚫ Sin comunicación.
+17. IMPACTO DE FALLA Al detectar un repetidor fuera de servicio, el sistema deberá mostrar: REPETIDOR R-04 FUERA DE SERVICIO Información:
+• Clientes afectados. • Zona. • Técnico responsable. • Última comunicación. • Hora de caída. • Tickets relacionados. Esto permitirá priorizar incidencias según número de usuarios afectados.
+18. MAPA DE COBERTURA El sistema podrá registrar:
+• Torres. • Sectores. • Azimut. • Altura. • Frecuencia. • Potencia. • Cobertura estimada. • Clientes existentes. • Prospectos.
+
+Permitirá identiﬁcar zonas con: Alta demanda + baja cobertura para analizar la instalación de un nuevo repetidor.
+19. PROSPECTOS Y DEMANDA Registro de interesados:
+• Nombre. • Teléfono. • WhatsApp. • Dirección. • Coordenadas. • Plan deseado. • Fecha. • Fuente. • Estado. Estados: • Nuevo. • Contactado. • Viable. • Sin cobertura. • Instalación pendiente. • Convertido.
+20. PINGS DE DEMANDA Cada prospecto podrá aparecer geográﬁcamente. El sistema generará concentración de demanda. Ejemplo: Zona Norte 47 interesados 32 con cobertura potencial 18 solicitudes en últimos 30 días Esto permitirá analizar la rentabilidad potencial de una nueva infraestructura.
+21. MÓDULO DE TICKETS El cliente podrá generar:
+• Sin Internet. • Internet lento. • Problema con antena. • Problema con router. • Pago no reﬂejado. • Solicitud de instalación. • Cambio de domicilio.
+
+
+• Cambio de plan. • Otro. Cada ticket tendrá: • Folio. • Cliente. • Prioridad. • Categoría. • Técnico. • Fecha. • SLA. • Estado. • Evidencias. • Comentarios. • Historial.
+
+22. SLA Conﬁguración por tipo de incidencia. Ejemplo:
+
+Prioridad Tiempo objetivo
+
+Crítica 2 horas
+
+Alta
+
+4 horas
+
+Media 8 horas
+
+Baja 24 horas
+
+Alertas automáticas cuando un ticket se acerque al vencimiento.
+
+23. APP DE TÉCNICOS Aplicación móvil para:
+• Ver órdenes. • Ver tickets. • Ver clientes. • Consultar ubicación. • Navegar hacia domicilio. • Registrar llegada. • Registrar salida. • Tomar fotografías. • Agregar comentarios. • Cambiar estado. • Registrar materiales. • Obtener ﬁrma del cliente.
+
+
+24. EVIDENCIA FOTOGRÁFICA Cada servicio podrá almacenar:
+• Foto antes. • Foto durante. • Foto después. • Foto del equipo. • Foto de instalación. • Ubicación GPS. • Fecha/hora. Esto permitirá comprobar el trabajo realizado.
+25. RUTAS DE TÉCNICOS Y COBRADORES El sistema podrá agrupar actividades por:
+• Zona. • Técnico. • Fecha. • Prioridad. Mostrará: Ruta sugerida 1. Cliente A 2. Cliente B 3. Cliente C 4. Cliente D Con navegación mediante aplicaciones de mapas compatibles.
+26. CONTROL DE COBRADORES El cobrador podrá consultar:
+• Clientes pendientes. • Monto a cobrar. • Dirección. • Ruta. • Estado. • Historial. Podrá registrar: • Pago. • No localizado. • Promesa de pago. • Rechazo. • Domicilio cerrado. • Evidencia.
+
+27. CONTROL DE EFECTIVO Para pagos recibidos en efectivo:
+• Registro de cobro. • Cobrador. • Cliente. • Monto. • Fecha. • Hora. • Folio. • Evidencia. • Corte de caja. El supervisor podrá conciliar: Cobros registrados vs efectivo entregado.
+28. PORTAL CAUTIVO Portal personalizable por WISP. Funciones:
+• Login. • Usuario/contraseña. • Código. • Voucher. • Promociones. • Publicidad. • Avisos. • Términos. • Contacto. Publicidad local Podrá mostrar anuncios de: • Comercios. • Restaurantes. • Farmacias. • Escuelas. • Servicios locales. Se podrá medir: • Impresiones. • Clics. • Campañas. • Vigencia.
+29. PROGRAMA DE REFERIDOS Cada cliente tendrá un código/enlace de referido. Ejemplo:
+
+INVITA-5821 Si un nuevo cliente contrata:
+• Se registra el referido. • Se valida el primer pago. • Se genera beneﬁcio. • Se registra la recompensa. Conﬁguración: • 1 mes gratis. • Descuento. • Saldo a favor. • Promoción personalizada.
+30. DASHBOARD FINANCIERO Indicadores: MRR Ingresos recurrentes mensuales. ARR Proyección anual de ingresos recurrentes. Churn Cancelaciones. ARPU Ingreso promedio por cliente. LTV Valor estimado del cliente durante su permanencia. Ticket promedio Morosidad Recuperación de cartera Ingresos por zona Ingresos por plan
+31. DASHBOARD OPERATIVO • Clientes activos. • Clientes suspendidos. • Clientes nuevos. • Clientes desconectados. • Tickets abiertos. • Tickets vencidos. • Tickets críticos. • Técnicos activos. • Instalaciones pendientes. • Repetidores activos. • Repetidores con alerta.
+
+32. DASHBOARD DE RED Visualización:
+• Equipos online. • Equipos ooline. • Clientes conectados. • Clientes desconectados. • Consumo. • CPU. • Memoria. • Latencia. • Packet loss. • Saturación por repetidor.
+33. APP DEL CLIENTE Aplicación personalizada con marca del WISP. Inicio Mostrar: Hola, Juan Internet: ������ ACTIVO Plan: Hogar 30 Mbps Próximo pago: $450 Fecha: 10 octubre
+Funciones • Consultar estado. • Consultar plan. • Consultar consumo. • Consultar pagos. • Descargar comprobantes. • Pagar. • Reportar falla. • Consultar tickets. • Contactar soporte. • Actualizar datos. • Consultar promociones. • Referir amigos. • Recibir notiﬁcaciones.
+
+34. NOTIFICACIONES PUSH Eventos:
+• Pago próximo. • Pago vencido. • Suspensión. • Reconexión. • Ticket actualizado. • Técnico en camino. • Promoción. • Mantenimiento programado. • Incidencia general.
+35. COMUNICACIÓN POR WHATSAPP Automatización de mensajes: Cobranza Tu servicio vence mañana. Vencimiento Tu pago está pendiente. Suspensión Tu servicio ha sido suspendido por falta de pago. Pago recibido Hemos recibido tu pago correctamente. Reconexión Tu servicio ha sido reactivado. Soporte Tu reporte #1258 ha sido asignado al técnico.
+36. SISTEMA DE NOTIFICACIONES MASIVAS El administrador podrá enviar campañas a:
+• Todos los clientes. • Una zona. • Un repetidor. • Un plan. • Clientes morosos. • Clientes activos. • Clientes nuevos.
+37. MANTENIMIENTO PROGRAMADO Permitir registrar:
+• Fecha. • Hora. • Zona.
+
+• Repetidor. • Equipos afectados. • Clientes potencialmente afectados. • Descripción. El sistema notiﬁcará anticipadamente a los clientes.
+38. INVENTARIO Control de:
+• Antenas. • CPE. • Routers. • Cable. • Conectores. • Fuentes. • PoE. • Torres. • Herrajes. • Refacciones. Funciones: • Entradas. • Salidas. • Instalaciones. • Devoluciones. • Existencias. • Mínimos. • Máximos.
+39. EQUIPOS INSTALADOS Cada equipo podrá estar relacionado con: Cliente → Instalación → CPE → Repetidor → Torre Permitirá conocer exactamente dónde está cada equipo.
+40. ÓRDENES DE INSTALACIÓN Flujo: Prospecto → Validación de cobertura → Cotización → Aceptación → Orden de instalación → Técnico → Instalación → Activación → Cliente activo Checklist de instalación:
+• Antena instalada. • Cableado. • PoE. • Router. • Conﬁguración.
+
+• Prueba de velocidad. • Prueba de señal. • Fotografía. • Firma.
+41. CONTRATOS Y DOCUMENTOS Generación automática de:
+• Contrato. • Orden de instalación. • Recibo. • Comprobante. • Evidencia de servicio. Firma digital opcional.
+42. ROLES Y PERMISOS Superadministrador Control total de la plataforma SaaS. Administrador WISP Control total de su empresa. Finanzas Cobranza, pagos y reportes. Soporte Tickets y clientes. Técnico Órdenes y soporte. Cobrador Cobranza en campo. Supervisor Operación y técnicos. Cliente Únicamente su información.
+43. AUDITORÍA Registrar:
+• Usuario. • Acción. • Fecha. • Hora. • IP. • Registro afectado. • Valor anterior. • Valor nuevo.
+
+
+
+Ejemplo: Usuario ADMIN suspendió cliente #1025 30/09/2026 08:42
+44. REPORTES Exportación a:
+• Excel. • CSV. • PDF. Reportes: • Clientes. • Morosidad. • Cobranza. • Pagos. • Ingresos. • Cancelaciones. • Altas. • Tickets. • Técnicos. • Inventario. • Equipos. • Red. • Repetidores. • Consumo. • Referidos.
+45. ALERTAS INTELIGENTES El sistema deberá generar alertas para:
+• Repetidor saturado. • Repetidor caído. • Muchos clientes desconectados. • Cliente con señal anormal. • Cliente con retrasos recurrentes. • Ticket próximo a vencer. • Inventario bajo. • Equipo sin comunicación. • Aumento anormal de cancelaciones. • Zona con crecimiento acelerado.
+46. AUTOMATIZACIONES PRINCIPALES El corazón de WISPCONTROL será el motor de reglas: Evento → Condición → Acción
+
+Ejemplo: Pago vencido ↓ Cliente supera días de tolerancia ↓ Suspender servicio en MikroTik ↓ Enviar WhatsApp ↓ Crear registro de suspensión Otro ejemplo: Repetidor desconectado ↓ Detectar 85 clientes afectados ↓ Generar alerta crítica ↓ Crear ticket automático ↓ Asignar técnico de guardia ↓ Enviar notiﬁcación
+47. BUSINESS INTELLIGENCE El sistema deberá permitir analizar: Rentabilidad por zona
+• Clientes. • Ingresos. • Costos. • Cancelaciones. • Morosidad. Rentabilidad por repetidor • Clientes. • Ingresos. • Capacidad. • Saturación. Crecimiento • Altas mensuales. • Bajas. • Crecimiento neto. • MRR. Análisis de expansión
+
+
+
+Cruce de: Prospectos + cobertura + distancia + capacidad + clientes existentes para apoyar la evaluación de nuevas zonas.
+48. SISTEMA DE SUSCRIPCIÓN SaaS WISPCONTROL podrá comercializarse mediante planes. Ejemplo STARTER
+• Hasta 100 clientes. • 5 equipos MikroTik. • Dashboard. • Cobranza. PRO • Hasta 500 clientes. • 25 equipos. • App técnico. • App cliente. • WhatsApp. • Mapas. ENTERPRISE • Hasta 5,000+ clientes. • Equipos ilimitados según contrato. • Multiusuario. • BI avanzado. • API. • White Label.
+49. COMISIONES POR PAGOS El sistema deberá registrar:
+• Importe del pago. • Comisión del gateway. • Comisión WISPCONTROL. • Importe neto WISP. Ejemplo: Pago: $450 Comisión: $15 Neto: $435 El administrador podrá consultar las comisiones acumuladas.
+
+50. API La plataforma deberá disponer de API para futuras integraciones. Posibles integraciones:
+• MikroTik. • WhatsApp. • Pasarelas de pago. • Aplicaciones móviles. • Sistemas contables. • CRM. • ERP. • Portal cautivo. • IoT.
+51. REQUERIMIENTOS NO FUNCIONALES Seguridad
+• HTTPS. • Contraseñas cifradas. • Control de sesiones. • Roles y permisos. • Auditoría. • Protección contra ataques comunes. • Backups automáticos. • Separación de información entre WISP. Disponibilidad La plataforma deberá diseñarse para operación continua, considerando monitoreo de servicios y recuperación ante fallos. Escalabilidad La arquitectura deberá permitir crecer progresivamente desde: 100 → 500 → 1,000 → 5,000 → 10,000+ clientes sin rediseñar completamente la plataforma.
+
+
+52. MÉTRICAS PRINCIPALES DEL PRODUCTO El dashboard principal deberá mostrar, como mínimo:
+
+Indicador
+
+Ejemplo
+
+Clientes activos 842
+
+Clientes nuevos +32
+
+Morosos
+
+47
+
+MRR
+
+$294,700
+
+Churn
+
+2.8%
+
+Ticket promedio $350
+
+Repetidores
+
+18
+
+Equipos online 96%
+
+Tickets abiertos 14
+
+Tickets críticos 2
+
+Cobranza del mes $287,450
+
+Prospectos
+
+126
+
+53. FLUJOS PRINCIPALES Alta de cliente Prospecto → Cobertura → Contratación → Instalación → Activación → Cobranza recurrente Cobranza Factura/cargo → WhatsApp → Link de pago → Pago → Conﬁrmación → Reconexión Soporte Cliente → Ticket → Priorización → Técnico → Ruta → Evidencia → Cierre Falla de infraestructura Monitorización → Repetidor caído → Clientes afectados → Ticket automático → Técnico → Reparación → Validación → Cierre Expansión Prospectos → Mapa de demanda → Cobertura → Capacidad → Análisis de zona → Nuevo repetidor
+54. DIFERENCIADOR FUNCIONAL DE WISPCONTROL El concepto central del producto no debe ser únicamente "software para administrar clientes WISP". Debe plantearse como: WISPCONTROL integra en una sola plataforma la cobranza, la red, el mapa y las operaciones de campo. La ventaja funcional está en conectar:
+
+
+DINERO → Cobranza y pagos RED → MikroTik, antenas y repetidores CAMPO → Técnicos, rutas y evidencias CLIENTE → App, WhatsApp y soporte CRECIMIENTO → BI, demanda y expansión Todo alimentado por una misma base de datos operativa. 55. PANEL PRINCIPAL PROPUESTO La pantalla inicial podría organizarse visualmente así:
+
+Resultado esperado WISPCONTROL debe convertir el negocio de: "vendo Internet y llevo el control en un cuaderno" a: "opero una red WISP automatizada, medible y escalable". La arquitectura funcional propuesta permite que el producto tenga MVP comercial desde una primera versión, pero conserve una ruta clara para llegar a una plataforma capaz de administrar miles de clientes, múltiples WISP y miles de dispositivos. PROTOTIPOS PARA FUTURAS APPS MÓVILES (Cliente y Técnico):
+
+
