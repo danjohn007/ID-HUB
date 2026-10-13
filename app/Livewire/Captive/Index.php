@@ -8,6 +8,7 @@ use App\Models\CaptiveAdStat;
 use App\Models\CaptiveSession;
 use App\Models\CaptiveVoucher;
 use App\Support\Audit;
+use App\Support\InputRules;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -95,7 +96,7 @@ class Index extends Component
     public function saveSettings(): void
     {
         $this->validate([
-            'settings.title' => 'required|string|max:80',
+            'settings.title' => 'required|string|max:80|'.InputRules::TEXT,
             'settings.welcome' => 'nullable|string|max:300',
             'settings.terms' => 'nullable|string|max:5000',
             'settings.methods' => 'required|array|min:1',
@@ -193,9 +194,9 @@ HTML;
     public function saveAd(): void
     {
         $data = $this->validate([
-            'ad.advertiser' => 'required|string|max:120',
+            'ad.advertiser' => 'required|string|max:120|'.InputRules::TEXT,
             'ad.business_type' => ['required', Rule::in(array_keys(config('wisp.ad_business_types')))],
-            'ad.campaign' => 'nullable|string|max:120',
+            'ad.campaign' => 'nullable|string|max:120|'.InputRules::TEXT,
             'ad.title' => 'required|string|max:120',
             'ad.body' => 'nullable|string|max:190',
             'ad.url' => 'nullable|url|max:500',
@@ -278,7 +279,7 @@ HTML;
             'gen.data_limit_mb' => 'nullable|integer|min:1|max:10000000',
             'gen.price' => 'nullable|numeric|min:0|max:100000',
             'gen.expires_days' => 'nullable|integer|between:1,3650',
-            'gen.batch' => 'required|string|max:40',
+            'gen.batch' => 'required|string|max:40|'.InputRules::CODE,
         ], [], ['gen.quantity' => 'cantidad', 'gen.duration_minutes' => 'duración', 'gen.data_limit_mb' => 'límite de datos', 'gen.batch' => 'lote']);
 
         $tid = tenant()->id;

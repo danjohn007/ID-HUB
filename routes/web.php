@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Public\LandingController;
 use App\Livewire\Auth\Login;
 use App\Support\Audit;
 use Illuminate\Http\Request;
@@ -19,6 +20,9 @@ foreach (glob(__DIR__.'/public/*.php') as $file) {
     require $file;
 }
 
+// Página pública; con sesión iniciada redirige al panel del usuario.
+Route::get('/', LandingController::class)->name('home');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', Login::class)->name('login');
 });
@@ -32,8 +36,6 @@ Route::middleware('auth')->group(function () {
 
         return redirect()->route('login');
     })->name('logout');
-
-    Route::get('/', fn () => redirect()->route(auth()->user()->homeRoute()))->name('home');
 
     Route::middleware('can:saas.manage')->prefix('saas')->group(function () {
         foreach (glob(__DIR__.'/saas/*.php') as $file) {

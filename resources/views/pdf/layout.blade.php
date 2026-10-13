@@ -19,7 +19,7 @@
         table.data { width: 100%; border-collapse: collapse; margin-top: 6px; }
         table.data th { background: #0B1B3A; color: #fff; text-align: left; padding: 5px 6px; font-size: 9.5px; }
         table.data td { padding: 4px 6px; border-bottom: 1px solid #e2e8f0; font-size: 9.5px; }
-        table.data tr:nth-child(even) td { background: #f8fafc; }
+        table.data tr.alt td { background: #f8fafc; }
         .box { border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; }
         .total { font-size: 14px; font-weight: bold; color: #0B1B3A; }
         .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #eef6ff; color: #1366d1; font-size: 9px; font-weight: bold; }

@@ -7,6 +7,7 @@ use App\Models\Repeater;
 use App\Models\Tower;
 use App\Models\User;
 use App\Models\Zone;
+use App\Support\InputRules;
 use Illuminate\Validation\Rule;
 
 /**
@@ -76,11 +77,11 @@ trait ManagesRepeaters
         $this->authorize('network.manage');
         $tid = tenant()->id;
         $data = $this->validate([
-            'rform.code' => ['required', 'string', 'max:30', Rule::unique('repeaters', 'code')->where('tenant_id', $tid)->ignore($this->repeaterId)],
-            'rform.name' => 'required|string|max:150',
+            'rform.code' => ['required', 'string', 'max:30', InputRules::CODE, Rule::unique('repeaters', 'code')->where('tenant_id', $tid)->ignore($this->repeaterId)],
+            'rform.name' => 'required|string|max:150|'.InputRules::TEXT,
             'rform.tower_id' => ['nullable', Rule::exists('towers', 'id')->where('tenant_id', $tid)],
             'rform.zone_id' => ['nullable', Rule::exists('zones', 'id')->where('tenant_id', $tid)],
-            'rform.location' => 'nullable|string|max:190',
+            'rform.location' => 'nullable|string|max:190|'.InputRules::TEXT,
             'rform.lat' => 'nullable|numeric|between:-90,90|required_with:rform.lng',
             'rform.lng' => 'nullable|numeric|between:-180,180|required_with:rform.lat',
             'rform.capacity' => 'required|integer|min:1|max:100000',
@@ -94,7 +95,7 @@ trait ManagesRepeaters
             'rform.notes' => 'nullable|string|max:2000',
         ], [], [
             'rform.code' => 'ID', 'rform.name' => 'nombre', 'rform.capacity' => 'capacidad', 'rform.alert_threshold' => 'umbral de alerta',
-            'rform.coverage_radius_km' => 'radio de cobertura', 'rform.lat' => 'latitud', 'rform.lng' => 'longitud',
+            'rform.coverage_radius_km' => 'radio de cobertura', 'rform.lat' => 'latitud', 'rform.lng' => 'longitud', 'rform.location' => 'ubicación',
         ])['rform'];
         $data = array_map(fn ($v) => $v === '' ? null : $v, $data);
         $data['monthly_cost'] ??= 0;

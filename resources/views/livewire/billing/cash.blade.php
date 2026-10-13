@@ -137,14 +137,14 @@
                 @if (! $actionCut->closed_at)<p class="mt-2 text-xs text-warning-700">El corte se cerrará y se recalculará el esperado con los cobros pendientes del cobrador.</p>@endif
             </div>
             <div class="space-y-3">
-                <x-ui.input label="Efectivo entregado" type="number" step="0.01" min="0" prefix="$" wire:model.live.debounce.400ms="deliveredAmount" name="deliveredAmount" required />
+                <x-ui.input label="Efectivo entregado" type="number" step="0.01" min="0" max="10000000" prefix="$" wire:model.live.debounce.400ms="deliveredAmount" name="deliveredAmount" required />
                 @if (is_numeric($deliveredAmount))
                     @php $d = round((float) $deliveredAmount - (float) $actionCut->expected_amount, 2); @endphp
                     <p @class(['text-sm font-semibold', 'text-success-700' => abs($d) < 0.01, 'text-danger-600' => $d < -0.009, 'text-warning-600' => $d > 0.009])>
                         {{ abs($d) < 0.01 ? 'Sin diferencia' : ($d < 0 ? 'Faltante: ' : 'Sobrante: ').money(abs($d)) }}
                     </p>
                 @endif
-                <x-ui.textarea label="Notas" wire:model="notes" name="notes" rows="2" placeholder="Denominaciones, observaciones..." />
+                <x-ui.textarea label="Notas" wire:model="notes" name="notes" rows="2" maxlength="300" placeholder="Denominaciones, observaciones..." />
             </div>
         @endif
         <x-slot:footer>
@@ -162,7 +162,7 @@
                 <div class="flex justify-between"><span class="text-slate-500">Efectivo entregado</span><b>{{ money($actionCut->delivered_amount) }}</b></div>
                 <div class="flex justify-between"><span class="text-slate-500">Diferencia</span><b class="{{ abs((float) $actionCut->difference) > 0.009 ? 'text-danger-600' : 'text-success-700' }}">{{ money($actionCut->difference) }}</b></div>
             </div>
-            <x-ui.textarea :label="abs((float) $actionCut->difference) > 0.009 ? 'Justificación de la diferencia' : 'Notas (opcional)'" wire:model="notes" name="notes" rows="2" />
+            <x-ui.textarea :label="abs((float) $actionCut->difference) > 0.009 ? 'Justificación de la diferencia' : 'Notas (opcional)'" wire:model="notes" name="notes" rows="2" maxlength="300" />
         @endif
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>

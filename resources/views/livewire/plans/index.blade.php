@@ -106,30 +106,30 @@
     <x-ui.modal wire:model="showForm" :title="$editingId ? 'Editar plan' : 'Nuevo plan'" size="3xl">
         <form wire:submit="save" id="plan-form" class="space-y-5">
             <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <x-ui.input label="Nombre" wire:model="form.name" required />
-                <x-ui.input label="Descripción" wire:model="form.description" class="md:col-span-2" />
-                <x-ui.input label="Descarga" type="number" step="0.1" wire:model="form.download_mbps" suffix="Mbps" required />
-                <x-ui.input label="Subida" type="number" step="0.1" wire:model="form.upload_mbps" suffix="Mbps" required />
+                <x-ui.input label="Nombre" wire:model="form.name" filter="text" maxlength="80" required />
+                <x-ui.input label="Descripción" wire:model="form.description" maxlength="190" class="md:col-span-2" />
+                <x-ui.input label="Descarga" type="number" step="0.1" min="0.1" max="100000" wire:model="form.download_mbps" suffix="Mbps" required />
+                <x-ui.input label="Subida" type="number" step="0.1" min="0.1" max="100000" wire:model="form.upload_mbps" suffix="Mbps" required />
                 <x-ui.select label="Periodicidad" wire:model="form.periodicity" :options="config('wisp.periodicity')" required />
-                <x-ui.input label="Precio" type="number" step="0.01" wire:model="form.price" prefix="$" required />
-                <x-ui.input label="IVA" type="number" step="0.01" wire:model="form.tax_rate" suffix="%" required />
+                <x-ui.input label="Precio" type="number" step="0.01" min="0" max="1000000" wire:model="form.price" prefix="$" required />
+                <x-ui.input label="IVA" type="number" step="0.01" min="0" max="100" wire:model="form.tax_rate" suffix="%" required />
                 <div class="flex items-end pb-2"><x-ui.toggle wire:model="form.price_includes_tax" label="El precio incluye IVA" /></div>
             </div>
             <div class="border-t border-slate-100 pt-4">
                 <div class="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">Políticas de suspensión y reconexión</div>
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <x-ui.input label="Límite de consumo" type="number" wire:model="form.data_cap_gb" suffix="GB" hint="Vacío = ilimitado" />
-                    <x-ui.input label="Días de tolerancia" type="number" wire:model="form.grace_days" :hint="'Vacío = política del WISP ('.tenant()->setting('billing.grace_days').' días)'" />
+                    <x-ui.input label="Límite de consumo" type="number" min="1" max="1000000" wire:model="form.data_cap_gb" suffix="GB" hint="Vacío = ilimitado" />
+                    <x-ui.input label="Días de tolerancia" type="number" min="0" max="60" wire:model="form.grace_days" :hint="'Vacío = política del WISP ('.tenant()->setting('billing.grace_days').' días)'" />
                     <x-ui.select label="Tipo de bloqueo" wire:model="form.block_type" :options="['partial' => 'Parcial (velocidad reducida / aviso)', 'total' => 'Total']" placeholder="Política del WISP" />
-                    <x-ui.input label="Recargo por atraso" type="number" step="0.01" wire:model="form.late_fee" prefix="$" hint="Vacío = política del WISP" />
-                    <x-ui.input label="Cargo de reconexión" type="number" step="0.01" wire:model="form.reconnection_fee" prefix="$" />
-                    <x-ui.input label="Costo de instalación" type="number" step="0.01" wire:model="form.installation_fee" prefix="$" />
+                    <x-ui.input label="Recargo por atraso" type="number" step="0.01" min="0" max="100000" wire:model="form.late_fee" prefix="$" hint="Vacío = política del WISP" />
+                    <x-ui.input label="Cargo de reconexión" type="number" step="0.01" min="0" max="100000" wire:model="form.reconnection_fee" prefix="$" />
+                    <x-ui.input label="Costo de instalación" type="number" step="0.01" min="0" max="100000" wire:model="form.installation_fee" prefix="$" />
                     <div class="flex items-end pb-2 md:col-span-3"><x-ui.toggle wire:model="form.auto_reconnect" label="Reconexión automática al confirmarse el pago" /></div>
                 </div>
             </div>
             <div class="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 md:grid-cols-2">
-                <x-ui.input label="Equipo permitido" wire:model="form.allowed_equipment" placeholder="LiteBeam 5AC, TP-Link CPE510..." />
-                <x-ui.input label="Perfil MikroTik (PPP profile / queue)" wire:model="form.mikrotik_profile" placeholder="plan-20M" />
+                <x-ui.input label="Equipo permitido" wire:model="form.allowed_equipment" filter="text" maxlength="190" placeholder="LiteBeam 5AC, TP-Link CPE510..." />
+                <x-ui.input label="Perfil MikroTik (PPP profile / queue)" wire:model="form.mikrotik_profile" filter="code" maxlength="80" placeholder="plan-20M" />
                 <div>
                     <label class="form-label">Color</label>
                     <div class="flex flex-wrap items-center gap-2">

@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\User;
 use App\Services\Billing\CashCutService;
 use App\Services\BillingService;
+use App\Support\InputRules;
 use Livewire\Attributes\Computed;
 
 /**
@@ -81,10 +82,10 @@ trait RegistersPayments
             'payClientId' => 'required|integer',
             'pay.amount' => 'required|numeric|min:1|max:1000000',
             'pay.method' => 'required|in:'.implode(',', array_keys(config('wisp.payment_methods'))),
-            'pay.reference' => 'nullable|string|max:120',
+            'pay.reference' => 'nullable|string|max:120|'.InputRules::TEXT,
             'pay.notes' => 'nullable|string|max:190',
             'pay.collector_id' => 'nullable|integer',
-        ], [], ['payClientId' => 'cliente', 'pay.amount' => 'importe', 'pay.method' => 'método', 'pay.reference' => 'referencia']);
+        ], [], ['payClientId' => 'cliente', 'pay.amount' => 'importe', 'pay.method' => 'método', 'pay.reference' => 'referencia', 'pay.notes' => 'notas']);
 
         $client = Client::findOrFail($this->payClientId);
         $collectorId = $this->pay['method'] === 'efectivo' && $this->pay['collector_id']

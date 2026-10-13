@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\CoverageService;
 use App\Services\InstallationService;
 use App\Services\ProspectService;
+use App\Support\InputRules;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -151,7 +152,7 @@ class Show extends Component
         $tid = tenant()->id;
         $this->validate([
             'items' => 'array|max:20',
-            'items.*.concepto' => 'required|string|max:120',
+            'items.*.concepto' => 'required|string|max:120|'.InputRules::TEXT,
             'items.*.importe' => 'required|numeric|between:-100000,100000',
             'quote.plan_id' => ['required', Rule::exists('plans', 'id')->where('tenant_id', $tid)],
             'quote.promotion_id' => ['nullable', Rule::exists('promotions', 'id')->where('tenant_id', $tid)],
@@ -264,7 +265,7 @@ class Show extends Component
         $this->ensureField();
         $this->validate([
             'signature' => ['required', 'string', 'starts_with:data:image/png;base64,', 'max:3000000'],
-            'signedBy' => 'required|string|max:150',
+            'signedBy' => 'required|string|max:150|'.InputRules::NAME,
         ], ['signature.required' => 'Dibuja la firma del cliente.'], ['signedBy' => 'nombre de quien firma']);
         $service->saveSignature($this->order, $this->signature, $this->signedBy);
         $this->signature = null;

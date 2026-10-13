@@ -215,7 +215,7 @@
                         <select wire:model="chatChannel" class="form-input w-28 shrink-0 py-2 text-xs">
                             @foreach ($channels as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach
                         </select>
-                        <textarea wire:model="chatBody" rows="2" class="form-input flex-1 resize-none" placeholder="Escribe un mensaje... puedes usar {nombre}, {saldo}, {link_pago}"></textarea>
+                        <textarea wire:model="chatBody" rows="2" maxlength="1600" class="form-input flex-1 resize-none" placeholder="Escribe un mensaje... puedes usar {nombre}, {saldo}, {link_pago}"></textarea>
                         <button type="submit" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00A884] text-white shadow hover:brightness-105" title="Enviar">
                             <x-heroicon-s-paper-airplane class="h-5 w-5" wire:loading.remove wire:target="sendChat" />
                             <svg wire:loading wire:target="sendChat" class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
@@ -283,11 +283,11 @@
                     <x-ui.select label="Plantilla (evento)" wire:model.live="compose.event" :options="config('wisp.message_events')" hint="Se carga el texto de la plantilla del WISP; puedes ajustarlo antes de enviar." />
                 @endif
                 @if (in_array($compose['channel'], ['email', 'push']))
-                    <x-ui.input label="Asunto / título" wire:model.live.debounce.400ms="compose.subject" />
+                    <x-ui.input label="Asunto / título" wire:model.live.debounce.400ms="compose.subject" maxlength="150" />
                 @endif
 
                 <div x-data="{ insert(v) { const t = this.$refs.body; const s = t.selectionStart ?? t.value.length; t.setRangeText(v, s, t.selectionEnd ?? s, 'end'); t.dispatchEvent(new Event('input')); t.focus(); } }">
-                    <x-ui.textarea label="Mensaje" wire:model.live.debounce.400ms="compose.body" x-ref="body" rows="5" required />
+                    <x-ui.textarea label="Mensaje" wire:model.live.debounce.400ms="compose.body" x-ref="body" rows="5" maxlength="1600" required />
                     <div class="mt-2 flex flex-wrap gap-1">
                         @foreach (\App\Models\NotificationTemplate::VARIABLES as $v)
                             <button type="button" @click="insert('{{ $v }}')" class="rounded-md bg-brand-50 px-1.5 py-0.5 font-mono text-[11px] text-brand-700 ring-1 ring-brand-100 hover:bg-brand-100">{{ $v }}</button>

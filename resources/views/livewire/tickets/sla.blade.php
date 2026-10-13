@@ -16,7 +16,7 @@
                         @php $s = $stats[$key]; @endphp
                         <tr wire:key="p{{ $key }}">
                             <td><x-ui.badge :color="$color" dot>{{ $label }}</x-ui.badge></td>
-                            <td><x-ui.input type="number" step="0.25" min="0.25" wire:model="policies.{{ $key }}.hours" suffix="h" /></td>
+                            <td><x-ui.input type="number" step="0.25" min="0.25" max="720" wire:model="policies.{{ $key }}.hours" suffix="h" /></td>
                             <td><x-ui.input type="number" step="5" min="10" max="99" wire:model="policies.{{ $key }}.warn" suffix="%" /></td>
                             <td class="font-semibold text-slate-700">{{ $s['open'] }}</td>
                             <td class="font-semibold {{ $s['overdue'] ? 'text-danger-600' : 'text-slate-400' }}">{{ $s['overdue'] }}</td>

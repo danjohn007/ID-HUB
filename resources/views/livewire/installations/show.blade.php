@@ -79,8 +79,8 @@
                             <tbody class="divide-y divide-slate-100">
                                 @foreach ($items as $i => $item)
                                     <tr wire:key="item-{{ $i }}">
-                                        <td class="px-2 py-1.5"><input type="text" wire:model="items.{{ $i }}.concepto" class="form-input" placeholder="Concepto"></td>
-                                        <td class="px-2 py-1.5"><input type="number" step="0.01" wire:model.live.debounce.400ms="items.{{ $i }}.importe" class="form-input text-right"></td>
+                                        <td class="px-2 py-1.5"><input type="text" wire:model="items.{{ $i }}.concepto" data-filter="text" maxlength="120" class="form-input" placeholder="Concepto"></td>
+                                        <td class="px-2 py-1.5"><input type="number" step="0.01" min="-100000" max="100000" wire:model.live.debounce.400ms="items.{{ $i }}.importe" class="form-input text-right"></td>
                                         <td class="px-1"><button type="button" wire:click="removeItem({{ $i }})" class="rounded p-1 text-slate-400 hover:text-danger-600"><x-heroicon-o-trash class="h-4 w-4" /></button></td>
                                     </tr>
                                 @endforeach
@@ -95,7 +95,7 @@
                         </table>
                     </div>
                     @error('items.*.concepto')<p class="mt-1 text-xs text-danger-600">{{ $message }}</p>@enderror
-                    <x-ui.textarea label="Notas" wire:model="quote.notes" rows="2" class="mt-3" />
+                    <x-ui.textarea label="Notas" wire:model="quote.notes" rows="2" maxlength="2000" class="mt-3" />
                     @if ($canManage)
                         <div class="mt-4 flex flex-wrap justify-end gap-2">
                             <x-ui.button variant="secondary" icon="check" wire:click="saveQuote">Guardar cotización</x-ui.button>
@@ -158,9 +158,9 @@
 
                 <x-ui.card title="Mediciones">
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        <x-ui.input label="Señal" type="number" step="0.1" wire:model="measures.signal_dbm" suffix="dBm" :disabled="! $editable" inputmode="decimal" />
-                        <x-ui.input label="Bajada" type="number" step="0.1" wire:model="measures.speed_down" suffix="Mbps" :disabled="! $editable" inputmode="decimal" />
-                        <x-ui.input label="Subida" type="number" step="0.1" wire:model="measures.speed_up" suffix="Mbps" :disabled="! $editable" inputmode="decimal" />
+                        <x-ui.input label="Señal" type="number" step="0.1" min="-120" max="0" wire:model="measures.signal_dbm" suffix="dBm" :disabled="! $editable" inputmode="decimal" />
+                        <x-ui.input label="Bajada" type="number" step="0.1" min="0" max="10000" wire:model="measures.speed_down" suffix="Mbps" :disabled="! $editable" inputmode="decimal" />
+                        <x-ui.input label="Subida" type="number" step="0.1" min="0" max="10000" wire:model="measures.speed_up" suffix="Mbps" :disabled="! $editable" inputmode="decimal" />
                     </div>
                     @if ($editable)
                         <div class="mt-3 flex justify-end"><x-ui.button variant="secondary" icon="check" wire:click="saveMeasures">Guardar mediciones</x-ui.button></div>
@@ -212,7 +212,7 @@
                         </div>
                         @error('signature')<p class="mt-1 text-xs text-danger-600">{{ $message }}</p>@enderror
                         <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
-                            <x-ui.input label="Nombre de quien firma" wire:model="signedBy" class="flex-1" />
+                            <x-ui.input label="Nombre de quien firma" wire:model="signedBy" filter="name" maxlength="150" class="flex-1" />
                             <x-ui.button icon="pencil" wire:click="saveSignature">Guardar firma</x-ui.button>
                         </div>
                     @endif
@@ -315,7 +315,7 @@
     </div>
 
     <x-ui.modal wire:model="showCancel" title="Cancelar orden" size="md">
-        <x-ui.textarea label="Motivo" wire:model="cancelReason" rows="3" required />
+        <x-ui.textarea label="Motivo" wire:model="cancelReason" rows="3" maxlength="190" required />
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Volver</x-ui.button>
             <x-ui.button variant="danger" wire:click="cancel">Cancelar orden</x-ui.button>

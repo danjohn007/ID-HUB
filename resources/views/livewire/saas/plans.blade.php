@@ -55,16 +55,16 @@
 
     <x-ui.modal wire:model="showForm" :title="$editingId ? 'Editar plan SaaS' : 'Nuevo plan SaaS'" size="2xl">
         <form wire:submit="save" id="saas-plan-form" class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-            <x-ui.input label="Nombre" wire:model="form.name" required class="sm:col-span-3" />
-            <x-ui.input label="Código" wire:model="form.code" hint="Ej. PRO" required class="sm:col-span-2" />
-            <x-ui.input label="Orden" type="number" min="0" wire:model="form.sort" />
-            <x-ui.input label="Descripción" wire:model="form.description" class="sm:col-span-6" />
-            <x-ui.input label="Mensualidad" type="number" step="0.01" min="0" prefix="$" wire:model="form.price_monthly" required class="sm:col-span-2" />
+            <x-ui.input label="Nombre" wire:model="form.name" filter="text" maxlength="80" required class="sm:col-span-3" />
+            <x-ui.input label="Código" wire:model="form.code" filter="upper" maxlength="40" hint="Ej. PRO" required class="sm:col-span-2" />
+            <x-ui.input label="Orden" type="number" min="0" max="1000" wire:model="form.sort" />
+            <x-ui.input label="Descripción" wire:model="form.description" maxlength="190" class="sm:col-span-6" />
+            <x-ui.input label="Mensualidad" type="number" step="0.01" min="0" max="1000000" prefix="$" wire:model="form.price_monthly" required class="sm:col-span-2" />
             <x-ui.input label="Comisión %" type="number" step="0.01" min="0" max="100" suffix="%" wire:model="form.commission_percent" hint="Sobre cada pago en línea" required class="sm:col-span-2" />
-            <x-ui.input label="Comisión fija" type="number" step="0.01" min="0" prefix="$" wire:model="form.commission_fixed" hint="Por pago en línea" required class="sm:col-span-2" />
-            <x-ui.input label="Máx. clientes" type="number" min="1" wire:model="form.max_clients" hint="Vacío = ilimitado" class="sm:col-span-2" />
-            <x-ui.input label="Máx. equipos" type="number" min="1" wire:model="form.max_devices" hint="Vacío = ilimitado" class="sm:col-span-2" />
-            <x-ui.input label="Máx. usuarios" type="number" min="1" wire:model="form.max_users" hint="Vacío = ilimitado" class="sm:col-span-2" />
+            <x-ui.input label="Comisión fija" type="number" step="0.01" min="0" max="100000" prefix="$" wire:model="form.commission_fixed" hint="Por pago en línea" required class="sm:col-span-2" />
+            <x-ui.input label="Máx. clientes" type="number" min="1" max="1000000" wire:model="form.max_clients" hint="Vacío = ilimitado" class="sm:col-span-2" />
+            <x-ui.input label="Máx. equipos" type="number" min="1" max="1000000" wire:model="form.max_devices" hint="Vacío = ilimitado" class="sm:col-span-2" />
+            <x-ui.input label="Máx. usuarios" type="number" min="1" max="1000000" wire:model="form.max_users" hint="Vacío = ilimitado" class="sm:col-span-2" />
 
             <div class="sm:col-span-6">
                 <label class="form-label">Funciones incluidas</label>

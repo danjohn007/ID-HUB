@@ -83,9 +83,9 @@
     {{-- Alta / edición --}}
     <x-ui.modal wire:model="showForm" :title="$editingId ? 'Editar usuario' : 'Nuevo usuario'" size="xl">
         <form wire:submit="save" id="user-form" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <x-ui.input label="Nombre completo" wire:model="form.name" required class="sm:col-span-2" />
-            <x-ui.input label="Correo (usuario de acceso)" type="email" wire:model="form.email" required />
-            <x-ui.input label="Teléfono" type="tel" wire:model="form.phone" />
+            <x-ui.input label="Nombre completo" wire:model="form.name" filter="name" required class="sm:col-span-2" />
+            <x-ui.input label="Correo (usuario de acceso)" type="email" wire:model="form.email" filter="email" required />
+            <x-ui.input label="Teléfono" type="tel" wire:model="form.phone" filter="phone" />
             <x-ui.select label="Rol" wire:model.live="form.role" :options="\App\Livewire\Users\Index::roles()" required class="sm:col-span-2" />
             @if (! empty($form['role']))
                 <div class="sm:col-span-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
@@ -98,7 +98,7 @@
                 <x-ui.toggle wire:model.live="form.generate" label="Generar contraseña segura" description="Se mostrará una sola vez" class="sm:col-span-2" />
             @endif
             @if ($editingId || ! ($form['generate'] ?? false))
-                <x-ui.input :label="$editingId ? 'Nueva contraseña (opcional)' : 'Contraseña'" type="password" autocomplete="new-password" wire:model="form.password" hint="Mínimo 8 caracteres con letras y números" class="sm:col-span-2" />
+                <x-ui.input :label="$editingId ? 'Nueva contraseña (opcional)' : 'Contraseña'" type="password" autocomplete="new-password" wire:model="form.password" maxlength="100" hint="Mínimo 8 caracteres con letras y números" class="sm:col-span-2" />
             @endif
             <x-ui.toggle wire:model="form.active" label="Usuario activo" description="Los usuarios inactivos no pueden iniciar sesión" />
             @if (in_array($form['role'] ?? '', ['tecnico', 'supervisor']))

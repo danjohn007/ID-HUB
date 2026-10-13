@@ -69,9 +69,9 @@
                 <div class="grid grid-cols-1 gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_300px]">
                     <div class="space-y-4" x-data="{ insert(v) { const t = this.$refs.body; const s = t.selectionStart ?? t.value.length; t.setRangeText(v, s, t.selectionEnd ?? s, 'end'); t.dispatchEvent(new Event('input')); t.focus(); } }">
                         @if (in_array($channel, ['email', 'push']))
-                            <x-ui.input :label="$channel === 'email' ? 'Asunto del correo' : 'Título de la notificación'" wire:model.live.debounce.400ms="form.subject" />
+                            <x-ui.input :label="$channel === 'email' ? 'Asunto del correo' : 'Título de la notificación'" wire:model.live.debounce.400ms="form.subject" maxlength="150" />
                         @endif
-                        <x-ui.textarea label="Mensaje" wire:model.live.debounce.400ms="form.body" x-ref="body" rows="7" />
+                        <x-ui.textarea label="Mensaje" wire:model.live.debounce.400ms="form.body" x-ref="body" rows="7" maxlength="1600" />
                         <div>
                             <div class="mb-1.5 text-xs font-medium text-slate-500">Variables (clic para insertar)</div>
                             <div class="flex flex-wrap gap-1">
@@ -132,7 +132,7 @@
                                 <p class="text-xs text-slate-500">La prueba de notificaciones push requiere un dispositivo con la app del cliente.</p>
                             @else
                                 <div class="flex gap-2">
-                                    <x-ui.input wire:model="testTo" :type="$channel === 'email' ? 'email' : 'tel'" :placeholder="$channel === 'email' ? 'correo@ejemplo.com' : '55 1234 5678'" class="flex-1" />
+                                    <x-ui.input wire:model="testTo" :type="$channel === 'email' ? 'email' : 'tel'" :filter="$channel === 'email' ? 'email' : 'phone'" :placeholder="$channel === 'email' ? 'correo@ejemplo.com' : '55 1234 5678'" class="flex-1" />
                                     <x-ui.button variant="secondary" icon="paper-airplane" wire:click="sendTest" title="Enviar prueba" />
                                 </div>
                                 <p class="mt-1.5 text-[11px] text-slate-500">Usa los datos del cliente de ejemplo. Se registra en la bitácora como "Envío de prueba".</p>

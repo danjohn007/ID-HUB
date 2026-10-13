@@ -1,0 +1,8 @@
+# Cuando el dominio apunta a la raíz del proyecto (no a public/), redirige
+# internamente todo a public/. Así la URL queda sin "/public" y los archivos
+# internos (.env, composer.json, artisan, storage/) no quedan expuestos.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

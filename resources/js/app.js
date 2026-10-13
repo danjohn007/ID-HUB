@@ -19,6 +19,87 @@ export const palette = {
 };
 window.wcPalette = palette;
 
+/**
+ * GPS con mensajes claros: wispGeo.get().then(({ lat, lng }) => ...).catch((e) => e.message)
+ * La geolocalización del navegador solo funciona en HTTPS (o localhost) y con permiso del usuario.
+ */
+const geoError = (code, message) => Object.assign(new Error(message), { code });
+export const wispGeo = {
+    async state() {
+        if (!window.isSecureContext) return 'insecure';
+        if (!navigator.geolocation) return 'unsupported';
+        try {
+            return (await navigator.permissions.query({ name: 'geolocation' })).state;
+        } catch (e) {
+            return 'prompt';
+        }
+    },
+    get(options = {}) {
+        return new Promise((resolve, reject) => {
+            if (!window.isSecureContext) {
+                return reject(geoError('insecure', 'La ubicación solo funciona con HTTPS. Pide al administrador activar el certificado SSL del sitio.'));
+            }
+            if (!navigator.geolocation) return reject(geoError('unsupported', 'Este dispositivo no permite obtener la ubicación.'));
+            navigator.geolocation.getCurrentPosition(
+                (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+                (err) => reject(err.code === 1
+                    ? geoError('denied', 'Permiso de ubicación bloqueado. Toca el candado junto a la dirección del sitio → Ubicación → Permitir, y recarga.')
+                    : err.code === 3
+                        ? geoError('timeout', 'El GPS tardó demasiado. Intenta de nuevo, de preferencia al aire libre.')
+                        : geoError('unavailable', 'No se pudo determinar tu ubicación. Activa el GPS del teléfono.')),
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000, ...options }
+            );
+        });
+    },
+    /** Muestra el motivo del fallo como toast (para acciones que continúan sin GPS). */
+    warn(e) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: { message: e.message, type: 'warning', timeout: 7000 } }));
+    },
+};
+window.wispGeo = wispGeo;
+
+/**
+ * Filtros de captura: <input data-filter="phone"> (o <x-ui.input filter="phone">) descarta al escribir o pegar
+ * los caracteres que no corresponden. Deben coincidir con App\Support\InputRules (validación del servidor).
+ */
+const LETTERS = 'A-Za-zÀ-ÖØ-öø-ÿ';
+const onlyOneDot = (v) => { const i = v.indexOf('.'); return i < 0 ? v : v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, ''); };
+export const inputFilters = {
+    name: (v) => v.replace(new RegExp(`[^${LETTERS}\\s.'-]`, 'g'), ''),
+    text: (v) => v.replace(new RegExp(`[^${LETTERS}0-9²³\\s.,;:_#&()/'"!¡?¿°%@+-]`, 'g'), ''),
+    alnum: (v) => v.replace(new RegExp(`[^${LETTERS}0-9\\s]`, 'g'), ''),
+    digits: (v) => v.replace(/\D+/g, ''),
+    decimal: (v) => onlyOneDot(v.replace(/[^\d.]/g, '')),
+    signed: (v) => { const neg = v.trim().startsWith('-'); const d = onlyOneDot(v.replace(/[^\d.]/g, '')); return (neg ? '-' : '') + d; },
+    phone: (v) => v.replace(/[^\d+\s()-]/g, '').replace(/(?!^)\+/g, ''),
+    code: (v) => v.replace(/[^A-Za-z0-9_-]/g, ''),
+    upper: (v) => v.toUpperCase().replace(/[^A-Z0-9_-]/g, ''),
+    username: (v) => v.replace(/[^A-Za-z0-9._@-]/g, ''),
+    slug: (v) => v.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+    email: (v) => v.replace(/\s+/g, ''),
+    rfc: (v) => v.toUpperCase().replace(/[^A-ZÑ&0-9]/g, ''),
+    curp: (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+    mac: (v) => v.toUpperCase().replace(/[^0-9A-F:-]/g, ''),
+    ip: (v) => v.replace(/[^\d.]/g, ''),
+    host: (v) => v.replace(/[^A-Za-z0-9.:-]/g, ''),
+    color: (v) => '#' + v.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6),
+};
+document.addEventListener('input', (e) => {
+    const el = e.target;
+    const filter = el?.dataset?.filter && inputFilters[el.dataset.filter];
+    if (!filter || typeof el.value !== 'string') return;
+    const before = el.value;
+    const after = filter(before);
+    if (after === before) return;
+    let caret = null;
+    try { caret = el.selectionStart; } catch (err) { /* type=number/email no exponen el cursor */ }
+    el.value = after;
+    if (caret !== null) {
+        const pos = Math.max(0, caret - (before.length - after.length));
+        try { el.setSelectionRange(pos, pos); } catch (err) { /* idem */ }
+    }
+}, true); // fase de captura: se limpia antes de que Livewire (wire:model) lea el valor
+
 const statusColors = { online: palette.success, warning: palette.warning, offline: palette.danger, unknown: palette.slate, maintenance: palette.brand };
 
 /* Íconos SVG (heroicons simplificados) por tipo de marcador */
@@ -213,13 +294,35 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('geo', (latField = 'lat', lngField = 'lng') => ({
         locating: false, error: null,
         locate() {
-            if (!navigator.geolocation) { this.error = 'GPS no disponible'; return; }
             this.locating = true;
-            navigator.geolocation.getCurrentPosition(
-                (p) => { this.$wire.set(latField, p.coords.latitude.toFixed(7)); this.$wire.set(lngField, p.coords.longitude.toFixed(7)); this.locating = false; },
-                (err) => { this.error = err.message; this.locating = false; },
-                { enableHighAccuracy: true, timeout: 15000 }
-            );
+            this.error = null;
+            wispGeo.get()
+                .then((c) => { this.$wire.set(latField, c.lat.toFixed(7)); this.$wire.set(lngField, c.lng.toFixed(7)); })
+                .catch((e) => { this.error = e.message; })
+                .finally(() => { this.locating = false; });
+        },
+    }));
+
+    /**
+     * Aviso para pedir permiso de ubicación en las pantallas de campo: <x-ui.geo-permission />.
+     * El navegador solo muestra su diálogo de permiso tras un toque del usuario y solo en HTTPS.
+     */
+    Alpine.data('geoPermission', () => ({
+        state: 'checking', error: null, asking: false,
+        async init() {
+            this.state = await wispGeo.state();
+            try {
+                const status = await navigator.permissions?.query({ name: 'geolocation' });
+                if (status) status.onchange = () => { this.state = status.state; };
+            } catch (e) { /* navegador sin Permissions API */ }
+        },
+        request() {
+            this.asking = true;
+            this.error = null;
+            wispGeo.get()
+                .then(() => { this.state = 'granted'; })
+                .catch((e) => { this.error = e.message; if (e.code === 'denied') this.state = 'denied'; })
+                .finally(() => { this.asking = false; });
         },
     }));
 

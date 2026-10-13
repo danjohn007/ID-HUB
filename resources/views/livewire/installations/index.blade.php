@@ -144,7 +144,7 @@
                 <x-ui.select label="Plan" wire:model="form.plan_id" :options="$plans" placeholder="Selecciona..." required />
                 <x-ui.select label="Promoción" wire:model="form.promotion_id" :options="$promotions" placeholder="Sin promoción" />
                 <x-ui.select label="Técnico" wire:model="form.technician_id" :options="$technicians" placeholder="Asignar después" />
-                <x-ui.textarea label="Notas" wire:model="form.notes" rows="2" />
+                <x-ui.textarea label="Notas" wire:model="form.notes" rows="2" maxlength="1000" />
             @endif
         </form>
         <x-slot:footer>

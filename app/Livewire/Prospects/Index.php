@@ -13,6 +13,7 @@ use App\Services\CoverageService;
 use App\Services\ProspectService;
 use App\Support\Catalog;
 use App\Support\DemandAnalysis;
+use App\Support\InputRules;
 use App\Support\MapData;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -162,11 +163,11 @@ class Index extends Component
         $tid = tenant()->id;
 
         return [
-            'form.name' => 'required|string|max:150',
-            'form.phone' => 'nullable|string|max:30',
-            'form.whatsapp' => 'nullable|string|max:30',
+            'form.name' => 'required|string|max:80|'.InputRules::NAME,
+            'form.phone' => 'nullable|string|max:20|'.InputRules::PHONE,
+            'form.whatsapp' => 'nullable|string|max:20|'.InputRules::PHONE,
             'form.email' => 'nullable|email|max:150',
-            'form.address' => 'nullable|string|max:190',
+            'form.address' => 'nullable|string|max:190|'.InputRules::TEXT,
             'form.lat' => 'nullable|numeric|between:-90,90',
             'form.lng' => 'nullable|numeric|between:-180,180',
             'form.zone_id' => ['nullable', Rule::exists('zones', 'id')->where('tenant_id', $tid)],
@@ -174,7 +175,7 @@ class Index extends Component
             'form.source' => ['required', Rule::in(array_keys(config('wisp.prospect_sources')))],
             'form.status' => ['required', Rule::in(array_keys(config('wisp.prospect_status')))],
             'form.assigned_to' => ['nullable', Rule::exists('users', 'id')->where('tenant_id', $tid)],
-            'form.referral_code' => 'nullable|string|max:30',
+            'form.referral_code' => 'nullable|string|max:30|'.InputRules::CODE,
             'form.notes' => 'nullable|string|max:2000',
             'form.date' => 'nullable|date|before_or_equal:today',
         ];
@@ -182,7 +183,8 @@ class Index extends Component
 
     protected function validationAttributes(): array
     {
-        return ['form.name' => 'nombre', 'form.email' => 'correo', 'form.date' => 'fecha', 'form.status' => 'estado', 'form.source' => 'fuente'];
+        return ['form.name' => 'nombre', 'form.email' => 'correo', 'form.date' => 'fecha', 'form.status' => 'estado', 'form.source' => 'fuente',
+            'form.phone' => 'teléfono', 'form.whatsapp' => 'WhatsApp', 'form.address' => 'dirección', 'form.referral_code' => 'código de referido'];
     }
 
     public function save(ProspectService $service): void

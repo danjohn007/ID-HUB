@@ -43,7 +43,7 @@
 
             <x-ui.card title="2. Mensaje">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <x-ui.input label="Nombre de la campaña" wire:model="form.name" placeholder="Ej. Promoción Buen Fin" required />
+                    <x-ui.input label="Nombre de la campaña" wire:model="form.name" filter="text" maxlength="150" placeholder="Ej. Promoción Buen Fin" required />
                     <div>
                         <label class="form-label">Canal <span class="text-danger-600">*</span></label>
                         <div class="grid grid-cols-4 gap-1 rounded-lg bg-slate-100 p-1">
@@ -55,10 +55,10 @@
                         </div>
                     </div>
                     @if (in_array($form['channel'], ['email', 'push']))
-                        <x-ui.input label="Asunto / título" wire:model.live.debounce.400ms="form.subject" class="md:col-span-2" required />
+                        <x-ui.input label="Asunto / título" wire:model.live.debounce.400ms="form.subject" maxlength="150" class="md:col-span-2" required />
                     @endif
                     <div class="md:col-span-2" x-data="{ insert(v) { const t = this.$refs.body; const s = t.selectionStart ?? t.value.length; t.setRangeText(v, s, t.selectionEnd ?? s, 'end'); t.dispatchEvent(new Event('input')); t.focus(); } }">
-                        <x-ui.textarea label="Mensaje" wire:model.live.debounce.400ms="form.body" x-ref="body" rows="6" required />
+                        <x-ui.textarea label="Mensaje" wire:model.live.debounce.400ms="form.body" x-ref="body" rows="6" maxlength="1600" required />
                         <div class="mt-2 flex flex-wrap items-center gap-1">
                             <span class="mr-1 text-xs text-slate-500">Variables:</span>
                             @foreach (\App\Models\NotificationTemplate::VARIABLES as $v)

@@ -15,6 +15,7 @@ use App\Services\ReferralService;
 use App\Services\RiskService;
 use App\Services\ServiceControl;
 use App\Services\TicketService;
+use App\Support\InputRules;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -77,9 +78,9 @@ class Show extends Component
         $this->validate([
             'payment.amount' => 'required|numeric|min:1|max:1000000',
             'payment.method' => 'required|in:'.implode(',', array_keys(config('wisp.payment_methods'))),
-            'payment.reference' => 'nullable|string|max:120',
+            'payment.reference' => 'nullable|string|max:120|'.InputRules::TEXT,
             'payment.notes' => 'nullable|string|max:190',
-        ], [], ['payment.amount' => 'importe', 'payment.method' => 'método']);
+        ], [], ['payment.amount' => 'importe', 'payment.method' => 'método', 'payment.reference' => 'referencia', 'payment.notes' => 'notas']);
 
         $p = $billing->registerPayment($this->client, (float) $this->payment['amount'], $this->payment['method'], [
             'reference' => $this->payment['reference'] ?: null,
@@ -98,7 +99,7 @@ class Show extends Component
         $this->authorize('billing.manage');
         $this->validate([
             'charge.type' => 'required|in:'.implode(',', array_keys(config('wisp.charge_types'))),
-            'charge.description' => 'required|string|max:190',
+            'charge.description' => 'required|string|max:190|'.InputRules::TEXT,
             'charge.amount' => 'required|numeric|min:1',
             'charge.due_date' => 'required|date',
         ], [], ['charge.description' => 'concepto', 'charge.amount' => 'importe']);
@@ -221,7 +222,7 @@ class Show extends Component
     {
         $this->authorize('tickets.manage');
         $this->validate([
-            'ticket.category' => 'required', 'ticket.priority' => 'required', 'ticket.subject' => 'required|string|max:190', 'ticket.description' => 'nullable|string|max:2000',
+            'ticket.category' => 'required', 'ticket.priority' => 'required', 'ticket.subject' => 'required|string|max:190|'.InputRules::TEXT, 'ticket.description' => 'nullable|string|max:2000',
         ], [], ['ticket.subject' => 'asunto']);
         $t = $tickets->create($this->ticket + ['client_id' => $this->client->id, 'repeater_id' => $this->client->repeater_id]);
         $this->showTicket = false;

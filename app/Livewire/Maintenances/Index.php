@@ -9,6 +9,7 @@ use App\Models\NetworkDevice;
 use App\Models\Repeater;
 use App\Models\Zone;
 use App\Services\Network\MaintenanceService;
+use App\Support\InputRules;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
@@ -88,7 +89,7 @@ class Index extends Component
     public function save(): void
     {
         $data = $this->validate([
-            'form.title' => 'required|string|max:150',
+            'form.title' => 'required|string|max:150|'.InputRules::TEXT,
             'form.description' => 'nullable|string|max:1000',
             'form.starts_at' => 'required|date',
             'form.ends_at' => 'nullable|date|after:form.starts_at',
@@ -98,7 +99,7 @@ class Index extends Component
             'form.device_ids.*' => [Rule::exists('network_devices', 'id')->where('tenant_id', tenant()->id)],
             'form.notify_hours_before' => 'required|integer|between:0,720',
         ], [], [
-            'form.title' => 'título', 'form.starts_at' => 'inicio', 'form.ends_at' => 'fin', 'form.zone_id' => 'zona',
+            'form.title' => 'título', 'form.description' => 'descripción', 'form.starts_at' => 'inicio', 'form.ends_at' => 'fin', 'form.zone_id' => 'zona',
             'form.repeater_id' => 'repetidor', 'form.notify_hours_before' => 'aviso anticipado',
         ])['form'];
 

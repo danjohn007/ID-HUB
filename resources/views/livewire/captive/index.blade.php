@@ -17,16 +17,16 @@
         <div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
             <x-ui.card title="Personalización" subtitle="Lo que ven las personas al conectarse al WiFi">
                 <form wire:submit="saveSettings" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <x-ui.input label="Título" wire:model="settings.title" required />
+                    <x-ui.input label="Título" wire:model="settings.title" filter="text" maxlength="80" required />
                     <div>
                         <label class="form-label">Color de fondo</label>
                         <div class="flex gap-2">
                             <input type="color" wire:model.live="settings.background" class="h-10 w-14 cursor-pointer rounded-lg border border-slate-300 bg-white p-1">
-                            <input wire:model.live="settings.background" class="form-input font-mono">
+                            <input wire:model.live="settings.background" data-filter="color" maxlength="7" class="form-input font-mono">
                         </div>
                         @error('settings.background')<p class="mt-1 text-xs font-medium text-danger-600">{{ $message }}</p>@enderror
                     </div>
-                    <x-ui.input label="Mensaje de bienvenida" wire:model="settings.welcome" class="sm:col-span-2" />
+                    <x-ui.input label="Mensaje de bienvenida" wire:model="settings.welcome" maxlength="300" class="sm:col-span-2" />
 
                     <div class="sm:col-span-2">
                         <label class="form-label">Formas de acceso <span class="text-danger-600">*</span></label>
@@ -40,10 +40,10 @@
                         @error('settings.methods')<p class="mt-1 text-xs font-medium text-danger-600">{{ $message }}</p>@enderror
                     </div>
 
-                    <x-ui.textarea label="Aviso destacado" wire:model="settings.notice" rows="2" hint="Ej. mantenimiento programado. Vacío = sin aviso" class="sm:col-span-2" />
-                    <x-ui.textarea label="Términos de uso" wire:model="settings.terms" rows="3" hint="Si hay términos, la persona debe aceptarlos para conectarse" class="sm:col-span-2" />
-                    <x-ui.textarea label="Contacto" wire:model="settings.contact" rows="2" hint="Teléfono, WhatsApp u horario de atención" />
-                    <x-ui.input label="Redirigir después de conectar" type="url" wire:model="settings.redirect_url" placeholder="https://..." hint="Vacío = la página que la persona quería abrir" />
+                    <x-ui.textarea label="Aviso destacado" wire:model="settings.notice" rows="2" maxlength="500" hint="Ej. mantenimiento programado. Vacío = sin aviso" class="sm:col-span-2" />
+                    <x-ui.textarea label="Términos de uso" wire:model="settings.terms" rows="3" maxlength="5000" hint="Si hay términos, la persona debe aceptarlos para conectarse" class="sm:col-span-2" />
+                    <x-ui.textarea label="Contacto" wire:model="settings.contact" rows="2" maxlength="300" hint="Teléfono, WhatsApp u horario de atención" />
+                    <x-ui.input label="Redirigir después de conectar" type="url" wire:model="settings.redirect_url" maxlength="300" placeholder="https://..." hint="Vacío = la página que la persona quería abrir" />
 
                     <div class="sm:col-span-2">
                         <label class="form-label">Imagen de fondo</label>
@@ -83,7 +83,7 @@
                         <x-ui.button variant="secondary" size="sm" icon="clipboard" class="mt-2" x-on:click="navigator.clipboard?.writeText($refs.html.value); copied = true"><span x-text="copied ? 'Copiado' : 'Copiar login.html'"></span></x-ui.button>
                     </div>
                     <div class="mt-4 border-t border-slate-100 pt-4">
-                        <x-ui.input label="Nombre DNS del hotspot (opcional)" wire:model="settings.hotspot_dns" placeholder="hotspot.miwisp.net"
+                        <x-ui.input label="Nombre DNS del hotspot (opcional)" wire:model="settings.hotspot_dns" filter="host" maxlength="120" placeholder="hotspot.miwisp.net"
                                     hint="Solo si el hotspot usa un DNS name en lugar de una IP privada. Se usa para validar a dónde se envían las credenciales." />
                         <div class="mt-2 flex justify-end"><x-ui.button size="sm" variant="secondary" wire:click="saveSettings">Guardar</x-ui.button></div>
                     </div>
@@ -168,16 +168,16 @@
 
         <x-ui.modal wire:model="showAd" :title="$adId ? 'Editar anuncio' : 'Nuevo anuncio'" size="2xl">
             <form wire:submit="saveAd" id="ad-form" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <x-ui.input label="Anunciante" wire:model="ad.advertiser" placeholder="Farmacia San José" required />
+                <x-ui.input label="Anunciante" wire:model="ad.advertiser" filter="text" maxlength="120" placeholder="Farmacia San José" required />
                 <x-ui.select label="Giro" wire:model="ad.business_type" :options="config('wisp.ad_business_types')" required />
-                <x-ui.input label="Título" wire:model="ad.title" placeholder="2x1 en vitaminas" required />
-                <x-ui.input label="Campaña" wire:model="ad.campaign" placeholder="Opcional" />
-                <x-ui.input label="Texto" wire:model="ad.body" class="sm:col-span-2" />
-                <x-ui.input label="Enlace al hacer clic" type="url" wire:model="ad.url" placeholder="https://..." hint="Agrégalo también al Walled Garden si debe abrir sin iniciar sesión" class="sm:col-span-2" />
+                <x-ui.input label="Título" wire:model="ad.title" maxlength="120" placeholder="2x1 en vitaminas" required />
+                <x-ui.input label="Campaña" wire:model="ad.campaign" filter="text" maxlength="120" placeholder="Opcional" />
+                <x-ui.input label="Texto" wire:model="ad.body" maxlength="190" class="sm:col-span-2" />
+                <x-ui.input label="Enlace al hacer clic" type="url" wire:model="ad.url" maxlength="500" placeholder="https://..." hint="Agrégalo también al Walled Garden si debe abrir sin iniciar sesión" class="sm:col-span-2" />
                 <x-ui.input label="Inicio" type="date" wire:model="ad.starts_at" />
                 <x-ui.input label="Fin" type="date" wire:model="ad.ends_at" />
                 <x-ui.input label="Peso" type="number" min="1" max="100" wire:model="ad.weight" hint="Más peso = se muestra más seguido" />
-                <x-ui.input label="Precio cobrado" type="number" step="0.01" min="0" prefix="$" wire:model="ad.price" />
+                <x-ui.input label="Precio cobrado" type="number" step="0.01" min="0" max="1000000" prefix="$" wire:model="ad.price" />
                 <div class="sm:col-span-2">
                     <label class="form-label">Imagen</label>
                     <input type="file" wire:model="adImage" accept="image/*" class="text-sm text-slate-600">
@@ -208,11 +208,11 @@
             <x-ui.card title="Generar fichas">
                 <form wire:submit="generateVouchers" class="grid grid-cols-2 gap-3">
                     <x-ui.input label="Cantidad" type="number" min="1" max="500" wire:model="gen.quantity" required />
-                    <x-ui.input label="Precio" type="number" step="0.01" min="0" prefix="$" wire:model="gen.price" />
+                    <x-ui.input label="Precio" type="number" step="0.01" min="0" max="100000" prefix="$" wire:model="gen.price" />
                     <x-ui.select label="Duración" wire:model="gen.duration_minutes" :options="['30' => '30 minutos', '60' => '1 hora', '180' => '3 horas', '1440' => '1 día', '10080' => '1 semana', '43200' => '30 días']" required />
-                    <x-ui.input label="Límite de datos" type="number" min="1" suffix="MB" wire:model="gen.data_limit_mb" placeholder="Sin límite" />
-                    <x-ui.input label="Vigencia para usarse" type="number" min="1" suffix="días" wire:model="gen.expires_days" />
-                    <x-ui.input label="Lote" wire:model="gen.batch" required />
+                    <x-ui.input label="Límite de datos" type="number" min="1" max="10000000" suffix="MB" wire:model="gen.data_limit_mb" placeholder="Sin límite" />
+                    <x-ui.input label="Vigencia para usarse" type="number" min="1" max="3650" suffix="días" wire:model="gen.expires_days" />
+                    <x-ui.input label="Lote" wire:model="gen.batch" filter="code" maxlength="40" required />
                     <x-ui.button type="submit" icon="sparkles" class="col-span-2">Generar</x-ui.button>
                 </form>
             </x-ui.card>

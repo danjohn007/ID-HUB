@@ -9,25 +9,25 @@
             <div class="space-y-5 xl:col-span-2">
                 <x-ui.card title="Datos fiscales y comerciales">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <x-ui.input label="Nombre comercial" wire:model="company.name" required />
-                        <x-ui.input label="Razón social" wire:model="company.legal_name" />
-                        <x-ui.input label="RFC" wire:model="company.rfc" placeholder="ABC123456XY9" class="uppercase" />
+                        <x-ui.input label="Nombre comercial" wire:model="company.name" filter="text" maxlength="150" required />
+                        <x-ui.input label="Razón social" wire:model="company.legal_name" filter="text" maxlength="190" />
+                        <x-ui.input label="RFC" wire:model="company.rfc" filter="rfc" placeholder="ABC123456XY9" class="uppercase" />
                         <x-ui.select label="Régimen fiscal" wire:model="company.tax_regime" :options="config('wisp.tax_regimes')" placeholder="—" />
-                        <x-ui.input label="Dirección" wire:model="company.address" class="md:col-span-2" />
-                        <x-ui.input label="Teléfono" type="tel" wire:model="company.phone" />
-                        <x-ui.input label="WhatsApp de atención" type="tel" wire:model="company.whatsapp" hint="Se muestra a los clientes en mensajes y en la app" />
-                        <x-ui.input label="Correo electrónico" type="email" wire:model="company.email" class="md:col-span-2" />
+                        <x-ui.input label="Dirección" wire:model="company.address" filter="text" maxlength="190" class="md:col-span-2" />
+                        <x-ui.input label="Teléfono" type="tel" wire:model="company.phone" filter="phone" />
+                        <x-ui.input label="WhatsApp de atención" type="tel" wire:model="company.whatsapp" filter="phone" hint="Se muestra a los clientes en mensajes y en la app" />
+                        <x-ui.input label="Correo electrónico" type="email" wire:model="company.email" filter="email" class="md:col-span-2" />
                     </div>
                 </x-ui.card>
 
                 <x-ui.card title="Dominio, moneda y zona horaria">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <x-ui.input label="Subdominio" wire:model="company.subdomain" suffix=".wispcontrol.com" placeholder="mi-wisp" />
-                        <x-ui.input label="Dominio propio (opcional)" wire:model="company.domain" placeholder="portal.miwisp.mx" hint="Apunta un registro CNAME a la plataforma" />
+                        <x-ui.input label="Subdominio" wire:model="company.subdomain" filter="slug" suffix=".wispcontrol.com" placeholder="mi-wisp" />
+                        <x-ui.input label="Dominio propio (opcional)" wire:model="company.domain" filter="host" maxlength="150" placeholder="portal.miwisp.mx" hint="Apunta un registro CNAME a la plataforma" />
                         <x-ui.select label="Moneda" wire:model="company.currency" :options="config('wisp.currencies')" required />
                         <x-ui.select label="Zona horaria" wire:model="company.timezone" :options="config('wisp.timezones')" required hint="Se usa para programar cortes y recordatorios" />
-                        <x-ui.input label="Centro del mapa · latitud" wire:model="company.map_lat" placeholder="20.7350" />
-                        <x-ui.input label="Centro del mapa · longitud" wire:model="company.map_lng" placeholder="-100.4480" />
+                        <x-ui.input label="Centro del mapa · latitud" wire:model="company.map_lat" filter="signed" placeholder="20.7350" />
+                        <x-ui.input label="Centro del mapa · longitud" wire:model="company.map_lng" filter="signed" placeholder="-100.4480" />
                     </div>
                 </x-ui.card>
             </div>
@@ -70,7 +70,7 @@
                                 <label class="form-label">{{ $label }}</label>
                                 <div class="flex items-center gap-2">
                                     <input type="color" wire:model.live="company.{{ $key }}" @disabled(! $whiteLabel) class="h-9 w-11 cursor-pointer rounded-lg border border-slate-300 bg-white p-1 disabled:cursor-not-allowed disabled:opacity-50">
-                                    <input type="text" wire:model.blur="company.{{ $key }}" @disabled(! $whiteLabel) class="form-input font-mono text-xs uppercase">
+                                    <input type="text" wire:model.blur="company.{{ $key }}" data-filter="color" maxlength="7" @disabled(! $whiteLabel) class="form-input font-mono text-xs uppercase">
                                 </div>
                                 @error('company.'.$key)<p class="mt-1 text-xs text-danger-600">{{ $message }}</p>@enderror
                             </div>
@@ -111,7 +111,7 @@
                         <x-ui.input label="Día de corte" type="number" min="1" max="28" wire:model="billing.billing_day" :hint="$billing['mode'] === 'anniversary' ? 'Valor por defecto para clientes nuevos' : 'Día del mes en que se emiten los cargos'" required />
                         <x-ui.input label="Días para pagar" type="number" min="0" max="30" wire:model="billing.due_days" hint="Entre la emisión y la fecha límite" suffix="días" required />
                         <x-ui.input label="Recordatorio previo" type="number" min="0" max="15" wire:model="billing.reminder_days_before" hint="Días antes de la fecha límite" suffix="días" required />
-                        <x-ui.input label="Prefijo de folios" wire:model="billing.folio_prefix" hint="Recibos: REC-000123" required />
+                        <x-ui.input label="Prefijo de folios" wire:model="billing.folio_prefix" filter="upper" maxlength="10" hint="Recibos: REC-000123" required />
                     </div>
                 </x-ui.card>
 
@@ -120,8 +120,8 @@
                         <x-ui.input label="Días de tolerancia" type="number" min="0" max="60" wire:model="billing.grace_days" suffix="días" required />
                         <x-ui.input label="Hora de corte" type="time" wire:model="billing.cut_hour" required />
                         <x-ui.select label="Tipo de bloqueo" wire:model="billing.block_type" :options="['partial' => 'Parcial (portal de aviso / velocidad mínima)', 'total' => 'Total (sin navegación)']" required />
-                        <x-ui.input label="Recargo por pago tardío" type="number" step="0.01" min="0" wire:model="billing.late_fee" prefix="$" required />
-                        <x-ui.input label="Cargo por reconexión" type="number" step="0.01" min="0" wire:model="billing.reconnection_fee" prefix="$" required />
+                        <x-ui.input label="Recargo por pago tardío" type="number" step="0.01" min="0" max="100000" wire:model="billing.late_fee" prefix="$" required />
+                        <x-ui.input label="Cargo por reconexión" type="number" step="0.01" min="0" max="100000" wire:model="billing.reconnection_fee" prefix="$" required />
                     </div>
                 </x-ui.card>
             </div>
@@ -174,15 +174,15 @@
                         </div>
                         @error("gateways.$p.enabled")<p class="text-xs font-medium text-danger-600">{{ $message }}</p>@enderror
                         <div class="grid grid-cols-2 gap-3">
-                            <x-ui.input label="Comisión del gateway" type="number" step="0.01" min="0" wire:model="gateways.{{ $p }}.fee_percent" suffix="%" />
-                            <x-ui.input label="Cargo fijo por operación" type="number" step="0.01" min="0" wire:model="gateways.{{ $p }}.fee_fixed" prefix="$" />
+                            <x-ui.input label="Comisión del gateway" type="number" step="0.01" min="0" max="20" wire:model="gateways.{{ $p }}.fee_percent" suffix="%" />
+                            <x-ui.input label="Cargo fijo por operación" type="number" step="0.01" min="0" max="1000" wire:model="gateways.{{ $p }}.fee_fixed" prefix="$" />
                         </div>
                         @if ($p === 'oxxo')
                             <p class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">OXXO Pay se procesa a través de Stripe y utiliza sus credenciales. Configura primero Stripe.</p>
                         @else
                             <div class="grid grid-cols-1 gap-3">
                                 @foreach (\App\Livewire\Settings\Index::GATEWAY_FIELDS[$p] as $field => [$flabel, $secret])
-                                    <x-ui.input :label="$flabel" :type="$secret ? 'password' : 'text'" autocomplete="off" wire:model="credentials.{{ $p }}.{{ $field }}"
+                                    <x-ui.input :label="$flabel" :type="$secret ? 'password' : 'text'" autocomplete="off" maxlength="500" wire:model="credentials.{{ $p }}.{{ $field }}"
                                                 :placeholder="$masked[$p][$field] ? 'Guardado: '.$masked[$p][$field] : 'Sin configurar'" />
                                 @endforeach
                             </div>
@@ -217,10 +217,10 @@
                 <div class="space-y-4">
                     <x-ui.select label="Proveedor" wire:model.live="messaging.whatsapp_provider" :options="['simulated' => 'Simulado (demo, no envía)', 'meta' => 'WhatsApp Cloud API (Meta)', 'twilio' => 'Twilio WhatsApp']" />
                     @if ($messaging['whatsapp_provider'] === 'meta')
-                        <x-ui.input label="Phone number ID" wire:model="messaging.whatsapp_phone_id" />
-                        <x-ui.input label="Token de acceso" type="password" autocomplete="off" wire:model="secrets.whatsapp_token" :placeholder="$maskedSecrets['whatsapp_token'] ? 'Guardado: '.$maskedSecrets['whatsapp_token'] : 'Sin configurar'" />
+                        <x-ui.input label="Phone number ID" wire:model="messaging.whatsapp_phone_id" filter="digits" maxlength="80" />
+                        <x-ui.input label="Token de acceso" type="password" autocomplete="off" maxlength="1000" wire:model="secrets.whatsapp_token" :placeholder="$maskedSecrets['whatsapp_token'] ? 'Guardado: '.$maskedSecrets['whatsapp_token'] : 'Sin configurar'" />
                     @elseif ($messaging['whatsapp_provider'] === 'twilio')
-                        <x-ui.input label="Número de WhatsApp (Twilio)" wire:model="messaging.twilio_whatsapp_from" placeholder="+14155238886" />
+                        <x-ui.input label="Número de WhatsApp (Twilio)" wire:model="messaging.twilio_whatsapp_from" filter="phone" placeholder="+14155238886" />
                         <p class="text-xs text-slate-500">Usa las credenciales de Twilio de la sección SMS.</p>
                     @endif
                 </div>
@@ -231,9 +231,9 @@
                     <x-ui.select label="Proveedor de SMS" wire:model.live="messaging.sms_provider" :options="['simulated' => 'Simulado (demo, no envía)', 'twilio' => 'Twilio']" />
                     @if ($messaging['sms_provider'] === 'twilio' || $messaging['whatsapp_provider'] === 'twilio')
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <x-ui.input label="Account SID" wire:model="messaging.twilio_sid" />
-                            <x-ui.input label="Auth token" type="password" autocomplete="off" wire:model="secrets.twilio_token" :placeholder="$maskedSecrets['twilio_token'] ? 'Guardado: '.$maskedSecrets['twilio_token'] : 'Sin configurar'" />
-                            <x-ui.input label="Número remitente SMS" wire:model="messaging.twilio_from" placeholder="+15005550006" class="md:col-span-2" />
+                            <x-ui.input label="Account SID" wire:model="messaging.twilio_sid" filter="code" maxlength="80" />
+                            <x-ui.input label="Auth token" type="password" autocomplete="off" maxlength="200" wire:model="secrets.twilio_token" :placeholder="$maskedSecrets['twilio_token'] ? 'Guardado: '.$maskedSecrets['twilio_token'] : 'Sin configurar'" />
+                            <x-ui.input label="Número remitente SMS" wire:model="messaging.twilio_from" filter="phone" placeholder="+15005550006" class="md:col-span-2" />
                         </div>
                     @endif
                 </div>
@@ -266,19 +266,19 @@
         <form wire:submit="saveNetwork" class="grid grid-cols-1 gap-5 xl:grid-cols-2">
             <x-ui.card title="Umbrales de monitoreo" subtitle="Generan alertas de señal, latencia, pérdida de paquetes y anomalías">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <x-ui.input label="Señal mínima aceptable" type="number" step="1" wire:model="network.signal_min_dbm" suffix="dBm" hint="Por debajo se marca señal anormal" />
-                    <x-ui.input label="Latencia máxima" type="number" wire:model="network.latency_max_ms" suffix="ms" />
-                    <x-ui.input label="Pérdida de paquetes máxima" type="number" step="0.1" wire:model="network.packet_loss_max" suffix="%" />
-                    <x-ui.input label="Desconexión masiva" type="number" wire:model="network.mass_disconnect_threshold" suffix="clientes" hint="Clientes caídos a la vez para alerta" />
-                    <x-ui.input label="Factor de consumo anormal" type="number" step="0.5" wire:model="network.usage_anomaly_factor" suffix="× promedio" />
+                    <x-ui.input label="Señal mínima aceptable" type="number" step="1" min="-100" max="-30" wire:model="network.signal_min_dbm" suffix="dBm" hint="Por debajo se marca señal anormal" />
+                    <x-ui.input label="Latencia máxima" type="number" min="1" max="5000" wire:model="network.latency_max_ms" suffix="ms" />
+                    <x-ui.input label="Pérdida de paquetes máxima" type="number" step="0.1" min="0" max="100" wire:model="network.packet_loss_max" suffix="%" />
+                    <x-ui.input label="Desconexión masiva" type="number" min="1" max="10000" wire:model="network.mass_disconnect_threshold" suffix="clientes" hint="Clientes caídos a la vez para alerta" />
+                    <x-ui.input label="Factor de consumo anormal" type="number" step="0.5" min="1" max="50" wire:model="network.usage_anomaly_factor" suffix="× promedio" />
                 </div>
             </x-ui.card>
             <x-ui.card title="Parámetros de expansión (BI)" subtitle="Usados en Business Intelligence → Análisis de expansión">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <x-ui.input label="Inversión de un repetidor nuevo" type="number" step="100" wire:model="bi.repeater_cost_estimate" prefix="$" />
-                    <x-ui.input label="Ampliar repetidor existente" type="number" step="100" wire:model="bi.sector_cost_estimate" prefix="$" hint="Nuevo sector o antena" />
-                    <x-ui.input label="Conversión esperada de prospectos" type="number" wire:model="bi.expected_conversion" suffix="%" />
-                    <x-ui.input label="Radio de agrupación de demanda" type="number" step="0.1" wire:model="bi.cluster_km" suffix="km" />
+                    <x-ui.input label="Inversión de un repetidor nuevo" type="number" step="100" min="0" max="10000000" wire:model="bi.repeater_cost_estimate" prefix="$" />
+                    <x-ui.input label="Ampliar repetidor existente" type="number" step="100" min="0" max="10000000" wire:model="bi.sector_cost_estimate" prefix="$" hint="Nuevo sector o antena" />
+                    <x-ui.input label="Conversión esperada de prospectos" type="number" min="1" max="100" wire:model="bi.expected_conversion" suffix="%" />
+                    <x-ui.input label="Radio de agrupación de demanda" type="number" step="0.1" min="0.3" max="5" wire:model="bi.cluster_km" suffix="km" />
                 </div>
                 <x-ui.button type="submit" icon="check" class="mt-5 w-full">Guardar parámetros</x-ui.button>
             </x-ui.card>
@@ -295,7 +295,7 @@
                                 x-on:click="const t = $root.querySelector('textarea'); const s = t.selectionStart; t.setRangeText('{{ '{'.$v.'}' }}', s, t.selectionEnd, 'end'); t.dispatchEvent(new Event('input')); t.focus()">{{ '{'.$v.'}' }}</button>
                     @endforeach
                 </div>
-                <x-ui.textarea wire:model.live.debounce.600ms="contract" rows="18" class="font-mono text-xs" />
+                <x-ui.textarea wire:model.live.debounce.600ms="contract" rows="18" maxlength="20000" class="font-mono text-xs" />
                 <div class="mt-4 flex flex-wrap justify-between gap-2">
                     <x-ui.button variant="ghost" icon="arrow-uturn-left" wire:click="restoreContract">Plantilla original</x-ui.button>
                     <x-ui.button icon="check" wire:click="saveContract">Guardar plantilla</x-ui.button>
@@ -312,8 +312,8 @@
         <div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
             <x-ui.card title="Comisiones de tu personal">
                 <form wire:submit="saveCommissions" class="space-y-4">
-                    <x-ui.input label="Comisión del cobrador" type="number" step="0.1" wire:model="commissions.collector_percent" suffix="% de lo cobrado en campo" />
-                    <x-ui.input label="Pago al técnico por instalación" type="number" step="1" wire:model="commissions.technician_install_fee" prefix="$" />
+                    <x-ui.input label="Comisión del cobrador" type="number" step="0.1" min="0" max="100" wire:model="commissions.collector_percent" suffix="% de lo cobrado en campo" />
+                    <x-ui.input label="Pago al técnico por instalación" type="number" step="1" min="0" max="100000" wire:model="commissions.technician_install_fee" prefix="$" />
                     <x-ui.button type="submit" icon="check">Guardar comisiones</x-ui.button>
                 </form>
             </x-ui.card>
@@ -368,15 +368,15 @@
 
         <x-ui.modal wire:model="showZone" :title="$zoneId ? 'Editar zona' : 'Nueva zona'">
             <form wire:submit="saveZone" id="zone-form" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <x-ui.input label="Nombre" wire:model="zone.name" required class="sm:col-span-2" />
-                <x-ui.input label="Comunidad" wire:model="zone.community" />
+                <x-ui.input label="Nombre" wire:model="zone.name" filter="text" maxlength="120" required class="sm:col-span-2" />
+                <x-ui.input label="Comunidad" wire:model="zone.community" filter="text" maxlength="120" />
                 <div>
                     <label class="form-label">Color</label>
                     <input type="color" wire:model="zone.color" class="h-9 w-full cursor-pointer rounded-lg border border-slate-300 bg-white p-1">
                 </div>
-                <x-ui.input label="Latitud del centro" wire:model="zone.lat" />
-                <x-ui.input label="Longitud del centro" wire:model="zone.lng" />
-                <x-ui.input label="Costo operativo mensual" type="number" step="0.01" wire:model="zone.monthly_cost" prefix="$" hint="Renta, enlace, energía, personal… (para BI)" class="sm:col-span-2" />
+                <x-ui.input label="Latitud del centro" wire:model="zone.lat" filter="signed" />
+                <x-ui.input label="Longitud del centro" wire:model="zone.lng" filter="signed" />
+                <x-ui.input label="Costo operativo mensual" type="number" step="0.01" min="0" max="10000000" wire:model="zone.monthly_cost" prefix="$" hint="Renta, enlace, energía, personal… (para BI)" class="sm:col-span-2" />
             </form>
             <x-slot:footer>
                 <x-ui.button variant="secondary" x-on:click="open = false">Cancelar</x-ui.button>

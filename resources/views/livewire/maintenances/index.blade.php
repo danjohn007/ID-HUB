@@ -81,7 +81,7 @@
 
     <x-ui.modal wire:model="showForm" :title="$editingId ? 'Editar mantenimiento' : 'Programar mantenimiento'" size="2xl">
         <form wire:submit="save" id="maintenance-form" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <x-ui.input label="Título" wire:model="form.title" placeholder="Cambio de antena sectorial" required class="sm:col-span-2" />
+            <x-ui.input label="Título" wire:model="form.title" filter="text" maxlength="150" placeholder="Cambio de antena sectorial" required class="sm:col-span-2" />
             <x-ui.input label="Inicio" type="datetime-local" wire:model="form.starts_at" required />
             <x-ui.input label="Fin estimado" type="datetime-local" wire:model="form.ends_at" />
             <x-ui.select label="Zona" wire:model.live="form.zone_id" :options="$zones" placeholder="Sin zona" />
@@ -104,7 +104,7 @@
                 </div>
             @endif
 
-            <x-ui.textarea label="Descripción (se incluye en el aviso)" wire:model="form.description" rows="2" class="sm:col-span-2" />
+            <x-ui.textarea label="Descripción (se incluye en el aviso)" wire:model="form.description" rows="2" maxlength="1000" class="sm:col-span-2" />
             <x-ui.select label="Aviso automático" wire:model="form.notify_hours_before" :options="['0' => 'Sin aviso automático', '2' => '2 horas antes', '6' => '6 horas antes', '12' => '12 horas antes', '24' => '24 horas antes', '48' => '48 horas antes', '72' => '72 horas antes']" />
             <div class="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2">
                 <x-heroicon-o-users class="h-5 w-5 text-slate-400" />

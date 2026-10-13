@@ -8,6 +8,7 @@ use App\Models\RouteStop;
 use App\Models\Ticket;
 use App\Services\Field\FieldPlanner;
 use App\Services\Field\FieldTracker;
+use Livewire\Attributes\Renderless;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -56,6 +57,7 @@ class Today extends Component
     {
         $route = $this->ensureRoute($planner);
         $this->toast('Ruta del día lista: '.$route->stops->count().' paradas');
+        $this->refreshMap($planner);
     }
 
     protected function findStop(string $key, FieldPlanner $planner): RouteStop
@@ -80,6 +82,7 @@ class Today extends Component
         $ticket = Ticket::query()->where('technician_id', auth()->id())->findOrFail((int) $id);
         app(FieldTracker::class)->onWay($ticket, auth()->user(), $lat, $lng);
         $this->toast('Se avisó al cliente que vas en camino');
+        $this->refreshMap();
     }
 
     public function arrive(string $key, $lat = null, $lng = null): void
@@ -87,6 +90,7 @@ class Today extends Component
         $stop = $this->findStop($key, app(FieldPlanner::class));
         app(FieldTracker::class)->arrive($stop, auth()->user(), $lat, $lng);
         $this->toast('Llegada registrada'.(is_numeric($lat) ? ' con GPS' : ' (sin GPS)'));
+        $this->refreshMap();
     }
 
     public function depart(string $key, $lat = null, $lng = null): void
@@ -94,6 +98,7 @@ class Today extends Component
         $stop = $this->findStop($key, app(FieldPlanner::class));
         app(FieldTracker::class)->depart($stop, auth()->user(), $lat, $lng);
         $this->toast('Salida registrada');
+        $this->refreshMap();
     }
 
     public function skip(string $key): void
@@ -101,12 +106,29 @@ class Today extends Component
         $stop = $this->findStop($key, app(FieldPlanner::class));
         $stop->update(['status' => 'skipped']);
         $this->toast('Parada omitida', 'warning');
+        $this->refreshMap();
     }
 
     public function shareLocation($lat = null, $lng = null): void
     {
         app(FieldTracker::class)->updateLocation(auth()->user(), $lat, $lng);
         $this->toast(is_numeric($lat) ? 'Ubicación compartida con la oficina' : 'No se pudo obtener el GPS', is_numeric($lat) ? 'success' : 'warning');
+        $this->refreshMap();
+    }
+
+    /** Envía al mapa de la ruta el estado actual de las paradas (atendidas, en sitio, pendientes). */
+    #[Renderless]
+    public function refreshMap(?FieldPlanner $planner = null): void
+    {
+        $planner ??= app(FieldPlanner::class);
+        $route = $this->route($planner);
+        $this->dispatch('map-data-field-map', data: $planner->mapData($this->stops($planner, $route), $this->start($planner, $route)));
+    }
+
+    /** Punto de partida: inicio de la ruta guardada o la ubicación actual del técnico. */
+    protected function start(FieldPlanner $planner, ?FieldRoute $route): ?array
+    {
+        return $route?->start_lat ? ['lat' => (float) $route->start_lat, 'lng' => (float) $route->start_lng, 'label' => 'Inicio'] : $planner->startFor(auth()->user());
     }
 
     public function render(FieldPlanner $planner)
@@ -115,7 +137,7 @@ class Today extends Component
         $stops = $this->stops($planner, $route);
         $done = collect($stops)->whereIn('stop_status', ['done', 'skipped'])->count();
         $next = collect($stops)->first(fn ($s) => ! in_array($s['stop_status'] ?? 'pending', ['done', 'skipped'], true));
-        $start = $route?->start_lat ? ['lat' => (float) $route->start_lat, 'lng' => (float) $route->start_lng, 'label' => 'Inicio'] : $planner->startFor(auth()->user());
+        $start = $this->start($planner, $route);
 
         return view('livewire.field.today', [
             'route' => $route,

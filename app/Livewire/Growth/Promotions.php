@@ -6,6 +6,7 @@ use App\Livewire\Concerns\Toasts;
 use App\Models\InstallationOrder;
 use App\Models\Plan;
 use App\Models\Promotion;
+use App\Support\InputRules;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
@@ -86,7 +87,7 @@ class Promotions extends Component
     {
         $tid = tenant()->id;
         $data = $this->validate([
-            'form.name' => 'required|string|max:120',
+            'form.name' => 'required|string|max:120|'.InputRules::TEXT,
             'form.description' => 'nullable|string|max:190',
             'form.type' => ['required', Rule::in(array_keys(config('wisp.promotion_types')))],
             'form.value' => [Rule::requiredIf(in_array($this->form['type'], ['descuento_pct', 'descuento_monto'], true)), 'nullable', 'numeric', 'min:0',
@@ -99,7 +100,7 @@ class Promotions extends Component
             'form.ends_at' => 'nullable|date|after_or_equal:form.starts_at',
             'form.show_in_portal' => 'boolean',
             'form.active' => 'boolean',
-            'form.uses' => 'required|integer|min:0',
+            'form.uses' => 'required|integer|min:0|max:1000000',
             'image' => 'nullable|image|max:4096',
         ], [], [
             'form.name' => 'nombre', 'form.type' => 'tipo', 'form.value' => 'valor', 'form.months' => 'meses', 'form.code' => 'código',

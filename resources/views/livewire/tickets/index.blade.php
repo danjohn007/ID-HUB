@@ -207,8 +207,8 @@
             <x-ui.select label="Técnico" wire:model="form.technician_id" :options="$technicians" placeholder="Sin asignar" />
             <x-ui.select label="Origen" wire:model="form.source" :options="$this->sources()" />
             <x-ui.select label="Repetidor relacionado" wire:model="form.repeater_id" :options="$repeaters" placeholder="Del cliente / ninguno" hint="Para fallas de infraestructura sin cliente específico." class="sm:col-span-2" />
-            <x-ui.input label="Asunto" wire:model="form.subject" placeholder="Si lo dejas vacío se usa la categoría" class="sm:col-span-2" />
-            <x-ui.textarea label="Descripción" wire:model="form.description" rows="4" class="sm:col-span-2" placeholder="Síntomas, horario de disponibilidad del cliente, referencias..." />
+            <x-ui.input label="Asunto" wire:model="form.subject" filter="text" placeholder="Si lo dejas vacío se usa la categoría" class="sm:col-span-2" />
+            <x-ui.textarea label="Descripción" wire:model="form.description" rows="4" maxlength="3000" class="sm:col-span-2" placeholder="Síntomas, horario de disponibilidad del cliente, referencias..." />
         </div>
         <p class="mt-3 text-xs text-slate-500">El SLA se calcula según la prioridad y se notifica al cliente por WhatsApp.</p>
         <x-slot:footer>
@@ -218,7 +218,7 @@
     </x-ui.modal>
 
     <x-ui.modal wire:model="showResolve" title="Resolver ticket" size="md">
-        <x-ui.textarea label="Solución aplicada" wire:model="resolveNote" rows="3" placeholder="Ej. Se realineó la antena y se cambió el conector RJ45" required />
+        <x-ui.textarea label="Solución aplicada" wire:model="resolveNote" rows="3" maxlength="190" placeholder="Ej. Se realineó la antena y se cambió el conector RJ45" required />
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>
             <x-ui.button variant="success" icon="check" wire:click="resolve">Marcar como resuelto</x-ui.button>

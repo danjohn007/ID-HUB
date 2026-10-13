@@ -126,7 +126,16 @@
                 <h2 class="mt-2 text-4xl font-extrabold tracking-tight text-navy-900">Inicia sesión</h2>
                 <p class="mt-2 text-[15px] text-slate-500">Entra a tu panel de cobranza, red y operación de campo.</p>
 
-                <form wire:submit="login" class="mt-8 space-y-5" x-data="{ show: false, forgot: false }">
+                <form wire:submit="login" class="mt-8 space-y-5"
+                      x-data="{
+                          show: false, forgot: false, lock: 0, timer: null,
+                          startLock(seconds) {
+                              this.lock = Math.max(1, parseInt(seconds) || 0);
+                              clearInterval(this.timer);
+                              this.timer = setInterval(() => { if (--this.lock <= 0) { this.lock = 0; clearInterval(this.timer); } }, 1000);
+                          },
+                      }"
+                      x-on:login-locked.window="startLock($event.detail.seconds)">
                     <div>
                         <label for="email" class="mb-1.5 block text-sm font-semibold text-navy-900">Correo electrónico</label>
                         <div class="relative">
@@ -134,7 +143,10 @@
                             <input id="email" type="email" wire:model="email" autocomplete="username" autofocus required placeholder="tu@empresa.com"
                                    @class(['form-input h-12 rounded-xl pl-11 text-[15px]', 'border-danger-500 focus:border-danger-500 focus:ring-danger-100' => $errors->has('email')])>
                         </div>
-                        @error('email')<p class="mt-1.5 text-xs font-medium text-danger-600">{{ $message }}</p>@enderror
+                        @error('email')<p x-show="lock === 0" class="mt-1.5 text-xs font-medium text-danger-600">{{ $message }}</p>@enderror
+                        <p x-show="lock > 0" x-cloak class="mt-1.5 text-xs font-medium text-danger-600">
+                            Demasiados intentos. Intenta de nuevo en <span class="tabular-nums" x-text="lock"></span> <span x-text="lock === 1 ? 'segundo' : 'segundos'"></span>.
+                        </p>
                     </div>
 
                     <div>
@@ -163,7 +175,7 @@
                         <span>Pide al administrador de tu WISP que la restablezca en <span class="font-semibold">Configuración → Usuarios</span>.</span>
                     </div>
 
-                    <button type="submit" wire:loading.attr="disabled" wire:target="login"
+                    <button type="submit" wire:loading.attr="disabled" wire:target="login" x-bind:disabled="lock > 0"
                             class="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 text-[15px] font-semibold text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-700 hover:shadow-brand-700/30 focus:ring-4 focus:ring-brand-200 focus:outline-none disabled:opacity-70">
                         <span wire:loading.remove wire:target="login" class="flex items-center gap-2">Entrar <x-heroicon-m-arrow-right class="h-5 w-5 transition group-hover:translate-x-0.5" /></span>
                         <span wire:loading wire:target="login" class="flex items-center gap-2">

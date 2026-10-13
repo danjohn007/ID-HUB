@@ -33,7 +33,7 @@ class RouteOptimizer
         $ordered = [];
         if ($located) {
             $groups = $byPriority
-                ? collect($located)->groupBy(fn ($p) => (int) ($p['rank'] ?? 9))->sortKeys()->map->values()->all()
+                ? collect($located)->groupBy(fn ($p) => (int) ($p['rank'] ?? 9))->sortKeys()->map(fn ($g) => $g->values()->all())->all()
                 : [$located];
             $cursor = $start;
             foreach ($groups as $group) {

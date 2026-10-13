@@ -110,16 +110,16 @@
     <x-ui.modal wire:model="showTowerForm" :title="$towerId ? 'Editar torre' : 'Nueva torre'" size="3xl">
         <form wire:submit="saveTower" class="space-y-4">
             <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-                <x-ui.input label="Clave" wire:model="tform.code" required />
-                <x-ui.input label="Nombre" wire:model="tform.name" required class="md:col-span-2" />
+                <x-ui.input label="Clave" wire:model="tform.code" filter="upper" maxlength="30" required />
+                <x-ui.input label="Nombre" wire:model="tform.name" filter="text" maxlength="150" required class="md:col-span-2" />
                 <x-ui.select label="Estado" wire:model="tform.status" :options="config('wisp.device_status')" />
                 <x-ui.select label="Zona" wire:model="tform.zone_id" :options="$zones" placeholder="—" />
-                <x-ui.input label="Dirección" wire:model="tform.address" class="md:col-span-3" />
-                <x-ui.input label="Latitud" wire:model.blur="tform.lat" required />
-                <x-ui.input label="Longitud" wire:model.blur="tform.lng" required />
-                <x-ui.input label="Altura" type="number" step="0.1" wire:model="tform.height_m" suffix="m" />
-                <x-ui.input label="Costo mensual" type="number" step="0.01" wire:model="tform.monthly_cost" prefix="$" />
-                <x-ui.input label="Propietario / renta" wire:model="tform.owner" class="md:col-span-4" />
+                <x-ui.input label="Dirección" wire:model="tform.address" filter="text" maxlength="190" class="md:col-span-3" />
+                <x-ui.input label="Latitud" wire:model.blur="tform.lat" filter="signed" required />
+                <x-ui.input label="Longitud" wire:model.blur="tform.lng" filter="signed" required />
+                <x-ui.input label="Altura" type="number" step="0.1" min="0" max="500" wire:model="tform.height_m" suffix="m" />
+                <x-ui.input label="Costo mensual" type="number" step="0.01" min="0" max="10000000" wire:model="tform.monthly_cost" prefix="$" />
+                <x-ui.input label="Propietario / renta" wire:model="tform.owner" filter="text" maxlength="150" class="md:col-span-4" />
             </div>
             <div wire:key="tpick-{{ $pickerVersion }}">
                 <x-ui.map :id="'tpick'.$pickerVersion" picker picker-lat="tform.lat" picker-lng="tform.lng"
@@ -127,7 +127,7 @@
                           :center="! empty($tform['lat']) && ! empty($tform['lng']) ? [(float) $tform['lat'], (float) $tform['lng']] : null"
                           :zoom="! empty($tform['lat']) ? 15 : 12" height="240px" :layers-control="false" />
             </div>
-            <x-ui.textarea label="Notas" wire:model="tform.notes" rows="2" />
+            <x-ui.textarea label="Notas" wire:model="tform.notes" rows="2" maxlength="2000" />
         </form>
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>
@@ -139,15 +139,15 @@
     <x-ui.modal wire:model="showSectorForm" :title="$sectorId ? 'Editar sector' : 'Nuevo sector'" size="2xl">
         <form wire:submit="saveSector" class="grid grid-cols-1 gap-4 md:grid-cols-3">
             <x-ui.select label="Torre" wire:model="sform.tower_id" :options="$towerOptions" placeholder="Selecciona..." required />
-            <x-ui.input label="Nombre" wire:model="sform.name" required placeholder="Sector Norte 120°" />
+            <x-ui.input label="Nombre" wire:model="sform.name" filter="text" maxlength="150" required placeholder="Sector Norte 120°" />
             <x-ui.select label="Repetidor que atiende" wire:model="sform.repeater_id" :options="$repeaterOptions" placeholder="—" />
             <x-ui.input label="Azimut" type="number" min="0" max="359" wire:model="sform.azimuth" suffix="°" required />
             <x-ui.input label="Apertura" type="number" min="1" max="360" wire:model="sform.beamwidth" suffix="°" required />
-            <x-ui.input label="Alcance" type="number" step="0.1" wire:model="sform.range_km" suffix="km" required />
-            <x-ui.input label="Altura" type="number" step="0.1" wire:model="sform.height_m" suffix="m" />
-            <x-ui.input label="Frecuencia" wire:model="sform.frequency" placeholder="5.8 GHz / canal 5745" />
-            <x-ui.input label="Potencia" type="number" step="0.5" wire:model="sform.power_dbm" suffix="dBm" />
-            <x-ui.input label="Tecnología" wire:model="sform.technology" placeholder="airMAX AC, LTU, ePMP..." class="md:col-span-3" />
+            <x-ui.input label="Alcance" type="number" step="0.1" min="0.1" max="100" wire:model="sform.range_km" suffix="km" required />
+            <x-ui.input label="Altura" type="number" step="0.1" min="0" max="500" wire:model="sform.height_m" suffix="m" />
+            <x-ui.input label="Frecuencia" wire:model="sform.frequency" filter="text" maxlength="60" placeholder="5.8 GHz / canal 5745" />
+            <x-ui.input label="Potencia" type="number" step="0.5" min="-30" max="60" wire:model="sform.power_dbm" suffix="dBm" />
+            <x-ui.input label="Tecnología" wire:model="sform.technology" filter="text" maxlength="80" placeholder="airMAX AC, LTU, ePMP..." class="md:col-span-3" />
         </form>
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>

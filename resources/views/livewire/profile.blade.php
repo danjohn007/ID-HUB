@@ -29,8 +29,8 @@
 
         <x-ui.card title="Datos personales" class="xl:col-span-2">
             <form wire:submit="saveProfile" class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <x-ui.input label="Nombre" wire:model="name" required />
-                <x-ui.input label="Teléfono" type="tel" wire:model="phone" />
+                <x-ui.input label="Nombre" wire:model="name" filter="name" required />
+                <x-ui.input label="Teléfono" type="tel" wire:model="phone" filter="phone" />
                 <x-ui.input label="Correo (usuario de acceso)" :value="$user->email" disabled hint="Solicita al administrador cambiar tu correo" class="md:col-span-2" />
                 <div class="md:col-span-2"><x-ui.button type="submit" icon="check">Guardar datos</x-ui.button></div>
             </form>
@@ -38,9 +38,9 @@
 
         <x-ui.card title="Cambiar contraseña" subtitle="Al cambiarla se cierran tus sesiones en otros dispositivos" class="xl:col-span-2">
             <form wire:submit="savePassword" class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <x-ui.input label="Contraseña actual" type="password" autocomplete="current-password" wire:model="current_password" required />
-                <x-ui.input label="Nueva contraseña" type="password" autocomplete="new-password" wire:model="password" hint="Mínimo 8 caracteres con letras y números" required />
-                <x-ui.input label="Confirmar nueva contraseña" type="password" autocomplete="new-password" wire:model="password_confirmation" required />
+                <x-ui.input label="Contraseña actual" type="password" autocomplete="current-password" wire:model="current_password" maxlength="100" required />
+                <x-ui.input label="Nueva contraseña" type="password" autocomplete="new-password" wire:model="password" maxlength="100" hint="Mínimo 8 caracteres con letras y números" required />
+                <x-ui.input label="Confirmar nueva contraseña" type="password" autocomplete="new-password" wire:model="password_confirmation" maxlength="100" required />
                 <div class="md:col-span-3"><x-ui.button type="submit" icon="lock-closed">Actualizar contraseña</x-ui.button></div>
             </form>
         </x-ui.card>

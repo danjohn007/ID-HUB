@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\InputRules;
 use Database\Seeders\ProductionSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -39,9 +40,9 @@ class InstallController extends Controller
     {
         $this->guard();
         $data = $request->validate([
-            'name' => 'required|string|max:120',
+            'name' => 'required|string|max:80|'.InputRules::NAME,
             'email' => 'required|email|max:150',
-            'password' => 'required|string|min:10|confirmed',
+            'password' => 'required|string|min:10|max:255|confirmed',
             'demo' => 'nullable|boolean',
         ]);
 

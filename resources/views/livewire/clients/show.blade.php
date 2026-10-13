@@ -407,10 +407,10 @@
     <x-ui.modal wire:model="showPayment" title="Registrar pago" size="md">
         <div class="space-y-4">
             <div class="rounded-lg bg-slate-50 p-3 text-sm">Saldo pendiente: <b>{{ money($client->balance) }}</b></div>
-            <x-ui.input label="Importe" type="number" step="0.01" wire:model="payment.amount" prefix="$" required />
+            <x-ui.input label="Importe" type="number" step="0.01" min="1" max="1000000" wire:model="payment.amount" prefix="$" required />
             <x-ui.select label="Método de pago" wire:model.live="payment.method" :options="config('wisp.payment_methods')" />
-            <x-ui.input label="Referencia" wire:model="payment.reference" placeholder="Folio de transferencia, autorización..." />
-            <x-ui.input label="Notas" wire:model="payment.notes" />
+            <x-ui.input label="Referencia" wire:model="payment.reference" filter="text" maxlength="120" placeholder="Folio de transferencia, autorización..." />
+            <x-ui.input label="Notas" wire:model="payment.notes" maxlength="190" />
             <x-ui.toggle wire:model="payment.notify" label="Enviar confirmación por WhatsApp" />
             @if ($client->service_status === 'suspendido')
                 <div class="rounded-lg bg-success-50 p-3 text-xs text-success-700">Si el pago liquida el saldo, el servicio se reactivará automáticamente en MikroTik.</div>
@@ -425,8 +425,8 @@
     <x-ui.modal wire:model="showCharge" title="Agregar cargo" size="md">
         <div class="space-y-4">
             <x-ui.select label="Tipo" wire:model="charge.type" :options="config('wisp.charge_types')" />
-            <x-ui.input label="Concepto" wire:model="charge.description" required />
-            <x-ui.input label="Importe (IVA incluido)" type="number" step="0.01" wire:model="charge.amount" prefix="$" required />
+            <x-ui.input label="Concepto" wire:model="charge.description" filter="text" required />
+            <x-ui.input label="Importe (IVA incluido)" type="number" step="0.01" min="1" wire:model="charge.amount" prefix="$" required />
             <x-ui.input label="Fecha límite" type="date" wire:model="charge.due_date" required />
         </div>
         <x-slot:footer>
@@ -437,7 +437,7 @@
 
     <x-ui.modal wire:model="showSuspend" title="Suspender servicio" size="md">
         <p class="mb-3 text-sm text-slate-600">Se bloqueará el servicio en MikroTik ({{ ($client->plan?->block_type ?: tenant()->setting('billing.block_type')) === 'partial' ? 'bloqueo parcial: se redirige al portal de pago' : 'bloqueo total' }}) y se notificará al cliente.</p>
-        <x-ui.input label="Motivo" wire:model="reason" placeholder="Falta de pago" />
+        <x-ui.input label="Motivo" wire:model="reason" maxlength="190" placeholder="Falta de pago" />
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>
             <x-ui.button variant="danger" icon="pause" wire:click="suspend">Suspender</x-ui.button>
@@ -474,8 +474,8 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <x-ui.select label="Categoría" wire:model="ticket.category" :options="config('wisp.ticket_categories')" />
             <x-ui.select label="Prioridad" wire:model="ticket.priority" :options="config('wisp.ticket_priorities')" />
-            <x-ui.input label="Asunto" wire:model="ticket.subject" class="sm:col-span-2" required />
-            <x-ui.textarea label="Descripción" wire:model="ticket.description" class="sm:col-span-2" />
+            <x-ui.input label="Asunto" wire:model="ticket.subject" filter="text" class="sm:col-span-2" required />
+            <x-ui.textarea label="Descripción" wire:model="ticket.description" maxlength="2000" class="sm:col-span-2" />
         </div>
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>
@@ -486,7 +486,7 @@
     <x-ui.modal wire:model="showMessage" title="Enviar mensaje" size="md">
         <div class="space-y-4">
             <x-ui.select label="Canal" wire:model="message.channel" :options="['whatsapp' => 'WhatsApp', 'sms' => 'SMS', 'email' => 'Correo']" />
-            <x-ui.textarea label="Mensaje" wire:model="message.body" rows="4" hint="Variables: {nombre}, {saldo}, {plan}, {fecha_limite}, {empresa}" />
+            <x-ui.textarea label="Mensaje" wire:model="message.body" rows="4" maxlength="1000" hint="Variables: {nombre}, {saldo}, {plan}, {fecha_limite}, {empresa}" />
         </div>
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>

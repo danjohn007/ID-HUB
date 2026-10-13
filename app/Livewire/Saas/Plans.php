@@ -5,6 +5,7 @@ namespace App\Livewire\Saas;
 use App\Livewire\Concerns\Toasts;
 use App\Livewire\Saas\Concerns\PlatformContext;
 use App\Models\SaasPlan;
+use App\Support\InputRules;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -63,13 +64,13 @@ class Plans extends Component
     public function save(): void
     {
         $data = $this->validate([
-            'form.code' => ['required', 'alpha_dash', 'max:40', Rule::unique('saas_plans', 'code')->ignore($this->editingId)],
-            'form.name' => 'required|string|max:80',
+            'form.code' => ['required', 'alpha_dash', 'max:40', InputRules::CODE, Rule::unique('saas_plans', 'code')->ignore($this->editingId)],
+            'form.name' => 'required|string|max:80|'.InputRules::TEXT,
             'form.description' => 'nullable|string|max:190',
             'form.price_monthly' => 'required|numeric|min:0|max:1000000',
-            'form.max_clients' => 'nullable|integer|min:1',
-            'form.max_devices' => 'nullable|integer|min:1',
-            'form.max_users' => 'nullable|integer|min:1',
+            'form.max_clients' => 'nullable|integer|min:1|max:1000000',
+            'form.max_devices' => 'nullable|integer|min:1|max:1000000',
+            'form.max_users' => 'nullable|integer|min:1|max:1000000',
             'form.commission_percent' => 'required|numeric|between:0,100',
             'form.commission_fixed' => 'required|numeric|min:0|max:100000',
             'form.features' => 'array',

@@ -20,11 +20,11 @@
         <form method="POST" action="{{ url('/install') }}" class="card mt-6 space-y-4 p-6">
             @csrf
             <h2 class="font-bold text-navy-900">Superadministrador</h2>
-            <x-ui.input label="Nombre" name="name" :value="old('name', 'Superadministrador')" required />
-            <x-ui.input label="Correo" name="email" type="email" :value="old('email')" required />
+            <x-ui.input label="Nombre" name="name" :value="old('name', 'Superadministrador')" filter="name" required />
+            <x-ui.input label="Correo" name="email" type="email" :value="old('email')" filter="email" required />
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <x-ui.input label="Contraseña (mín. 10)" name="password" type="password" required />
-                <x-ui.input label="Confirmar contraseña" name="password_confirmation" type="password" required />
+                <x-ui.input label="Contraseña (mín. 10)" name="password" type="password" maxlength="255" required />
+                <x-ui.input label="Confirmar contraseña" name="password_confirmation" type="password" maxlength="255" required />
             </div>
             <label class="flex items-center gap-2 text-sm text-slate-600">
                 <input type="checkbox" name="demo" value="1" class="rounded border-slate-300"> Cargar datos de demostración (2 WISP ficticios)

@@ -3,9 +3,14 @@
                gps(method, ...args) {
                    this.busy = method + (args[0] || '');
                    const run = (lat, lng) => this.$wire.call(method, ...args, lat, lng).finally(() => this.busy = null);
-                   if (!navigator.geolocation) return run(null, null);
-                   navigator.geolocation.getCurrentPosition((p) => run(p.coords.latitude, p.coords.longitude), () => run(null, null), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+                   wispGeo.get().then((c) => run(c.lat, c.lng)).catch((e) => {
+                       wispGeo.warn(e);
+                       if (method === 'shareLocation') { this.busy = null; return; }
+                       run(null, null);
+                   });
                } }">
+
+    <x-ui.geo-permission />
 
     {{-- Encabezado --}}
     <div class="relative mb-4 overflow-hidden rounded-2xl bg-navy-900 p-5 text-white shadow-lg">
@@ -42,7 +47,7 @@
 
     @if ($stops)
         <div class="mb-4">
-            <button type="button" @click="showMap = !showMap; if (showMap) setTimeout(() => window.dispatchEvent(new CustomEvent('map-data-field-map', { detail: { data: @js($map) } })), 300)" class="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-xs">
+            <button type="button" @click="showMap = !showMap; if (showMap) setTimeout(() => $wire.refreshMap(), 300)" class="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-xs">
                 <span class="flex items-center gap-2"><x-heroicon-o-map-pin class="h-5 w-5 text-brand-600" /> Ver mapa de la ruta</span>
                 <x-heroicon-m-chevron-down class="h-5 w-5 text-slate-400 transition" ::class="showMap && 'rotate-180'" />
             </button>

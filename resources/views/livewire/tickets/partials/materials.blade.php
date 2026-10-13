@@ -2,9 +2,9 @@
 @if ($canWork && $t->isOpen())
     <div class="mb-4 grid grid-cols-6 gap-2">
         <x-ui.select wire:model="material.item_id" :options="$items" placeholder="Artículo del inventario..." class="col-span-6" />
-        <x-ui.input type="number" step="0.01" min="0.01" wire:model="material.quantity" placeholder="Cant." class="col-span-2" />
+        <x-ui.input type="number" step="0.01" min="0.01" max="100000" wire:model="material.quantity" placeholder="Cant." class="col-span-2" />
         <x-ui.select wire:model="material.type" :options="['instalacion' => 'Instalación', 'salida' => 'Salida']" class="col-span-4 sm:col-span-2" />
-        <x-ui.input wire:model="material.serial" placeholder="Serie (opcional)" class="col-span-6 sm:col-span-2" />
+        <x-ui.input wire:model="material.serial" filter="text" maxlength="120" placeholder="Serie (opcional)" class="col-span-6 sm:col-span-2" />
         <x-ui.button icon="plus" wire:click="addMaterial" class="col-span-6">Registrar material</x-ui.button>
     </div>
 @endif

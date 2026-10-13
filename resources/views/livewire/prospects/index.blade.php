@@ -220,19 +220,19 @@
     <x-ui.modal wire:model="showForm" :title="$editingId ? 'Editar prospecto' : 'Nuevo prospecto'" size="4xl">
         <form wire:submit="save" id="prospect-form" class="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div class="grid grid-cols-2 gap-3 content-start">
-                <x-ui.input label="Nombre completo" wire:model="form.name" class="col-span-2" required />
-                <x-ui.input label="Teléfono" wire:model="form.phone" inputmode="tel" />
-                <x-ui.input label="WhatsApp" wire:model="form.whatsapp" inputmode="tel" />
-                <x-ui.input label="Correo" type="email" wire:model="form.email" class="col-span-2" />
-                <x-ui.input label="Dirección" wire:model="form.address" class="col-span-2" />
+                <x-ui.input label="Nombre completo" wire:model="form.name" filter="name" class="col-span-2" required />
+                <x-ui.input label="Teléfono" wire:model="form.phone" inputmode="tel" filter="phone" />
+                <x-ui.input label="WhatsApp" wire:model="form.whatsapp" inputmode="tel" filter="phone" />
+                <x-ui.input label="Correo" type="email" wire:model="form.email" filter="email" class="col-span-2" />
+                <x-ui.input label="Dirección" wire:model="form.address" filter="text" maxlength="190" class="col-span-2" />
                 <x-ui.select label="Plan deseado" wire:model="form.desired_plan_id" :options="$plans->mapWithKeys(fn ($pl) => [$pl->id => $pl->name.' · '.$pl->speedLabel().' · '.money($pl->price)])" placeholder="Sin definir" />
                 <x-ui.select label="Zona" wire:model="form.zone_id" :options="$zones" placeholder="Automática" />
                 <x-ui.select label="Fuente" wire:model="form.source" :options="config('wisp.prospect_sources')" required />
                 <x-ui.select label="Estado" wire:model="form.status" :options="config('wisp.prospect_status')" required />
                 <x-ui.select label="Asignado a" wire:model="form.assigned_to" :options="$users" placeholder="Sin asignar" />
                 <x-ui.input label="Fecha de solicitud" type="date" wire:model="form.date" />
-                <x-ui.input label="Código de referido" wire:model="form.referral_code" placeholder="INVITA-1234" class="col-span-2" />
-                <x-ui.textarea label="Notas" wire:model="form.notes" rows="2" class="col-span-2" />
+                <x-ui.input label="Código de referido" wire:model="form.referral_code" filter="upper" placeholder="INVITA-1234" class="col-span-2" />
+                <x-ui.textarea label="Notas" wire:model="form.notes" rows="2" maxlength="2000" class="col-span-2" />
             </div>
             <div>
                 <div class="mb-1 flex items-center justify-between">
@@ -248,8 +248,8 @@
                               :circles="\App\Support\MapData::coverageCircles()" :layers-control="false" />
                 </div>
                 <div class="mt-2 grid grid-cols-2 gap-2">
-                    <x-ui.input wire:model.live.debounce.600ms="form.lat" placeholder="Latitud" />
-                    <x-ui.input wire:model.live.debounce.600ms="form.lng" placeholder="Longitud" />
+                    <x-ui.input wire:model.live.debounce.600ms="form.lat" filter="signed" placeholder="Latitud" />
+                    <x-ui.input wire:model.live.debounce.600ms="form.lng" filter="signed" placeholder="Longitud" />
                 </div>
                 @if ($coverage)
                     <div @class(['mt-3 flex items-start gap-2 rounded-lg p-3 text-sm', 'bg-success-50 text-success-700' => $coverage['ok'], 'bg-danger-50 text-danger-700' => ! $coverage['ok']])>
@@ -279,7 +279,7 @@
             <x-ui.select label="Plan" wire:model="order.plan_id" :options="$plans->mapWithKeys(fn ($pl) => [$pl->id => $pl->name.' · '.$pl->speedLabel().' · '.money($pl->price).' · instalación '.money($pl->installation_fee)])" placeholder="Selecciona..." required />
             <x-ui.select label="Promoción" wire:model="order.promotion_id" :options="$promotions->mapWithKeys(fn ($pr) => [$pr->id => $pr->name.' · '.$pr->valueLabel()])" placeholder="Sin promoción" />
             <x-ui.select label="Técnico (opcional)" wire:model="order.technician_id" :options="$technicians" placeholder="Asignar después" />
-            <x-ui.textarea label="Notas" wire:model="order.notes" rows="2" />
+            <x-ui.textarea label="Notas" wire:model="order.notes" rows="2" maxlength="1000" />
         </form>
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>

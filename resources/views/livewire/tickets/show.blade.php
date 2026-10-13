@@ -1,4 +1,4 @@
-<div x-data="{ busy: null, gps(method) { this.busy = method; const run = (lat, lng) => this.$wire.call(method, lat, lng).finally(() => this.busy = null); if (!navigator.geolocation) return run(null, null); navigator.geolocation.getCurrentPosition((p) => run(p.coords.latitude, p.coords.longitude), () => run(null, null), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }); } }">
+<div x-data="{ busy: null, gps(method) { this.busy = method; const run = (lat, lng) => this.$wire.call(method, lat, lng).finally(() => this.busy = null); wispGeo.get().then((c) => run(c.lat, c.lng)).catch((e) => { wispGeo.warn(e); run(null, null); }); } }">
     <x-ui.page-header :title="'Ticket '.$t->folio" :subtitle="$t->subject" :breadcrumbs="['Tickets' => route('tickets.index'), $t->folio => null]">
         <x-ui.button variant="secondary" icon="document-arrow-down" :href="route('documents.ticket', $t)" :navigate="false" target="_blank">Evidencia de servicio (PDF)</x-ui.button>
         @if ($canWork)
@@ -75,7 +75,7 @@
             <x-ui.card title="Historial y comentarios">
                 @if ($canWork)
                     <form wire:submit="addComment" class="mb-5">
-                        <x-ui.textarea wire:model="commentBody" rows="2" placeholder="Escribe un comentario o avance..." />
+                        <x-ui.textarea wire:model="commentBody" rows="2" maxlength="2000" placeholder="Escribe un comentario o avance..." />
                         <div class="mt-2 flex items-center justify-between gap-3">
                             <x-ui.toggle wire:model="commentInternal" label="Nota interna" description="No visible para el cliente" />
                             <x-ui.button type="submit" icon="paper-airplane" wire:loading.attr="disabled" wire:target="addComment">Comentar</x-ui.button>
@@ -210,7 +210,7 @@
                     </label>
                 @endforeach
             </div>
-            <x-ui.textarea :label="$newStatus === 'resuelto' ? 'Solución aplicada' : 'Nota (opcional)'" wire:model="statusNote" rows="3" placeholder="{{ $newStatus === 'resuelto' ? 'Describe qué se hizo para resolver la falla' : 'Motivo del cambio' }}" />
+            <x-ui.textarea :label="$newStatus === 'resuelto' ? 'Solución aplicada' : 'Nota (opcional)'" wire:model="statusNote" rows="3" maxlength="190" placeholder="{{ $newStatus === 'resuelto' ? 'Describe qué se hizo para resolver la falla' : 'Motivo del cambio' }}" />
             @error('newStatus')<p class="text-xs text-danger-600">{{ $message }}</p>@enderror
             @if (in_array($newStatus, ['en_proceso', 'resuelto', 'cerrado']))
                 <p class="text-xs text-slate-500">Se notificará al cliente sobre la actualización.</p>
@@ -224,10 +224,10 @@
 
     <x-ui.modal wire:model="showEdit" title="Editar ticket" size="lg">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <x-ui.input label="Asunto" wire:model="edit.subject" class="sm:col-span-2" required />
+            <x-ui.input label="Asunto" wire:model="edit.subject" filter="text" class="sm:col-span-2" required />
             <x-ui.select label="Categoría" wire:model="edit.category" :options="config('wisp.ticket_categories')" />
             <x-ui.select label="Prioridad" wire:model="edit.priority" :options="config('wisp.ticket_priorities')" hint="Cambiar la prioridad recalcula el SLA." />
-            <x-ui.textarea label="Descripción" wire:model="edit.description" rows="4" class="sm:col-span-2" />
+            <x-ui.textarea label="Descripción" wire:model="edit.description" rows="4" maxlength="3000" class="sm:col-span-2" />
         </div>
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>

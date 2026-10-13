@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Plan;
 use App\Models\Prospect;
 use App\Support\Audit;
+use App\Support\InputRules;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -49,10 +50,10 @@ class ReferralController extends Controller
     {
         $referrer = $this->resolve($code);
         $data = $request->validate([
-            'name' => 'required|string|max:120',
-            'phone' => 'required|string|max:30',
+            'name' => 'required|string|max:80|'.InputRules::NAME,
+            'phone' => 'required|string|max:20|'.InputRules::PHONE,
             'email' => 'nullable|email|max:150',
-            'address' => 'required|string|max:190',
+            'address' => 'required|string|max:190|'.InputRules::TEXT,
             'desired_plan_id' => ['nullable', Rule::exists('plans', 'id')->where('tenant_id', $referrer->tenant_id)->where('active', true)],
             'notes' => 'nullable|string|max:500',
         ], [], ['name' => 'nombre', 'phone' => 'teléfono', 'email' => 'correo', 'address' => 'domicilio', 'desired_plan_id' => 'plan', 'notes' => 'comentarios']);

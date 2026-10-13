@@ -131,7 +131,7 @@
                 @if ($cancelPaymentModel->cash_cut_id) El corte de caja se recalcula. @endif
             </div>
         @endif
-        <x-ui.textarea label="Motivo" wire:model="cancelReason" name="cancelReason" rows="2" required />
+        <x-ui.textarea label="Motivo" wire:model="cancelReason" name="cancelReason" rows="2" maxlength="150" required />
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Volver</x-ui.button>
             <x-ui.button variant="danger" icon="x-circle" wire:click="cancelPayment">Cancelar pago</x-ui.button>

@@ -40,14 +40,14 @@
         @endif
 
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <x-ui.input label="Importe" type="number" step="0.01" min="1" prefix="$" wire:model="pay.amount" name="pay.amount" required />
+            <x-ui.input label="Importe" type="number" step="0.01" min="1" max="1000000" prefix="$" wire:model="pay.amount" name="pay.amount" required />
             <x-ui.select label="Método" wire:model.live="pay.method" name="pay.method" :options="collect(config('wisp.payment_methods'))->except(['saldo', 'referido'])" required />
             @if ($pay['method'] === 'efectivo')
                 <x-ui.select label="Cobrador (corte de caja)" wire:model="pay.collector_id" :options="$this->collectorOptions" placeholder="Cobro en oficina (sin cobrador)" hint="Si lo recibió un cobrador, se suma a su corte abierto." />
             @else
-                <x-ui.input label="Referencia" wire:model="pay.reference" name="pay.reference" placeholder="Folio, autorización..." />
+                <x-ui.input label="Referencia" wire:model="pay.reference" name="pay.reference" filter="text" maxlength="120" placeholder="Folio, autorización..." />
             @endif
-            <x-ui.input label="Notas" wire:model="pay.notes" name="pay.notes" />
+            <x-ui.input label="Notas" wire:model="pay.notes" name="pay.notes" maxlength="190" />
         </div>
         <x-ui.toggle wire:model="pay.notify" label="Enviar confirmación al cliente" description="WhatsApp/SMS con el folio del pago." />
         <p class="text-xs text-slate-500">El pago se aplica a los cargos más antiguos; el excedente queda como saldo a favor. Si el cliente está suspendido y liquida su saldo, se reactiva automáticamente.</p>

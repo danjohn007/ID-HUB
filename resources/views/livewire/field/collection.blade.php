@@ -1,4 +1,6 @@
 <div class="mx-auto max-w-3xl">
+    <x-ui.geo-permission />
+
     {{-- Encabezado --}}
     <div class="mb-4 flex items-start justify-between gap-3">
         <div class="min-w-0">
@@ -183,7 +185,7 @@
             </div>
         @endif
         <div class="space-y-3">
-            <x-ui.input label="Importe recibido" type="number" inputmode="decimal" step="0.01" min="1" prefix="$" wire:model="payForm.amount" name="payForm.amount" required class="text-lg" />
+            <x-ui.input label="Importe recibido" type="number" inputmode="decimal" step="0.01" min="1" max="100000" prefix="$" wire:model="payForm.amount" name="payForm.amount" required class="text-lg" />
             <div>
                 <label class="form-label">Método</label>
                 <div class="grid grid-cols-2 gap-2">
@@ -195,9 +197,9 @@
                 </div>
             </div>
             @if ($payForm['method'] !== 'efectivo')
-                <x-ui.input label="Referencia / autorización" wire:model="payForm.reference" name="payForm.reference" />
+                <x-ui.input label="Referencia / autorización" wire:model="payForm.reference" name="payForm.reference" filter="text" maxlength="120" />
             @endif
-            <x-ui.input label="Notas" wire:model="payForm.notes" name="payForm.notes" placeholder="Opcional" />
+            <x-ui.input label="Notas" wire:model="payForm.notes" name="payForm.notes" maxlength="190" placeholder="Opcional" />
             @include('livewire.field.partials.collection-evidence', ['model' => 'payEvidence', 'file' => $payEvidence, 'latField' => 'payForm.lat', 'lngField' => 'payForm.lng', 'lat' => $payForm['lat']])
         </div>
         <x-slot:footer>
@@ -230,10 +232,10 @@
             @if ($visitForm['result'] === 'promesa')
                 <div class="grid grid-cols-2 gap-3">
                     <x-ui.input label="Pagará el" type="date" wire:model="visitForm.promise_date" name="visitForm.promise_date" :min="now()->toDateString()" required />
-                    <x-ui.input label="Monto" type="number" inputmode="decimal" step="0.01" prefix="$" wire:model="visitForm.promise_amount" name="visitForm.promise_amount" />
+                    <x-ui.input label="Monto" type="number" inputmode="decimal" step="0.01" min="1" max="100000" prefix="$" wire:model="visitForm.promise_amount" name="visitForm.promise_amount" />
                 </div>
             @endif
-            <x-ui.textarea label="Notas" wire:model="visitForm.notes" name="visitForm.notes" rows="2" placeholder="Con quién habló, observaciones..." />
+            <x-ui.textarea label="Notas" wire:model="visitForm.notes" name="visitForm.notes" rows="2" maxlength="190" placeholder="Con quién habló, observaciones..." />
             @include('livewire.field.partials.collection-evidence', ['model' => 'visitEvidence', 'file' => $visitEvidence, 'latField' => 'visitForm.lat', 'lngField' => 'visitForm.lng', 'lat' => $visitForm['lat']])
         </div>
         <x-slot:footer>

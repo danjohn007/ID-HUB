@@ -259,14 +259,24 @@ class FieldPlanner
             if (! $p['lat']) {
                 continue;
             }
-            $done = in_array($p['stop_status'] ?? null, ['done'], true);
+            // Atendida: gris con ✓ · en sitio: ámbar · omitida: gris claro · pendiente: color de prioridad
+            $status = $p['stop_status'] ?? 'pending';
+            $number = (string) ($p['sequence'] ?? $i + 1);
             $markers[] = [
                 'lat' => $p['lat'], 'lng' => $p['lng'],
                 'type' => $p['type'] === 'installation_order' ? 'installation' : ($p['type'] === 'client' ? 'client' : 'ticket'),
-                'color' => $done ? '#94A3B8' : (['critica' => '#E5484D', 'alta' => '#F7881F', 'media' => '#1A7FF5', 'baja' => '#22A06B'][$p['priority']] ?? '#1A7FF5'),
+                'color' => match ($status) {
+                    'done' => '#64748B',
+                    'skipped' => '#CBD5E1',
+                    'arrived' => '#F59E0B',
+                    default => ['critica' => '#E5484D', 'alta' => '#F7881F', 'media' => '#1A7FF5', 'baja' => '#22A06B'][$p['priority']] ?? '#1A7FF5',
+                },
+                'pulse' => $status === 'arrived',
                 'size' => 26, 'layer' => 'paradas',
-                'tooltip' => (string) ($p['sequence'] ?? $i + 1), 'permanentTooltip' => true,
-                'popup' => '<b>'.($p['sequence'] ?? $i + 1).'. '.e($p['title']).'</b><br>'.e($p['subtitle']).'<br><span style="color:#64748b">'.e($p['address']).'</span>',
+                'tooltip' => match ($status) { 'done' => '✓ '.$number, 'skipped' => '– '.$number, default => $number },
+                'permanentTooltip' => true,
+                'popup' => '<b>'.$number.'. '.e($p['title']).'</b><br>'.e($p['subtitle']).'<br><span style="color:#64748b">'.e($p['address']).'</span>'
+                    .'<br><b>'.e(['done' => 'Atendida', 'skipped' => 'Omitida', 'arrived' => 'En sitio'][$status] ?? 'Pendiente').'</b>',
             ];
             $line[] = [$p['lat'], $p['lng']];
         }

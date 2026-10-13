@@ -67,16 +67,16 @@
 
     <x-ui.modal wire:model="showForm" :title="$editingId ? 'Editar promoción' : 'Nueva promoción'" size="2xl">
         <form wire:submit="save" id="promo-form" class="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <x-ui.input label="Nombre" wire:model="form.name" class="md:col-span-2" required />
-            <x-ui.input label="Descripción" wire:model="form.description" class="md:col-span-2" />
+            <x-ui.input label="Nombre" wire:model="form.name" filter="text" maxlength="120" class="md:col-span-2" required />
+            <x-ui.input label="Descripción" wire:model="form.description" maxlength="190" class="md:col-span-2" />
             <x-ui.select label="Tipo" wire:model.live="form.type" :options="config('wisp.promotion_types')" required />
             @if (in_array($form['type'], ['descuento_pct', 'descuento_monto']))
-                <x-ui.input label="Valor" type="number" step="0.01" wire:model="form.value" :suffix="$form['type'] === 'descuento_pct' ? '%' : null" :prefix="$form['type'] === 'descuento_monto' ? '$' : null" required />
+                <x-ui.input label="Valor" type="number" step="0.01" min="0" :max="$form['type'] === 'descuento_pct' ? 100 : 100000" wire:model="form.value" :suffix="$form['type'] === 'descuento_pct' ? '%' : null" :prefix="$form['type'] === 'descuento_monto' ? '$' : null" required />
             @else
-                <x-ui.input label="Valor de referencia" type="number" step="0.01" wire:model="form.value" prefix="$" hint="Opcional (p. ej. costo de instalación que se condona)" />
+                <x-ui.input label="Valor de referencia" type="number" step="0.01" min="0" max="100000" wire:model="form.value" prefix="$" hint="Opcional (p. ej. costo de instalación que se condona)" />
             @endif
-            <x-ui.input label="Meses que aplica" type="number" wire:model="form.months" required />
-            <x-ui.input label="Código" wire:model="form.code" placeholder="BUENFIN" hint="Letras, números, guion" />
+            <x-ui.input label="Meses que aplica" type="number" min="1" max="24" wire:model="form.months" required />
+            <x-ui.input label="Código" wire:model="form.code" filter="upper" maxlength="30" placeholder="BUENFIN" hint="Letras, números, guion" />
             <x-ui.input label="Inicio" type="date" wire:model="form.starts_at" />
             <x-ui.input label="Fin" type="date" wire:model="form.ends_at" />
             <div class="md:col-span-2">
@@ -103,7 +103,7 @@
                 </div>
                 @error('image')<p class="mt-1 text-xs text-danger-600">{{ $message }}</p>@enderror
             </div>
-            <x-ui.input label="Usos registrados" type="number" wire:model="form.uses" />
+            <x-ui.input label="Usos registrados" type="number" min="0" max="1000000" wire:model="form.uses" />
             <div class="flex flex-col justify-end gap-2 pb-1">
                 <x-ui.toggle wire:model="form.show_in_portal" label="Mostrar en portal cautivo" />
                 <x-ui.toggle wire:model="form.active" label="Activa" />

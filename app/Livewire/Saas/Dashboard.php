@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\SaasBillingService;
 use App\Services\TenantProvisioner;
+use App\Support\InputRules;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -61,9 +62,9 @@ class Dashboard extends Component
     {
         $t = Tenant::findOrFail($this->editingId);
         $data = $this->validate([
-            'edit.name' => 'required|string|max:120',
+            'edit.name' => 'required|string|max:120|'.InputRules::TEXT,
             'edit.email' => 'nullable|email|max:150',
-            'edit.phone' => 'nullable|string|max:30',
+            'edit.phone' => 'nullable|string|max:20|'.InputRules::PHONE,
             'edit.saas_plan_id' => 'nullable|exists:saas_plans,id',
             'edit.status' => ['required', Rule::in(array_keys(self::STATUSES))],
             'edit.trial_ends_at' => 'nullable|date',
@@ -102,14 +103,14 @@ class Dashboard extends Component
     public function save(TenantProvisioner $provisioner): void
     {
         $data = $this->validate([
-            'form.name' => 'required|string|max:120',
+            'form.name' => 'required|string|max:120|'.InputRules::TEXT,
             'form.slug' => ['required', 'alpha_dash', 'max:80', Rule::unique('tenants', 'slug')],
             'form.email' => 'nullable|email|max:150',
-            'form.phone' => 'nullable|string|max:30',
+            'form.phone' => 'nullable|string|max:20|'.InputRules::PHONE,
             'form.saas_plan_id' => 'nullable|exists:saas_plans,id',
-            'form.admin_name' => 'required|string|max:120',
+            'form.admin_name' => 'required|string|max:80|'.InputRules::NAME,
             'form.admin_email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')],
-            'form.admin_password' => ['required', 'string', Password::min(8)->letters()->numbers()],
+            'form.admin_password' => ['required', 'string', 'max:255', Password::min(8)->letters()->numbers()],
         ], [], [
             'form.name' => 'nombre', 'form.slug' => 'identificador', 'form.email' => 'correo', 'form.phone' => 'teléfono',
             'form.saas_plan_id' => 'plan', 'form.admin_name' => 'nombre del administrador',

@@ -29,14 +29,20 @@ class Login extends Component
         ], [], ['email' => 'correo', 'password' => 'contraseña']);
 
         $key = Str::lower($this->email).'|'.request()->ip();
+        // El bloqueo se avisa con un evento: la vista lleva la cuenta regresiva segundo a segundo
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            throw ValidationException::withMessages([
-                'email' => 'Demasiados intentos. Intenta de nuevo en '.RateLimiter::availableIn($key).' segundos.',
-            ]);
+            $this->dispatch('login-locked', seconds: RateLimiter::availableIn($key));
+
+            return;
         }
 
         if (! Auth::attempt(['email' => $this->email, 'password' => $this->password, 'active' => true], $this->remember)) {
             RateLimiter::hit($key, 60);
+            if (RateLimiter::tooManyAttempts($key, 5)) {
+                $this->dispatch('login-locked', seconds: RateLimiter::availableIn($key));
+
+                return;
+            }
             throw ValidationException::withMessages(['email' => 'Las credenciales no son válidas.']);
         }
 

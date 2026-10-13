@@ -21,10 +21,16 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ReportExporter
 {
+    public const PDF_MAX_ROWS = 500;
+
     public function download(string $name, string $format, array $columns, iterable $rows, ?string $title = null, array $summary = [])
     {
         $filename = Str::slug($name).'-'.now()->format('Ymd-His');
         $data = $this->table($columns, $rows);
+        // OpenSpout necesita la extensión zip para el XLSX; sin ella se entrega CSV (también abre en Excel).
+        if ($format === 'xlsx' && ! class_exists(\ZipArchive::class)) {
+            $format = 'csv';
+        }
 
         return match ($format) {
             'csv' => $this->csv($filename, $data),
@@ -75,8 +81,9 @@ class ReportExporter
             $writer = new XlsxWriter;
             $writer->openToFile($tmp);
             $writer->getCurrentSheet()->setName(Str::limit(preg_replace('/[^\p{L}\p{N} ]/u', '', $title), 28, ''));
-            $header = (new Style)->withFontBold(true)->withFontColor('FFFFFF')->withBackgroundColor('0B1B3A');
-            $writer->addRow(Row::fromValuesWithStyle($data['headers'], $header));
+            // API de OpenSpout 4.x (setters); withFontBold()/fromValuesWithStyle() son de la 5.x
+            $header = (new Style)->setFontBold()->setFontColor('FFFFFF')->setBackgroundColor('0B1B3A');
+            $writer->addRow(Row::fromValues($data['headers'], $header));
             foreach ($data['rows'] as $row) {
                 $writer->addRow(Row::fromValues(array_map(fn ($v) => $v ?? '', $row)));
             }
@@ -88,10 +95,25 @@ class ReportExporter
 
     protected function pdf(string $filename, array $data, string $title, array $summary): StreamedResponse
     {
+        // dompdf arma todo el documento en memoria: se limita el número de filas
+        // (el listado completo va en Excel/CSV) y se sube el límite de memoria si el hosting lo permite.
+        $total = count($data['rows']);
+        $data['rows'] = array_slice($data['rows'], 0, self::PDF_MAX_ROWS);
+        $this->raiseMemoryLimit('512M');
+
         $pdf = Pdf::loadView('pdf.report', [
-            'title' => $title, 'data' => $data, 'summary' => $summary, 'tenant' => tenant(),
+            'title' => $title, 'data' => $data, 'summary' => $summary, 'tenant' => tenant(), 'total' => $total,
         ])->setPaper('letter', count($data['headers']) > 7 ? 'landscape' : 'portrait');
 
         return response()->streamDownload(fn () => print($pdf->output()), $filename.'.pdf', ['Content-Type' => 'application/pdf']);
+    }
+
+    protected function raiseMemoryLimit(string $limit): void
+    {
+        $current = ini_get('memory_limit');
+        $bytes = fn (string $v) => (int) $v * (['g' => 1 << 30, 'm' => 1 << 20, 'k' => 1 << 10][strtolower(substr($v, -1))] ?? 1);
+        if ($current !== '-1' && $bytes($current) < $bytes($limit)) {
+            @ini_set('memory_limit', $limit);
+        }
     }
 }

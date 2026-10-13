@@ -75,6 +75,7 @@ class Show extends Component
     {
         $this->authorize('tickets.manage');
         $this->validate([
+            // Sin regex al editar: los tickets automáticos pueden traer asuntos con «·» u otros signos
             'edit.subject' => 'required|string|max:190',
             'edit.description' => 'nullable|string|max:3000',
             'edit.category' => 'required|in:'.implode(',', array_keys(config('wisp.ticket_categories'))),

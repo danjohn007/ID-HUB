@@ -12,6 +12,7 @@ use App\Services\Messaging\CampaignService;
 use App\Services\Messaging\MessageCatalog;
 use App\Services\Messaging\MessageService;
 use App\Support\Audit;
+use App\Support\InputRules;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -78,7 +79,7 @@ class Edit extends Component
     protected function rules(): array
     {
         return [
-            'form.name' => 'required|string|max:150',
+            'form.name' => 'required|string|max:150|'.InputRules::TEXT,
             'form.channel' => ['required', Rule::in(array_keys(config('wisp.channels')))],
             'form.segment' => ['required', Rule::in(array_keys(config('wisp.campaign_segments')))],
             'form.segment_value' => [Rule::requiredIf(in_array($this->form['segment'] ?? '', CampaignService::VALUE_SEGMENTS)), 'nullable', 'integer'],

@@ -8,6 +8,7 @@ use App\Models\PaymentGateway;
 use App\Models\Tenant;
 use App\Models\Zone;
 use App\Support\Audit;
+use App\Support\InputRules;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
@@ -182,13 +183,13 @@ class Index extends Component
         $tenant = tenant();
         $id = $tenant->id;
         $data = $this->validate([
-            'company.name' => 'required|string|max:150',
-            'company.legal_name' => 'nullable|string|max:190',
-            'company.rfc' => ['nullable', 'string', 'regex:/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/i'],
+            'company.name' => 'required|string|max:150|'.InputRules::TEXT,
+            'company.legal_name' => 'nullable|string|max:190|'.InputRules::TEXT,
+            'company.rfc' => ['nullable', 'string', 'max:13', 'regex:/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/i'],
             'company.tax_regime' => 'nullable|string|max:120',
-            'company.address' => 'nullable|string|max:190',
-            'company.phone' => 'nullable|string|max:30',
-            'company.whatsapp' => 'nullable|string|max:30',
+            'company.address' => 'nullable|string|max:190|'.InputRules::TEXT,
+            'company.phone' => 'nullable|string|max:20|'.InputRules::PHONE,
+            'company.whatsapp' => 'nullable|string|max:20|'.InputRules::PHONE,
             'company.email' => 'nullable|email|max:150',
             'company.primary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'company.secondary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -207,6 +208,7 @@ class Index extends Component
             'company.name' => 'nombre comercial', 'company.email' => 'correo', 'company.primary_color' => 'color primario',
             'company.secondary_color' => 'color secundario', 'company.domain' => 'dominio', 'company.subdomain' => 'subdominio',
             'company.timezone' => 'zona horaria', 'company.currency' => 'moneda', 'logo' => 'logotipo',
+            'company.legal_name' => 'razón social', 'company.address' => 'dirección', 'company.phone' => 'teléfono', 'company.whatsapp' => 'WhatsApp',
         ])['company'];
         $data = $this->nullify($data);
         $data['rfc'] = $data['rfc'] ? mb_strtoupper($data['rfc']) : null;
@@ -348,11 +350,11 @@ class Index extends Component
     {
         $data = $this->validate([
             'messaging.whatsapp_provider' => 'required|in:simulated,meta,twilio',
-            'messaging.whatsapp_phone_id' => 'nullable|string|max:80',
+            'messaging.whatsapp_phone_id' => 'nullable|string|max:80|'.InputRules::DIGITS,
             'messaging.sms_provider' => 'required|in:simulated,twilio',
-            'messaging.twilio_sid' => 'nullable|string|max:80',
-            'messaging.twilio_from' => 'nullable|string|max:30',
-            'messaging.twilio_whatsapp_from' => 'nullable|string|max:30',
+            'messaging.twilio_sid' => 'nullable|string|max:80|'.InputRules::CODE,
+            'messaging.twilio_from' => 'nullable|string|max:20|'.InputRules::PHONE,
+            'messaging.twilio_whatsapp_from' => 'nullable|string|max:20|'.InputRules::PHONE,
             'messaging.email_enabled' => 'boolean',
             'messaging.push_provider' => 'required|in:simulated,expo',
             'messaging.default_channels' => 'array|min:1',
@@ -361,6 +363,7 @@ class Index extends Component
             'secrets.twilio_token' => 'nullable|string|max:200',
         ], ['messaging.default_channels.min' => 'Selecciona al menos un canal.'], [
             'messaging.whatsapp_phone_id' => 'Phone number ID', 'messaging.twilio_sid' => 'Account SID',
+            'messaging.twilio_from' => 'número remitente SMS', 'messaging.twilio_whatsapp_from' => 'número de WhatsApp (Twilio)',
         ]);
         $m = $data['messaging'];
         $current = tenant()->settingsFor('messaging');
@@ -475,13 +478,13 @@ class Index extends Component
     {
         $tid = tenant()->id;
         $d = $this->validate([
-            'zone.name' => ['required', 'string', 'max:120', Rule::unique('zones', 'name')->where('tenant_id', $tid)->ignore($this->zoneId)],
-            'zone.community' => 'nullable|string|max:120',
+            'zone.name' => ['required', 'string', 'max:120', InputRules::TEXT, Rule::unique('zones', 'name')->where('tenant_id', $tid)->ignore($this->zoneId)],
+            'zone.community' => 'nullable|string|max:120|'.InputRules::TEXT,
             'zone.color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'zone.lat' => 'nullable|numeric|between:-90,90',
             'zone.lng' => 'nullable|numeric|between:-180,180',
             'zone.monthly_cost' => 'required|numeric|min:0|max:10000000',
-        ], [], ['zone.name' => 'nombre', 'zone.monthly_cost' => 'costo mensual', 'zone.lat' => 'latitud', 'zone.lng' => 'longitud'])['zone'];
+        ], [], ['zone.name' => 'nombre', 'zone.community' => 'comunidad', 'zone.monthly_cost' => 'costo mensual', 'zone.lat' => 'latitud', 'zone.lng' => 'longitud'])['zone'];
         $d = $this->nullify($d);
 
         if ($this->zoneId) {

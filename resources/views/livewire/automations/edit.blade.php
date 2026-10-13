@@ -33,9 +33,9 @@
         <div class="min-w-0 space-y-3">
             <x-ui.card>
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
-                    <x-ui.input label="Nombre de la regla" wire:model="form.name" required :disabled="$isSystem" :hint="$isSystem ? 'Regla del sistema: se puede editar y desactivar, pero no eliminar ni renombrar.' : null" />
+                    <x-ui.input label="Nombre de la regla" wire:model="form.name" filter="text" maxlength="190" required :disabled="$isSystem" :hint="$isSystem ? 'Regla del sistema: se puede editar y desactivar, pero no eliminar ni renombrar.' : null" />
                     <div class="flex items-end pb-2"><x-ui.toggle wire:model="form.active" label="Regla activa" /></div>
-                    <x-ui.input label="Descripción" wire:model="form.description" class="md:col-span-2" placeholder="¿Qué hace esta regla?" />
+                    <x-ui.input label="Descripción" wire:model="form.description" maxlength="190" class="md:col-span-2" placeholder="¿Qué hace esta regla?" />
                 </div>
             </x-ui.card>
 
@@ -101,7 +101,7 @@
                                             @foreach ($def[2] as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach
                                         </select>
                                     @else
-                                        <input type="{{ $type === 'number' ? 'number' : 'text' }}" step="any" wire:model.live.debounce.400ms="form.conditions.{{ $i }}.value" class="form-input text-sm" placeholder="Valor">
+                                        <input type="{{ $type === 'number' ? 'number' : 'text' }}" step="any" wire:model.live.debounce.400ms="form.conditions.{{ $i }}.value" maxlength="190" class="form-input text-sm" placeholder="Valor">
                                     @endif
                                     @error("form.conditions.$i.value")<p class="mt-1 text-xs font-medium text-danger-600">{{ $message }}</p>@enderror
                                 </div>
@@ -162,22 +162,22 @@
                                                 @endforeach
                                             </div>
                                             @error("$p.roles")<p class="-mt-2 mb-2 text-xs font-medium text-danger-600">{{ $message }}</p>@enderror
-                                            <x-ui.textarea label="Mensaje" wire:model="{{ $p }}.message" rows="2" x-on:focus="target = $el" />
+                                            <x-ui.textarea label="Mensaje" wire:model="{{ $p }}.message" rows="2" maxlength="500" x-on:focus="target = $el" />
                                             @break
                                         @case('create_ticket')
                                             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                                                 <x-ui.select label="Categoría" wire:model="{{ $p }}.category" :options="config('wisp.ticket_categories')" />
                                                 <x-ui.select label="Prioridad" wire:model="{{ $p }}.priority" :options="config('wisp.ticket_priorities')" />
-                                                <x-ui.input label="Asunto" wire:model="{{ $p }}.subject" class="md:col-span-2" x-on:focus="target = $el" />
-                                                <x-ui.textarea label="Descripción" wire:model="{{ $p }}.description" rows="2" class="md:col-span-2" x-on:focus="target = $el" />
+                                                <x-ui.input label="Asunto" wire:model="{{ $p }}.subject" maxlength="190" class="md:col-span-2" x-on:focus="target = $el" />
+                                                <x-ui.textarea label="Descripción" wire:model="{{ $p }}.description" rows="2" maxlength="1000" class="md:col-span-2" x-on:focus="target = $el" />
                                             </div>
                                             @break
                                         @case('create_alert')
                                             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                                                 <x-ui.select label="Severidad" wire:model="{{ $p }}.severity" :options="config('wisp.alert_severity')" />
                                                 <x-ui.select label="Tipo de alerta" wire:model="{{ $p }}.alert_type" :options="RC::alertTypes()" />
-                                                <x-ui.input label="Título" wire:model="{{ $p }}.title" class="md:col-span-2" x-on:focus="target = $el" />
-                                                <x-ui.textarea label="Mensaje" wire:model="{{ $p }}.message" rows="2" class="md:col-span-2" x-on:focus="target = $el" />
+                                                <x-ui.input label="Título" wire:model="{{ $p }}.title" maxlength="190" class="md:col-span-2" x-on:focus="target = $el" />
+                                                <x-ui.textarea label="Mensaje" wire:model="{{ $p }}.message" rows="2" maxlength="500" class="md:col-span-2" x-on:focus="target = $el" />
                                             </div>
                                             @break
                                         @case('set_status')

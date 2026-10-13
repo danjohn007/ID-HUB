@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\RouteStop;
 use App\Services\Billing\CashCutService;
 use App\Services\BillingService;
+use App\Support\InputRules;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Title;
@@ -111,12 +112,12 @@ class Collection extends Component
         $this->validate([
             'payForm.amount' => 'required|numeric|min:1|max:100000',
             'payForm.method' => 'required|in:efectivo,transferencia,deposito,tarjeta',
-            'payForm.reference' => 'nullable|string|max:120',
+            'payForm.reference' => 'nullable|string|max:120|'.InputRules::TEXT,
             'payForm.notes' => 'nullable|string|max:190',
             'payForm.lat' => 'nullable|numeric|between:-90,90',
             'payForm.lng' => 'nullable|numeric|between:-180,180',
-            'payEvidence' => 'nullable|image|max:8192',
-        ], [], ['payForm.amount' => 'importe', 'payForm.method' => 'método', 'payEvidence' => 'foto de evidencia']);
+            'payEvidence' => 'nullable|file|mimes:jpg,jpeg,png,webp,heic,heif,pdf|max:8192',
+        ], [], ['payForm.amount' => 'importe', 'payForm.method' => 'método', 'payForm.reference' => 'referencia', 'payForm.notes' => 'notas', 'payEvidence' => 'foto de evidencia']);
 
         $client = $this->myClient($this->clientId);
         $due = (float) $client->balance;
@@ -159,7 +160,7 @@ class Collection extends Component
             'visitForm.notes' => 'nullable|string|max:190',
             'visitForm.lat' => 'nullable|numeric|between:-90,90',
             'visitForm.lng' => 'nullable|numeric|between:-180,180',
-            'visitEvidence' => 'nullable|image|max:8192',
+            'visitEvidence' => 'nullable|file|mimes:jpg,jpeg,png,webp,heic,heif,pdf|max:8192',
         ], [], ['visitForm.result' => 'resultado', 'visitForm.promise_date' => 'fecha de promesa', 'visitForm.promise_amount' => 'monto prometido', 'visitEvidence' => 'foto de evidencia']);
 
         $client = $this->myClient($this->clientId);

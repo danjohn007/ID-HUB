@@ -77,16 +77,16 @@
     {{-- Alta de WISP --}}
     <x-ui.modal wire:model="showForm" title="Nuevo WISP" size="2xl">
         <form wire:submit="save" id="tenant-form" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <x-ui.input label="Nombre comercial" wire:model.live.debounce.400ms="form.name" required class="sm:col-span-2" />
-            <x-ui.input label="Identificador" wire:model="form.slug" hint="Solo letras, números y guiones; también se usa como subdominio" required />
+            <x-ui.input label="Nombre comercial" wire:model.live.debounce.400ms="form.name" filter="text" maxlength="120" required class="sm:col-span-2" />
+            <x-ui.input label="Identificador" wire:model="form.slug" filter="slug" maxlength="80" hint="Solo letras, números y guiones; también se usa como subdominio" required />
             <x-ui.select label="Plan SaaS" wire:model="form.saas_plan_id" :options="$plans" placeholder="Sin plan" />
-            <x-ui.input label="Correo de contacto" type="email" wire:model="form.email" />
-            <x-ui.input label="Teléfono / WhatsApp" type="tel" wire:model="form.phone" />
+            <x-ui.input label="Correo de contacto" type="email" wire:model="form.email" filter="email" />
+            <x-ui.input label="Teléfono / WhatsApp" type="tel" wire:model="form.phone" filter="phone" />
 
             <div class="sm:col-span-2 border-t border-slate-100 pt-4 text-sm font-semibold text-navy-900">Administrador del WISP</div>
-            <x-ui.input label="Nombre" wire:model="form.admin_name" required />
-            <x-ui.input label="Correo (usuario de acceso)" type="email" wire:model="form.admin_email" required />
-            <x-ui.input label="Contraseña" type="password" autocomplete="new-password" wire:model="form.admin_password" hint="Mínimo 8 caracteres con letras y números" required class="sm:col-span-2" />
+            <x-ui.input label="Nombre" wire:model="form.admin_name" filter="name" maxlength="80" required />
+            <x-ui.input label="Correo (usuario de acceso)" type="email" wire:model="form.admin_email" filter="email" required />
+            <x-ui.input label="Contraseña" type="password" autocomplete="new-password" wire:model="form.admin_password" maxlength="255" hint="Mínimo 8 caracteres con letras y números" required class="sm:col-span-2" />
         </form>
         <x-slot:footer>
             <x-ui.button variant="secondary" x-on:click="open = false">Cancelar</x-ui.button>
@@ -97,15 +97,15 @@
     {{-- Edición de WISP --}}
     <x-ui.modal wire:model="showEdit" title="Editar WISP" size="2xl">
         <form wire:submit="updateTenant" id="tenant-edit-form" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <x-ui.input label="Nombre comercial" wire:model="edit.name" required class="sm:col-span-2" />
-            <x-ui.input label="Correo de contacto" type="email" wire:model="edit.email" />
-            <x-ui.input label="Teléfono / WhatsApp" type="tel" wire:model="edit.phone" />
+            <x-ui.input label="Nombre comercial" wire:model="edit.name" filter="text" maxlength="120" required class="sm:col-span-2" />
+            <x-ui.input label="Correo de contacto" type="email" wire:model="edit.email" filter="email" />
+            <x-ui.input label="Teléfono / WhatsApp" type="tel" wire:model="edit.phone" filter="phone" />
             <x-ui.select label="Plan SaaS" wire:model="edit.saas_plan_id" :options="$plans" placeholder="Sin plan" />
             <x-ui.select label="Estado" wire:model.live="edit.status" :options="\App\Livewire\Saas\Dashboard::STATUSES" required />
             <x-ui.input label="Fin del periodo de prueba" type="date" wire:model="edit.trial_ends_at" />
             <x-ui.input label="Suscripción vigente hasta" type="date" wire:model="edit.subscription_ends_at" />
             @if (($edit['status'] ?? '') === 'suspended')
-                <x-ui.input label="Motivo de suspensión" wire:model="edit.suspended_reason" class="sm:col-span-2" />
+                <x-ui.input label="Motivo de suspensión" wire:model="edit.suspended_reason" maxlength="190" class="sm:col-span-2" />
             @endif
             <p class="sm:col-span-2 text-xs text-slate-500">Con estado Suspendido o Cancelado, los usuarios del WISP no pueden iniciar sesión.</p>
         </form>

@@ -74,11 +74,11 @@
                     <x-ui.toggle wire:model="config.enabled" label="Programa activo" description="Muestra el enlace de referido y registra recompensas" />
                     <x-ui.select label="Tipo de recompensa" wire:model.live="config.reward_type" :options="config('wisp.reward_types')" required />
                     @if ($config['reward_type'] !== 'mes_gratis')
-                        <x-ui.input label="Valor de la recompensa" type="number" step="0.01" wire:model="config.reward_value" prefix="$" hint="Se aplica como saldo a favor / bonificación al cliente que refiere" />
+                        <x-ui.input label="Valor de la recompensa" type="number" step="0.01" min="0" max="100000" wire:model="config.reward_value" prefix="$" hint="Se aplica como saldo a favor / bonificación al cliente que refiere" />
                     @else
                         <p class="rounded-lg bg-slate-50 p-2.5 text-xs text-slate-500">Se bonifica el importe de una mensualidad del plan del cliente que refiere.</p>
                     @endif
-                    <x-ui.input label="Prefijo del código" wire:model.live.debounce.400ms="config.code_prefix" :hint="'Ejemplo: '.$example" required />
+                    <x-ui.input label="Prefijo del código" wire:model.live.debounce.400ms="config.code_prefix" filter="upper" maxlength="12" :hint="'Ejemplo: '.$example" required />
                     <x-ui.button type="submit" icon="check" class="w-full">Guardar configuración</x-ui.button>
                 </form>
                 <div class="mt-4 rounded-lg bg-brand-50 p-3 text-xs text-brand-800">

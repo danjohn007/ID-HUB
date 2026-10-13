@@ -48,14 +48,14 @@
             <form method="POST" action="{{ route('referral.store', $code) }}" class="space-y-4 border-t border-slate-100 p-5">
                 @csrf
                 <h2 class="text-sm font-semibold text-navy-900">Déjanos tus datos</h2>
-                <x-ui.input label="Nombre completo" name="name" :value="old('name')" required />
-                <x-ui.input label="Teléfono / WhatsApp" name="phone" type="tel" :value="old('phone')" required />
-                <x-ui.input label="Correo (opcional)" name="email" type="email" :value="old('email')" />
-                <x-ui.input label="Domicilio donde quieres el servicio" name="address" :value="old('address')" hint="Calle, número, colonia y comunidad" required />
+                <x-ui.input label="Nombre completo" name="name" :value="old('name')" filter="name" pattern="[\p{L}\s.'\-]+" title="Solo letras, espacios, punto, apóstrofo y guion" required />
+                <x-ui.input label="Teléfono / WhatsApp" name="phone" type="tel" :value="old('phone')" filter="phone" pattern="\+?[0-9\s\(\)\-]{7,20}" title="Solo números, espacios, paréntesis, guiones y + inicial (7 a 20)" required />
+                <x-ui.input label="Correo (opcional)" name="email" type="email" :value="old('email')" filter="email" />
+                <x-ui.input label="Domicilio donde quieres el servicio" name="address" :value="old('address')" filter="text" hint="Calle, número, colonia y comunidad" required />
                 @if ($plans->isNotEmpty())
                     <x-ui.select label="Plan de interés" name="desired_plan_id" :options="$plans->mapWithKeys(fn ($p) => [$p->id => $p->name.' · '.money($p->price, false)])->all()" placeholder="Aún no sé" />
                 @endif
-                <x-ui.textarea label="Comentarios (opcional)" name="notes" rows="2">{{ old('notes') }}</x-ui.textarea>
+                <x-ui.textarea label="Comentarios (opcional)" name="notes" rows="2" maxlength="500">{{ old('notes') }}</x-ui.textarea>
                 <button type="submit" class="pay-btn flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm">
                     <x-heroicon-o-paper-airplane class="h-5 w-5" /> Quiero que me contacten
                 </button>

@@ -69,16 +69,16 @@
 
                 <div data-panel="usuario" @class(['space-y-3', 'hidden' => $method !== 'usuario'])>
                     <p class="text-sm text-slate-500">Entra con el usuario y contraseña de tu servicio.</p>
-                    <input name="username" value="{{ request('username') }}" autocomplete="username" autocapitalize="none" placeholder="Usuario" class="cp-input form-input">
-                    <input name="password" type="password" autocomplete="current-password" placeholder="Contraseña" class="cp-input form-input">
+                    <input name="username" value="{{ request('username') }}" maxlength="80" pattern="[A-Za-z0-9._@\-]+" title="Letras, números, punto, guion, guion bajo o @" autocomplete="username" autocapitalize="none" placeholder="Usuario" class="cp-input form-input">
+                    <input name="password" type="password" maxlength="80" autocomplete="current-password" placeholder="Contraseña" class="cp-input form-input">
                 </div>
                 <div data-panel="codigo" @class(['space-y-3', 'hidden' => $method !== 'codigo'])>
                     <p class="text-sm text-slate-500">Escribe tu número de cliente; lo encuentras en tu recibo o estado de cuenta.</p>
-                    <input name="code" value="{{ request('code') }}" autocapitalize="characters" placeholder="Código de cliente" class="cp-input form-input font-mono uppercase tracking-wider">
+                    <input name="code" value="{{ request('code') }}" maxlength="30" pattern="[A-Za-z0-9_\-]+" title="Letras, números y guiones" autocapitalize="characters" placeholder="Código de cliente" class="cp-input form-input font-mono uppercase tracking-wider">
                 </div>
                 <div data-panel="voucher" @class(['space-y-3', 'hidden' => $method !== 'voucher'])>
                     <p class="text-sm text-slate-500">Escribe el código de tu ficha de Internet.</p>
-                    <input name="voucher" value="{{ request('voucher') }}" autocapitalize="characters" autocomplete="off" placeholder="Ej. 7XK2MP9Q" class="cp-input form-input text-center font-mono text-lg uppercase tracking-[0.3em]">
+                    <input name="voucher" value="{{ request('voucher') }}" maxlength="30" pattern="[A-Za-z0-9 \-]+" title="Letras y números" autocapitalize="characters" autocomplete="off" placeholder="Ej. 7XK2MP9Q" class="cp-input form-input text-center font-mono text-lg uppercase tracking-[0.3em]">
                 </div>
 
                 @if ($cfg['terms'])

@@ -8,6 +8,7 @@ use App\Models\AutomationRun;
 use App\Services\Automation\RuleCatalog;
 use App\Services\AutomationEngine;
 use App\Support\Audit;
+use App\Support\InputRules;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -160,7 +161,7 @@ class Edit extends Component
     protected function rules(): array
     {
         $rules = [
-            'form.name' => 'required|string|max:190',
+            'form.name' => 'required|string|max:190|'.InputRules::TEXT,
             'form.description' => 'nullable|string|max:190',
             'form.event' => ['required', Rule::in(array_keys(config('wisp.automation_events')))],
             'form.active' => 'boolean',

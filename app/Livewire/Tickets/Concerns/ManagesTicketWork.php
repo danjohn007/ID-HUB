@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Services\Field\FieldTracker;
 use App\Services\InventoryService;
 use App\Services\TicketService;
+use App\Support\InputRules;
 use Illuminate\Support\Facades\Storage;
 use Livewire\WithFileUploads;
 
@@ -140,8 +141,8 @@ trait ManagesTicketWork
             'material.item_id' => 'required|integer',
             'material.quantity' => 'required|numeric|min:0.01|max:100000',
             'material.type' => 'required|in:instalacion,salida',
-            'material.serial' => 'nullable|string|max:120',
-        ], [], ['material.item_id' => 'artículo', 'material.quantity' => 'cantidad']);
+            'material.serial' => 'nullable|string|max:120|'.InputRules::TEXT,
+        ], [], ['material.item_id' => 'artículo', 'material.quantity' => 'cantidad', 'material.serial' => 'serie']);
 
         $item = InventoryItem::query()->where('active', true)->findOrFail($this->material['item_id']);
         $inventory->move($item, $this->material['type'], (float) $this->material['quantity'], [
@@ -169,7 +170,7 @@ trait ManagesTicketWork
     public function saveSignature(): void
     {
         $this->ensureCanWork();
-        $this->validate(['signedBy' => 'required|string|min:3|max:120'], [], ['signedBy' => 'nombre de quien firma']);
+        $this->validate(['signedBy' => 'required|string|min:3|max:120|'.InputRules::NAME], [], ['signedBy' => 'nombre de quien firma']);
         if (! $this->signature || ! preg_match('/^data:image\/png;base64,([A-Za-z0-9+\/=]+)$/', $this->signature, $m)) {
             $this->addError('signature', 'Captura la firma del cliente.');
 

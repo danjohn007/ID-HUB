@@ -6,6 +6,7 @@ use App\Livewire\Concerns\Toasts;
 use App\Models\Client;
 use App\Models\Plan;
 use App\Models\Promotion;
+use App\Support\InputRules;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -76,7 +77,7 @@ class Index extends Component
     protected function rules(): array
     {
         return [
-            'form.name' => ['required', 'string', 'max:80', Rule::unique('plans', 'name')->where('tenant_id', tenant()->id)->ignore($this->editingId)],
+            'form.name' => ['required', 'string', 'max:80', InputRules::TEXT, Rule::unique('plans', 'name')->where('tenant_id', tenant()->id)->ignore($this->editingId)],
             'form.description' => 'nullable|string|max:190',
             'form.download_mbps' => 'required|numeric|min:0.1|max:100000',
             'form.upload_mbps' => 'required|numeric|min:0.1|max:100000',
@@ -91,8 +92,8 @@ class Index extends Component
             'form.reconnection_fee' => 'nullable|numeric|min:0|max:100000',
             'form.installation_fee' => 'nullable|numeric|min:0|max:100000',
             'form.auto_reconnect' => 'boolean',
-            'form.allowed_equipment' => 'nullable|string|max:190',
-            'form.mikrotik_profile' => 'nullable|string|max:80',
+            'form.allowed_equipment' => 'nullable|string|max:190|'.InputRules::TEXT,
+            'form.mikrotik_profile' => 'nullable|string|max:80|'.InputRules::CODE,
             'form.color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'form.active' => 'boolean',
             'form.public' => 'boolean',
@@ -105,7 +106,7 @@ class Index extends Component
             'form.name' => 'nombre', 'form.download_mbps' => 'velocidad de descarga', 'form.upload_mbps' => 'velocidad de subida',
             'form.price' => 'precio', 'form.tax_rate' => 'IVA', 'form.data_cap_gb' => 'límite de consumo', 'form.grace_days' => 'días de tolerancia',
             'form.late_fee' => 'recargo', 'form.reconnection_fee' => 'cargo de reconexión', 'form.installation_fee' => 'costo de instalación',
-            'form.mikrotik_profile' => 'perfil MikroTik',
+            'form.mikrotik_profile' => 'perfil MikroTik', 'form.description' => 'descripción', 'form.allowed_equipment' => 'equipo permitido',
         ];
     }
 

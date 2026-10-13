@@ -9,6 +9,7 @@ use App\Models\Sector;
 use App\Models\Tower;
 use App\Models\Zone;
 use App\Services\CoverageService;
+use App\Support\InputRules;
 use App\Support\MapData;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
@@ -74,18 +75,19 @@ class Index extends Component
         $this->authorize('network.manage');
         $tid = tenant()->id;
         $data = $this->validate([
-            'tform.code' => ['required', 'string', 'max:30', Rule::unique('towers', 'code')->where('tenant_id', $tid)->ignore($this->towerId)],
-            'tform.name' => 'required|string|max:150',
+            'tform.code' => ['required', 'string', 'max:30', InputRules::CODE, Rule::unique('towers', 'code')->where('tenant_id', $tid)->ignore($this->towerId)],
+            'tform.name' => 'required|string|max:150|'.InputRules::TEXT,
             'tform.zone_id' => ['nullable', Rule::exists('zones', 'id')->where('tenant_id', $tid)],
-            'tform.address' => 'nullable|string|max:190',
+            'tform.address' => 'nullable|string|max:190|'.InputRules::TEXT,
             'tform.lat' => 'required|numeric|between:-90,90',
             'tform.lng' => 'required|numeric|between:-180,180',
             'tform.height_m' => 'nullable|numeric|min:0|max:500',
-            'tform.owner' => 'nullable|string|max:150',
-            'tform.monthly_cost' => 'nullable|numeric|min:0',
+            'tform.owner' => 'nullable|string|max:150|'.InputRules::TEXT,
+            'tform.monthly_cost' => 'nullable|numeric|min:0|max:10000000',
             'tform.status' => ['required', Rule::in(array_keys(config('wisp.device_status')))],
             'tform.notes' => 'nullable|string|max:2000',
-        ], [], ['tform.code' => 'clave', 'tform.name' => 'nombre', 'tform.lat' => 'latitud', 'tform.lng' => 'longitud', 'tform.height_m' => 'altura'])['tform'];
+        ], [], ['tform.code' => 'clave', 'tform.name' => 'nombre', 'tform.lat' => 'latitud', 'tform.lng' => 'longitud', 'tform.height_m' => 'altura',
+            'tform.address' => 'dirección', 'tform.owner' => 'propietario', 'tform.monthly_cost' => 'costo mensual'])['tform'];
         $data = array_map(fn ($v) => $v === '' ? null : $v, $data);
         $data['monthly_cost'] ??= 0;
         $tower = $this->towerId ? tap(Tower::findOrFail($this->towerId))->update($data) : Tower::create($data);
@@ -138,15 +140,16 @@ class Index extends Component
         $data = $this->validate([
             'sform.tower_id' => ['required', Rule::exists('towers', 'id')->where('tenant_id', $tid)],
             'sform.repeater_id' => ['nullable', Rule::exists('repeaters', 'id')->where('tenant_id', $tid)],
-            'sform.name' => 'required|string|max:150',
+            'sform.name' => 'required|string|max:150|'.InputRules::TEXT,
             'sform.azimuth' => 'required|integer|between:0,359',
             'sform.beamwidth' => 'required|integer|between:1,360',
             'sform.range_km' => 'required|numeric|min:0.1|max:100',
             'sform.height_m' => 'nullable|numeric|min:0|max:500',
-            'sform.frequency' => 'nullable|string|max:60',
+            'sform.frequency' => 'nullable|string|max:60|'.InputRules::TEXT,
             'sform.power_dbm' => 'nullable|numeric|between:-30,60',
-            'sform.technology' => 'nullable|string|max:80',
-        ], [], ['sform.tower_id' => 'torre', 'sform.name' => 'nombre', 'sform.azimuth' => 'azimut', 'sform.beamwidth' => 'apertura', 'sform.range_km' => 'alcance', 'sform.power_dbm' => 'potencia'])['sform'];
+            'sform.technology' => 'nullable|string|max:80|'.InputRules::TEXT,
+        ], [], ['sform.tower_id' => 'torre', 'sform.name' => 'nombre', 'sform.azimuth' => 'azimut', 'sform.beamwidth' => 'apertura', 'sform.range_km' => 'alcance', 'sform.power_dbm' => 'potencia',
+            'sform.frequency' => 'frecuencia', 'sform.technology' => 'tecnología'])['sform'];
         $data = array_map(fn ($v) => $v === '' ? null : $v, $data);
         $sector = $this->sectorId ? tap(Sector::findOrFail($this->sectorId))->update($data) : Sector::create($data);
         $this->showSectorForm = false;

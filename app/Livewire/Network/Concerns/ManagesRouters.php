@@ -6,6 +6,7 @@ use App\Models\NetworkDevice;
 use App\Models\Tower;
 use App\Services\Network\NetworkClient;
 use App\Support\Audit;
+use App\Support\InputRules;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -58,25 +59,26 @@ trait ManagesRouters
         $this->authorize('network.manage');
         $tid = tenant()->id;
         $data = $this->validate([
-            'mform.name' => ['required', 'string', 'max:120', Rule::unique('network_devices', 'name')->where('tenant_id', $tid)->where('type', 'mikrotik')->whereNull('deleted_at')->ignore($this->routerId)],
-            'mform.model' => 'nullable|string|max:100',
-            'mform.ip' => 'nullable|ip',
+            'mform.name' => ['required', 'string', 'max:120', InputRules::TEXT, Rule::unique('network_devices', 'name')->where('tenant_id', $tid)->where('type', 'mikrotik')->whereNull('deleted_at')->ignore($this->routerId)],
+            'mform.model' => 'nullable|string|max:100|'.InputRules::TEXT,
+            'mform.ip' => 'nullable|ip|max:15',
             'mform.api_mode' => ['required', Rule::in(array_keys(config('wisp.api_modes')))],
             'mform.api_host' => ['nullable', 'string', 'max:190', 'regex:/^[A-Za-z0-9.\-:\[\]]+$/', Rule::requiredIf(fn () => in_array($this->mform['api_mode'], ['api', 'rest'], true) && empty($this->mform['ip']))],
             'mform.api_port' => 'nullable|integer|between:1,65535',
             'mform.api_ssl' => 'boolean',
-            'mform.api_user' => ['nullable', 'string', 'max:100', Rule::requiredIf(fn () => in_array($this->mform['api_mode'], ['api', 'rest'], true))],
+            'mform.api_user' => ['nullable', 'string', 'max:100', InputRules::USERNAME, Rule::requiredIf(fn () => in_array($this->mform['api_mode'], ['api', 'rest'], true))],
             'mform.password' => 'nullable|string|max:190',
             'mform.service_method' => ['required', Rule::in(array_keys(config('wisp.service_methods')))],
             'mform.suspended_list' => ['nullable', 'string', 'max:60', 'regex:/^[A-Za-z0-9_\-.]+$/'],
-            'mform.location' => 'nullable|string|max:190',
+            'mform.location' => 'nullable|string|max:190|'.InputRules::TEXT,
             'mform.tower_id' => ['nullable', Rule::exists('towers', 'id')->where('tenant_id', $tid)],
             'mform.notes' => 'nullable|string|max:2000',
         ], [
             'mform.api_host.required' => 'Indica el host o la IP del equipo.',
         ], [
             'mform.name' => 'nombre', 'mform.api_host' => 'host', 'mform.api_port' => 'puerto', 'mform.api_user' => 'usuario',
-            'mform.suspended_list' => 'address-list de suspendidos', 'mform.api_mode' => 'modo de conexión',
+            'mform.suspended_list' => 'address-list de suspendidos', 'mform.api_mode' => 'modo de conexión', 'mform.model' => 'modelo',
+            'mform.ip' => 'IP de gestión', 'mform.location' => 'ubicación', 'mform.password' => 'contraseña',
         ])['mform'];
 
         $password = $data['password'];

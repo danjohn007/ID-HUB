@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use App\Services\InventoryService;
 use App\Services\ReportExporter;
 use App\Support\Catalog;
+use App\Support\InputRules;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
@@ -128,19 +129,20 @@ class Index extends Component
     {
         $this->authorize('inventory.manage');
         $this->validate([
-            'item.sku' => ['required', 'string', 'max:40', Rule::unique('inventory_items', 'sku')->where('tenant_id', tenant()->id)->ignore($this->itemId)],
-            'item.name' => 'required|string|max:190',
+            'item.sku' => ['required', 'string', 'max:40', InputRules::CODE, Rule::unique('inventory_items', 'sku')->where('tenant_id', tenant()->id)->ignore($this->itemId)],
+            'item.name' => 'required|string|max:190|'.InputRules::TEXT,
             'item.category' => 'required|in:'.implode(',', array_keys(config('wisp.inventory_categories'))),
-            'item.brand' => 'nullable|string|max:120',
-            'item.model' => 'nullable|string|max:120',
+            'item.brand' => 'nullable|string|max:120|'.InputRules::TEXT,
+            'item.model' => 'nullable|string|max:120|'.InputRules::TEXT,
             'item.unit' => 'required|string|max:10',
             'item.stock' => $this->itemId ? 'nullable' : 'required|numeric|min:0|max:9999999',
             'item.min_stock' => 'required|numeric|min:0|max:9999999',
             'item.max_stock' => 'nullable|numeric|min:0|max:9999999|gte:item.min_stock',
             'item.unit_cost' => 'required|numeric|min:0|max:9999999',
-            'item.location' => 'nullable|string|max:120',
+            'item.location' => 'nullable|string|max:120|'.InputRules::TEXT,
         ], ['item.max_stock.gte' => 'El máximo debe ser mayor o igual al mínimo.'], [
             'item.sku' => 'SKU', 'item.name' => 'nombre', 'item.min_stock' => 'mínimo', 'item.max_stock' => 'máximo', 'item.unit_cost' => 'costo', 'item.stock' => 'existencia inicial',
+            'item.brand' => 'marca', 'item.model' => 'modelo', 'item.location' => 'ubicación',
         ]);
 
         $data = collect($this->item)->except('stock')->all();
@@ -223,11 +225,12 @@ class Index extends Component
             'movement.quantity' => $isAdjust ? 'nullable' : 'required|numeric|min:0.01|max:9999999',
             'movement.counted' => $isAdjust ? 'required|numeric|min:0|max:9999999' : 'nullable',
             'movement.unit_cost' => 'nullable|numeric|min:0|max:9999999',
-            'movement.reference' => 'nullable|string|max:120',
-            'movement.ticket_folio' => 'nullable|string|max:30',
-            'movement.serial' => 'nullable|string|max:120',
+            'movement.reference' => 'nullable|string|max:120|'.InputRules::TEXT,
+            'movement.ticket_folio' => 'nullable|string|max:30|'.InputRules::CODE,
+            'movement.serial' => 'nullable|string|max:120|'.InputRules::CODE,
             'movement.notes' => 'nullable|string|max:190',
-        ], [], ['movement.item_id' => 'artículo', 'movement.quantity' => 'cantidad', 'movement.counted' => 'existencia contada', 'movement.unit_cost' => 'costo unitario']);
+        ], [], ['movement.item_id' => 'artículo', 'movement.quantity' => 'cantidad', 'movement.counted' => 'existencia contada', 'movement.unit_cost' => 'costo unitario',
+            'movement.reference' => 'referencia', 'movement.ticket_folio' => 'folio de ticket', 'movement.serial' => 'número de serie', 'movement.notes' => 'notas']);
 
         $ticketId = null;
         if ($folio = trim($this->movement['ticket_folio'])) {

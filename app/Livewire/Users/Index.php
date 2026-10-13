@@ -6,6 +6,7 @@ use App\Livewire\Concerns\Toasts;
 use App\Livewire\Concerns\WithTable;
 use App\Models\User;
 use App\Support\Audit;
+use App\Support\InputRules;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -81,13 +82,13 @@ class Index extends Component
     {
         $isNew = ! $this->editingId;
         $data = $this->validate([
-            'form.name' => 'required|string|max:120',
+            'form.name' => 'required|string|max:80|'.InputRules::NAME,
             'form.email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($this->editingId)],
-            'form.phone' => 'nullable|string|max:30',
+            'form.phone' => 'nullable|string|max:20|'.InputRules::PHONE,
             'form.role' => ['required', Rule::in(array_keys(self::roles()))],
             'form.active' => 'boolean',
             'form.on_call' => 'boolean',
-            'form.password' => [$isNew && ! ($this->form['generate'] ?? false) ? 'required' : 'nullable', 'string', Password::min(8)->letters()->numbers()],
+            'form.password' => [$isNew && ! ($this->form['generate'] ?? false) ? 'required' : 'nullable', 'string', 'max:100', Password::min(8)->letters()->numbers()],
         ], [], ['form.name' => 'nombre', 'form.email' => 'correo', 'form.role' => 'rol', 'form.password' => 'contraseña', 'form.phone' => 'teléfono'])['form'];
 
         $me = auth()->user();

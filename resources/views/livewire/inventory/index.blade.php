@@ -191,21 +191,21 @@
     {{-- ============================== MODALES ============================== --}}
     <x-ui.modal wire:model="showItem" :title="$itemId ? 'Editar artículo' : 'Nuevo artículo'" size="2xl">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-            <x-ui.input label="SKU" wire:model="item.sku" class="sm:col-span-2" required />
-            <x-ui.input label="Nombre" wire:model="item.name" class="sm:col-span-4" required />
+            <x-ui.input label="SKU" wire:model="item.sku" filter="code" maxlength="40" class="sm:col-span-2" required />
+            <x-ui.input label="Nombre" wire:model="item.name" filter="text" maxlength="190" class="sm:col-span-4" required />
             <x-ui.select label="Categoría" wire:model="item.category" :options="config('wisp.inventory_categories')" class="sm:col-span-2" />
-            <x-ui.input label="Marca" wire:model="item.brand" class="sm:col-span-2" />
-            <x-ui.input label="Modelo" wire:model="item.model" class="sm:col-span-2" />
+            <x-ui.input label="Marca" wire:model="item.brand" filter="text" maxlength="120" class="sm:col-span-2" />
+            <x-ui.input label="Modelo" wire:model="item.model" filter="text" maxlength="120" class="sm:col-span-2" />
             <x-ui.select label="Unidad" wire:model="item.unit" :options="['pza' => 'Pieza', 'm' => 'Metro', 'rollo' => 'Rollo', 'caja' => 'Caja', 'kit' => 'Kit', 'par' => 'Par']" class="sm:col-span-2" />
-            <x-ui.input label="Costo unitario" type="number" step="0.01" wire:model="item.unit_cost" prefix="$" class="sm:col-span-2" />
-            <x-ui.input label="Ubicación" wire:model="item.location" placeholder="Almacén, camioneta..." class="sm:col-span-2" />
+            <x-ui.input label="Costo unitario" type="number" step="0.01" min="0" max="9999999" wire:model="item.unit_cost" prefix="$" class="sm:col-span-2" />
+            <x-ui.input label="Ubicación" wire:model="item.location" filter="text" maxlength="120" placeholder="Almacén, camioneta..." class="sm:col-span-2" />
             @if (! $itemId)
-                <x-ui.input label="Existencia inicial" type="number" step="0.01" wire:model="item.stock" class="sm:col-span-2" hint="Se registra como entrada." />
+                <x-ui.input label="Existencia inicial" type="number" step="0.01" min="0" max="9999999" wire:model="item.stock" class="sm:col-span-2" hint="Se registra como entrada." />
             @else
                 <div class="sm:col-span-2"><label class="form-label">Existencia actual</label><div class="form-input bg-slate-50 text-slate-600">{{ $item['stock'] }} {{ $item['unit'] }}</div><p class="mt-1 text-xs text-slate-500">Cámbiala con movimientos.</p></div>
             @endif
-            <x-ui.input label="Mínimo" type="number" step="0.01" wire:model="item.min_stock" class="sm:col-span-2" hint="Alerta al llegar a este nivel." />
-            <x-ui.input label="Máximo" type="number" step="0.01" wire:model="item.max_stock" class="sm:col-span-2" />
+            <x-ui.input label="Mínimo" type="number" step="0.01" min="0" max="9999999" wire:model="item.min_stock" class="sm:col-span-2" hint="Alerta al llegar a este nivel." />
+            <x-ui.input label="Máximo" type="number" step="0.01" min="0" max="9999999" wire:model="item.max_stock" class="sm:col-span-2" />
             <div class="space-y-3 sm:col-span-6">
                 <x-ui.toggle wire:model="item.serialized" label="Artículo serializado" description="Pide número de serie en cada movimiento (antenas, CPE, routers)." />
                 <x-ui.toggle wire:model="item.active" label="Activo" />
@@ -230,17 +230,17 @@
             <x-ui.select label="Artículo" wire:model.live="movement.item_id" :options="$itemOptions" placeholder="Selecciona..." required />
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 @if ($movement['type'] === 'ajuste')
-                    <x-ui.input label="Existencia física contada" type="number" step="0.01" wire:model="movement.counted" required hint="Se registra la diferencia contra el sistema." />
+                    <x-ui.input label="Existencia física contada" type="number" step="0.01" min="0" max="9999999" wire:model="movement.counted" required hint="Se registra la diferencia contra el sistema." />
                 @else
-                    <x-ui.input label="Cantidad" type="number" step="0.01" min="0.01" wire:model="movement.quantity" required :hint="in_array($movement['type'], ['entrada', 'devolucion']) ? 'Suma a la existencia' : 'Se descuenta de la existencia'" />
+                    <x-ui.input label="Cantidad" type="number" step="0.01" min="0.01" max="9999999" wire:model="movement.quantity" required :hint="in_array($movement['type'], ['entrada', 'devolucion']) ? 'Suma a la existencia' : 'Se descuenta de la existencia'" />
                 @endif
                 @if ($movement['type'] === 'entrada')
-                    <x-ui.input label="Costo unitario de compra" type="number" step="0.01" wire:model="movement.unit_cost" prefix="$" hint="Actualiza el costo promedio." />
+                    <x-ui.input label="Costo unitario de compra" type="number" step="0.01" min="0" max="9999999" wire:model="movement.unit_cost" prefix="$" hint="Actualiza el costo promedio." />
                 @else
-                    <x-ui.input label="Número de serie" wire:model="movement.serial" />
+                    <x-ui.input label="Número de serie" wire:model="movement.serial" filter="code" maxlength="120" />
                 @endif
-                <x-ui.input label="Referencia" wire:model="movement.reference" placeholder="Factura, orden de compra, vale..." />
-                <x-ui.input label="Ticket (folio)" wire:model="movement.ticket_folio" placeholder="T-001258" />
+                <x-ui.input label="Referencia" wire:model="movement.reference" filter="text" maxlength="120" placeholder="Factura, orden de compra, vale..." />
+                <x-ui.input label="Ticket (folio)" wire:model="movement.ticket_folio" filter="upper" maxlength="30" placeholder="T-001258" />
             </div>
             @if (in_array($movement['type'], ['salida', 'instalacion', 'devolucion']))
                 <div class="relative">
@@ -255,7 +255,7 @@
                     @endif
                 </div>
             @endif
-            <x-ui.input label="Notas" wire:model="movement.notes" />
+            <x-ui.input label="Notas" wire:model="movement.notes" maxlength="190" />
         </div>
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>

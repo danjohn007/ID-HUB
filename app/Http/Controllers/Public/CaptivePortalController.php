@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\Promotion;
 use App\Models\Tenant;
 use App\Services\CaptivePortalService;
+use App\Support\InputRules;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -75,7 +76,11 @@ class CaptivePortalController extends Controller
         $request->validate([
             'method' => ['required', 'in:'.implode(',', (array) $cfg['methods'])],
             'accept' => $cfg['terms'] ? 'accepted' : 'nullable',
-        ], ['accept.accepted' => 'Debes aceptar los términos de uso.']);
+            'username' => ['nullable', 'string', 'max:80', InputRules::USERNAME],
+            'password' => 'nullable|string|max:80',
+            'code' => ['nullable', 'string', 'max:30', InputRules::CODE],
+            'voucher' => ['nullable', 'string', 'max:30', 'regex:/^[A-Za-z0-9\s\-]+$/'],
+        ], ['accept.accepted' => 'Debes aceptar los términos de uso.'], ['username' => 'usuario', 'password' => 'contraseña', 'code' => 'código de cliente', 'voucher' => 'código de ficha']);
 
         $hotspot = $this->hotspot($request);
         $result = $this->portal->authenticate($tenant, $request->input('method'), $request->only('username', 'password', 'code', 'voucher'), $hotspot['mac'] ?: null, $hotspot['ip'] ?: $request->ip());

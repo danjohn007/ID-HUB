@@ -12,6 +12,7 @@ use App\Models\Zone;
 use App\Services\ReportExporter;
 use App\Services\TicketService;
 use App\Support\Catalog;
+use App\Support\InputRules;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -160,11 +161,11 @@ class Index extends Component
             'form.category' => 'required|in:'.implode(',', array_keys(config('wisp.ticket_categories'))),
             'form.priority' => 'required|in:'.implode(',', array_keys(config('wisp.ticket_priorities'))),
             'form.technician_id' => 'nullable',
-            'form.subject' => 'nullable|string|max:190',
+            'form.subject' => 'nullable|string|max:190|'.InputRules::TEXT,
             'form.description' => 'nullable|string|max:3000',
             'form.source' => 'required|in:admin,cliente,whatsapp,telefono,automatico',
         ], ['form.client_id.required_without' => 'Selecciona un cliente (o un repetidor para fallas de infraestructura).'],
-            ['form.client_id' => 'cliente', 'form.category' => 'categoría', 'form.priority' => 'prioridad']);
+            ['form.client_id' => 'cliente', 'form.category' => 'categoría', 'form.priority' => 'prioridad', 'form.subject' => 'asunto', 'form.description' => 'descripción']);
 
         $client = $this->form['client_id'] ? Client::findOrFail($this->form['client_id']) : null;
         $tech = $this->form['technician_id'] ? User::forTenant()->active()->findOrFail($this->form['technician_id']) : null;

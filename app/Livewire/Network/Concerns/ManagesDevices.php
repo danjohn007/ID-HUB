@@ -7,6 +7,7 @@ use App\Models\NetworkDevice;
 use App\Models\Repeater;
 use App\Models\Tower;
 use App\Models\User;
+use App\Support\InputRules;
 use Illuminate\Validation\Rule;
 
 /**
@@ -62,14 +63,14 @@ trait ManagesDevices
         $tid = tenant()->id;
         $data = $this->validate([
             'dform.type' => ['required', Rule::in(array_keys(config('wisp.device_types')))],
-            'dform.name' => 'required|string|max:150',
-            'dform.manufacturer' => 'nullable|string|max:100',
-            'dform.model' => 'nullable|string|max:100',
-            'dform.serial' => 'nullable|string|max:100',
-            'dform.mac' => ['nullable', 'regex:/^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/'],
-            'dform.ip' => 'nullable|ip',
-            'dform.firmware' => 'nullable|string|max:100',
-            'dform.location' => 'nullable|string|max:190',
+            'dform.name' => 'required|string|max:150|'.InputRules::TEXT,
+            'dform.manufacturer' => 'nullable|string|max:100|'.InputRules::TEXT,
+            'dform.model' => 'nullable|string|max:100|'.InputRules::TEXT,
+            'dform.serial' => 'nullable|string|max:100|'.InputRules::CODE,
+            'dform.mac' => ['nullable', 'max:17', 'regex:/^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/'],
+            'dform.ip' => 'nullable|ip|max:15',
+            'dform.firmware' => 'nullable|string|max:100|'.InputRules::TEXT,
+            'dform.location' => 'nullable|string|max:190|'.InputRules::TEXT,
             'dform.lat' => 'nullable|numeric|between:-90,90',
             'dform.lng' => 'nullable|numeric|between:-180,180',
             'dform.responsible_id' => ['nullable', Rule::exists('users', 'id')->where('tenant_id', $tid)],
@@ -79,9 +80,11 @@ trait ManagesDevices
             'dform.status' => ['required', Rule::in(array_keys(config('wisp.device_status')))],
             'dform.installed_at' => 'nullable|date',
             'dform.notes' => 'nullable|string|max:2000',
-            'dform.client_code' => 'nullable|string|max:30',
+            'dform.client_code' => 'nullable|string|max:30|'.InputRules::CODE,
         ], [], [
             'dform.name' => 'nombre', 'dform.mac' => 'MAC', 'dform.ip' => 'IP', 'dform.type' => 'tipo', 'dform.status' => 'estado',
+            'dform.manufacturer' => 'fabricante', 'dform.model' => 'modelo', 'dform.serial' => 'número de serie', 'dform.location' => 'ubicación',
+            'dform.client_code' => 'código de cliente', 'dform.notes' => 'notas',
         ])['dform'];
 
         $client = null;

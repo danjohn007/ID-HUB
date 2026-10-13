@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Livewire\Concerns\Toasts;
 use App\Support\Audit;
+use App\Support\InputRules;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -39,8 +40,8 @@ class Profile extends Component
     public function saveProfile(): void
     {
         $data = $this->validate([
-            'name' => 'required|string|max:120',
-            'phone' => 'nullable|string|max:30',
+            'name' => 'required|string|max:80|'.InputRules::NAME,
+            'phone' => 'nullable|string|max:20|'.InputRules::PHONE,
         ], [], ['name' => 'nombre', 'phone' => 'teléfono']);
         Auth::user()->update(['name' => $data['name'], 'phone' => $data['phone'] ?: null]);
         $this->toast('Perfil actualizado');
@@ -49,8 +50,8 @@ class Profile extends Component
     public function savePassword(): void
     {
         $this->validate([
-            'current_password' => 'required|current_password',
-            'password' => ['required', 'confirmed', 'different:current_password', Password::min(8)->letters()->numbers()],
+            'current_password' => 'required|string|max:100|current_password',
+            'password' => ['required', 'string', 'max:100', 'confirmed', 'different:current_password', Password::min(8)->letters()->numbers()],
         ], [
             'current_password.current_password' => 'La contraseña actual no es correcta.',
             'password.different' => 'La nueva contraseña debe ser distinta de la actual.',

@@ -14,6 +14,7 @@ use App\Services\CoverageService;
 use App\Services\ReferralService;
 use App\Services\ServiceControl;
 use App\Support\Audit;
+use App\Support\InputRules;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -78,21 +79,21 @@ class Edit extends Component
         $tid = tenant()->id;
 
         return [
-            'form.code' => ['required', 'string', 'max:30', Rule::unique('clients', 'code')->where('tenant_id', $tid)->ignore($id)],
-            'form.first_name' => 'required|string|max:120',
-            'form.last_name' => 'nullable|string|max:120',
-            'form.phone' => 'nullable|string|max:30',
-            'form.whatsapp' => 'nullable|string|max:30',
+            'form.code' => ['required', 'string', 'max:30', InputRules::CODE, Rule::unique('clients', 'code')->where('tenant_id', $tid)->ignore($id)],
+            'form.first_name' => 'required|string|max:80|'.InputRules::NAME,
+            'form.last_name' => 'nullable|string|max:80|'.InputRules::NAME,
+            'form.phone' => 'nullable|string|max:20|'.InputRules::PHONE,
+            'form.whatsapp' => 'nullable|string|max:20|'.InputRules::PHONE,
             'form.email' => 'nullable|email|max:150',
-            'form.curp' => 'nullable|string|max:20',
-            'form.rfc' => 'nullable|string|max:20',
-            'form.address' => 'nullable|string|max:190',
-            'form.references' => 'nullable|string|max:190',
+            'form.curp' => 'nullable|string|max:18|'.InputRules::CURP,
+            'form.rfc' => 'nullable|string|max:13|'.InputRules::RFC,
+            'form.address' => 'nullable|string|max:190|'.InputRules::TEXT,
+            'form.references' => 'nullable|string|max:190|'.InputRules::TEXT,
             'form.lat' => 'nullable|numeric|between:-90,90',
             'form.lng' => 'nullable|numeric|between:-180,180',
             'form.zone_id' => ['nullable', Rule::exists('zones', 'id')->where('tenant_id', $tid)],
-            'form.community' => 'nullable|string|max:120',
-            'form.colonia' => 'nullable|string|max:120',
+            'form.community' => 'nullable|string|max:120|'.InputRules::TEXT,
+            'form.colonia' => 'nullable|string|max:120|'.InputRules::TEXT,
             'form.plan_id' => ['required', Rule::exists('plans', 'id')->where('tenant_id', $tid)],
             'form.installation_date' => 'nullable|date',
             'form.technician_id' => ['nullable', Rule::exists('users', 'id')->where('tenant_id', $tid)],
@@ -100,13 +101,14 @@ class Edit extends Component
             'form.cpe_device_id' => ['nullable', Rule::exists('network_devices', 'id')->where('tenant_id', $tid)],
             'form.repeater_id' => ['nullable', Rule::exists('repeaters', 'id')->where('tenant_id', $tid)],
             'form.router_device_id' => ['nullable', Rule::exists('network_devices', 'id')->where('tenant_id', $tid)],
-            'form.ip_address' => 'nullable|ip',
-            'form.mac_address' => ['nullable', 'regex:/^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/'],
-            'form.pppoe_user' => ['nullable', 'string', 'max:80', Rule::unique('clients', 'pppoe_user')->where('tenant_id', $tid)->ignore($id)],
+            'form.ip_address' => 'nullable|ip|max:15',
+            'form.mac_address' => ['nullable', 'max:17', 'regex:/^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/'],
+            'form.pppoe_user' => ['nullable', 'string', 'max:80', InputRules::USERNAME, Rule::unique('clients', 'pppoe_user')->where('tenant_id', $tid)->ignore($id)],
             'form.pppoe_password' => 'nullable|string|max:80',
             'form.service_status' => ['required', Rule::in(array_keys(config('wisp.client_status')))],
             'form.billing_day' => 'required|integer|between:1,28',
             'form.notes' => 'nullable|string|max:2000',
+            'referralCode' => ['nullable', 'string', 'max:30', InputRules::CODE],
         ];
     }
 
@@ -115,6 +117,8 @@ class Edit extends Component
         return [
             'form.code' => 'ID de cliente', 'form.first_name' => 'nombre', 'form.plan_id' => 'plan', 'form.email' => 'correo',
             'form.ip_address' => 'IP', 'form.mac_address' => 'MAC', 'form.pppoe_user' => 'usuario PPPoE', 'form.billing_day' => 'día de facturación',
+            'form.last_name' => 'apellidos', 'form.phone' => 'teléfono', 'form.whatsapp' => 'WhatsApp', 'form.curp' => 'CURP', 'form.rfc' => 'RFC',
+            'form.address' => 'dirección', 'form.references' => 'referencias', 'form.community' => 'comunidad', 'form.colonia' => 'colonia', 'referralCode' => 'código de referido',
         ];
     }
 

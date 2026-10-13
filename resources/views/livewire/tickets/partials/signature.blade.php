@@ -13,7 +13,7 @@
     <div class="mt-3" x-data="{ sign: false }" x-on:signature-saved.window="sign = false">
         <x-ui.button x-show="!sign" @click="sign = true" variant="secondary" icon="pencil" class="w-full">{{ $t->signature_path ? 'Capturar nueva firma' : 'Capturar firma del cliente' }}</x-ui.button>
         <div x-show="sign" x-cloak class="space-y-2">
-            <x-ui.input label="Nombre de quien firma" wire:model="signedBy" />
+            <x-ui.input label="Nombre de quien firma" wire:model="signedBy" filter="name" maxlength="120" />
             <div wire:ignore>
                 <template x-if="sign">
                     <div x-data="signaturePad('signature')">
