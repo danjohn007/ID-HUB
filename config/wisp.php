@@ -19,6 +19,8 @@ return [
         'tagline' => 'Tu WISP bajo control',
         // Enlace "Agenda una demo" del login (WhatsApp, Calendly, formulario...). Vacío = no se muestra.
         'sales_url' => env('WISP_SALES_URL'),
+        // Destino de las solicitudes de demo del formulario de la página pública.
+        'sales_email' => env('WISP_SALES_EMAIL', 'dan@impactosdigitales.com'),
     ],
 
     'roles' => [

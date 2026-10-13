@@ -22,6 +22,7 @@ foreach (glob(__DIR__.'/public/*.php') as $file) {
 
 // Página pública; con sesión iniciada redirige al panel del usuario.
 Route::get('/', LandingController::class)->name('home');
+Route::post('/solicitar-demo', [LandingController::class, 'demo'])->middleware('throttle:5,1')->name('demo.request');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', Login::class)->name('login');

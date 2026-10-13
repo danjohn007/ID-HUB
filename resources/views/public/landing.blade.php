@@ -1,8 +1,5 @@
 @php
     $brand = config('wisp.brand.name', 'WISPCONTROL');
-    $salesUrl = config('wisp.brand.sales_url');
-    $demoUrl = $salesUrl ?: route('login');
-    $demoAttrs = $salesUrl ? 'target="_blank" rel="noopener"' : '';
 @endphp
 <!DOCTYPE html>
 <html lang="es" class="scroll-smooth">
@@ -15,6 +12,7 @@
     <meta property="og:description" content="Cobra a tiempo, corta y reconecta solo, y haz crecer tu red. Todo en una sola plataforma.">
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#071330">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     @vite(['resources/css/app.css'])
     <style>
@@ -50,7 +48,7 @@
         </nav>
         <div class="flex items-center gap-2">
             <a href="{{ route('login') }}" class="hidden rounded-lg px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-white/10 sm:inline-flex">Iniciar sesión</a>
-            <a href="{{ $demoUrl }}" {!! $demoAttrs !!} class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white shadow-lg shadow-brand-900/40 transition hover:bg-brand-500">
+            <a href="#demo" data-demo class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white shadow-lg shadow-brand-900/40 transition hover:bg-brand-500">
                 <span class="sm:hidden">Demo</span><span class="hidden sm:inline">Agenda una demo</span> <x-heroicon-m-arrow-right class="hidden h-4 w-4 sm:block" />
             </a>
             <button type="button" class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 lg:hidden" data-menu-toggle aria-label="Abrir menú" aria-expanded="false">
@@ -96,7 +94,7 @@
                 Deja atrás los cuadernos, las hojas de cálculo y los mensajes de WhatsApp a mano.
             </p>
             <div class="mt-9 flex flex-col gap-3 sm:flex-row">
-                <a href="{{ $demoUrl }}" {!! $demoAttrs !!} class="group inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3.5 text-base font-bold text-white shadow-xl shadow-brand-600/30 transition hover:-translate-y-0.5 hover:bg-brand-500">
+                <a href="#demo" data-demo class="group inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3.5 text-base font-bold text-white shadow-xl shadow-brand-600/30 transition hover:-translate-y-0.5 hover:bg-brand-500">
                     Agenda una demo gratuita <x-heroicon-m-arrow-right class="h-5 w-5 transition group-hover:translate-x-1" />
                 </a>
                 <a href="#automatizacion" class="inline-flex items-center justify-center gap-2 rounded-xl bg-white/5 px-6 py-3.5 text-base font-semibold text-white ring-1 ring-white/20 transition hover:bg-white/10">
@@ -500,7 +498,7 @@
                                 <li class="flex gap-3 text-lg text-slate-600"><span class="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600"><x-heroicon-m-check class="h-4 w-4" /></span>{{ $item }}</li>
                             @endforeach
                         </ul>
-                        <a href="{{ $demoUrl }}" {!! $demoAttrs !!} class="mt-8 inline-flex items-center gap-2 font-semibold text-brand-600 hover:text-brand-700">Quiero verlo en mi WISP <x-heroicon-m-arrow-right class="h-4 w-4" /></a>
+                        <a href="#demo" data-demo class="mt-8 inline-flex items-center gap-2 font-semibold text-brand-600 hover:text-brand-700">Quiero verlo en mi WISP <x-heroicon-m-arrow-right class="h-4 w-4" /></a>
                     </div>
                     <div class="relative flex justify-center">
                         <div class="pointer-events-none absolute inset-0 m-auto h-72 w-72 rounded-full bg-brand-200/50 blur-3xl" aria-hidden="true"></div>
@@ -597,7 +595,7 @@
                     @if ((float) ($plan['commission_percent'] ?? 0) > 0)
                         <p class="mt-6 text-xs {{ $featured ? 'text-navy-300' : 'text-slate-400' }}">Comisión de {{ rtrim(rtrim(number_format((float) $plan['commission_percent'], 2), '0'), '.') }} % por pago en línea.</p>
                     @endif
-                    <a href="{{ $demoUrl }}" {!! $demoAttrs !!} @class([
+                    <a href="#demo" data-demo @class([
                         'mt-6 inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition',
                         'bg-brand-600 text-white shadow-lg shadow-brand-600/30 hover:bg-brand-500' => $featured,
                         'bg-navy-900 text-white hover:bg-navy-800' => ! $featured,
@@ -679,7 +677,7 @@
         <h2 class="text-4xl font-extrabold tracking-tight text-white sm:text-6xl">¿Listo para tomar el control de tu WISP?</h2>
         <p class="mx-auto mt-6 max-w-xl text-lg text-navy-200">Te mostramos {{ $brand }} funcionando con datos reales de un WISP, en una llamada de 30 minutos.</p>
         <div class="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-            <a href="{{ $demoUrl }}" {!! $demoAttrs !!} class="group inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 py-4 text-base font-bold text-white shadow-xl shadow-brand-600/30 transition hover:-translate-y-0.5 hover:bg-brand-500">
+            <a href="#demo" data-demo class="group inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 py-4 text-base font-bold text-white shadow-xl shadow-brand-600/30 transition hover:-translate-y-0.5 hover:bg-brand-500">
                 Agenda tu demo gratuita <x-heroicon-m-arrow-right class="h-5 w-5 transition group-hover:translate-x-1" />
             </a>
             <a href="{{ route('login') }}" class="inline-flex items-center justify-center rounded-xl bg-white/5 px-7 py-4 text-base font-semibold text-white ring-1 ring-white/20 transition hover:bg-white/10">Iniciar sesión</a>
@@ -708,7 +706,7 @@
                 <h3 class="text-sm font-bold text-white">Accesos</h3>
                 <ul class="mt-4 space-y-2.5 text-sm">
                     <li><a href="{{ route('login') }}" class="transition hover:text-white">Iniciar sesión</a></li>
-                    <li><a href="{{ $demoUrl }}" {!! $demoAttrs !!} class="transition hover:text-white">Agenda una demo</a></li>
+                    <li><a href="#demo" data-demo class="transition hover:text-white">Agenda una demo</a></li>
                     <li><a href="{{ url('/api/docs') }}" class="transition hover:text-white">Documentación de la API</a></li>
                 </ul>
             </div>
@@ -723,7 +721,130 @@
     </div>
 </footer>
 
+{{-- ============================================================ Recuadro: solicitar demo --}}
+@php $demoOpen = $errors->has('demo') || $errors->any() || session('demo_sent'); @endphp
+<div id="demo" @class(['fixed inset-0 z-[60] items-end justify-center p-0 sm:items-center sm:p-6', 'flex' => $demoOpen, 'hidden' => ! $demoOpen])
+     role="dialog" aria-modal="true" aria-labelledby="demo-title" data-demo-modal>
+    <div class="absolute inset-0 bg-navy-950/70 backdrop-blur-sm" data-demo-close></div>
+    <div class="relative max-h-[100dvh] w-full overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-3xl motion-safe:animate-fade-up">
+        <div class="relative overflow-hidden bg-navy-950 px-6 pt-6 pb-7 sm:px-8">
+            <div class="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-brand-600/40 blur-3xl" aria-hidden="true"></div>
+            <button type="button" class="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full text-navy-200 hover:bg-white/10 hover:text-white" data-demo-close aria-label="Cerrar">
+                <x-heroicon-o-x-mark class="h-5 w-5" />
+            </button>
+            <span class="relative flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white"><x-heroicon-o-rocket-launch class="h-6 w-6" /></span>
+            <h2 id="demo-title" class="relative mt-4 text-2xl font-extrabold tracking-tight text-white">Agenda tu demo gratuita</h2>
+            <p class="relative mt-1 text-sm text-navy-200">Déjanos tus datos y te contactamos para mostrarte {{ $brand }} con tu operación.</p>
+        </div>
+
+        <div @class(['px-6 py-10 text-center sm:px-8', 'hidden' => ! session('demo_sent')]) data-demo-success>
+            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-50 text-success-600"><x-heroicon-o-check-circle class="h-8 w-8" /></span>
+            <h3 class="mt-4 text-xl font-bold text-navy-900">¡Solicitud enviada!</h3>
+            <p class="mt-2 text-slate-600" data-demo-success-text>{{ session('demo_sent', 'Recibimos tu solicitud y te contactaremos muy pronto.') }}</p>
+            <button type="button" class="mt-6 rounded-xl bg-navy-900 px-6 py-3 text-sm font-bold text-white hover:bg-navy-800" data-demo-close>Listo</button>
+        </div>
+
+        <form method="POST" action="{{ route('demo.request') }}" @class(['space-y-4 px-6 py-6 sm:px-8', 'hidden' => session('demo_sent')]) data-demo-form novalidate>
+            @csrf
+            <div class="absolute h-0 w-0 overflow-hidden opacity-0" aria-hidden="true"><label>Sitio web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <label for="demo-name" class="form-label">Nombre completo *</label>
+                    <input id="demo-name" name="name" type="text" required maxlength="120" autocomplete="name" value="{{ old('name') }}" class="form-input">
+                </div>
+                <div>
+                    <label for="demo-email" class="form-label">Correo electrónico *</label>
+                    <input id="demo-email" name="email" type="email" required maxlength="160" autocomplete="email" value="{{ old('email') }}" class="form-input">
+                </div>
+                <div>
+                    <label for="demo-phone" class="form-label">Teléfono / WhatsApp</label>
+                    <input id="demo-phone" name="phone" type="tel" maxlength="30" autocomplete="tel" value="{{ old('phone') }}" class="form-input">
+                </div>
+                <div>
+                    <label for="demo-company" class="form-label">Nombre de tu WISP</label>
+                    <input id="demo-company" name="company" type="text" maxlength="160" autocomplete="organization" value="{{ old('company') }}" class="form-input">
+                </div>
+                <div>
+                    <label for="demo-clients" class="form-label">Clientes actuales</label>
+                    <select id="demo-clients" name="clients" class="form-input">
+                        <option value="">Selecciona…</option>
+                        @foreach (['Menos de 100', '100 a 500', '500 a 2,000', 'Más de 2,000', 'Aún no opero'] as $opt)
+                            <option @selected(old('clients') === $opt)>{{ $opt }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="sm:col-span-2">
+                    <label for="demo-message" class="form-label">¿Qué te gustaría resolver?</label>
+                    <textarea id="demo-message" name="message" rows="3" maxlength="1500" class="form-input" placeholder="Ej. cobranza, cortes automáticos, app para técnicos…">{{ old('message') }}</textarea>
+                </div>
+            </div>
+            <p @class(['rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700', 'hidden' => ! $errors->any()]) data-demo-error role="alert">{{ $errors->first() }}</p>
+            <button type="submit" class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3.5 text-base font-bold text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-500 disabled:opacity-60" data-demo-submit>
+                <span data-demo-label>Enviar solicitud</span> <x-heroicon-m-paper-airplane class="h-5 w-5" />
+            </button>
+            <p class="text-center text-xs text-slate-400">Usaremos tus datos solo para contactarte sobre la demo.</p>
+        </form>
+    </div>
+</div>
+
 <script>
+    (() => {
+        // Recuadro "Agenda una demo"
+        const modal = document.querySelector('[data-demo-modal]');
+        const form = modal.querySelector('[data-demo-form]');
+        const success = modal.querySelector('[data-demo-success]');
+        const errorBox = modal.querySelector('[data-demo-error]');
+        const submit = modal.querySelector('[data-demo-submit]');
+        const openDemo = (e) => {
+            e?.preventDefault();
+            modal.classList.replace('hidden', 'flex');
+            document.body.classList.add('overflow-hidden');
+            setTimeout(() => form.querySelector('#demo-name')?.focus(), 50);
+        };
+        const closeDemo = () => {
+            modal.classList.replace('flex', 'hidden');
+            document.body.classList.remove('overflow-hidden');
+            if (!success.classList.contains('hidden')) {
+                form.reset();
+                form.classList.remove('hidden');
+                success.classList.add('hidden');
+            }
+        };
+        document.querySelectorAll('[data-demo]').forEach((a) => a.addEventListener('click', openDemo));
+        modal.querySelectorAll('[data-demo-close]').forEach((b) => b.addEventListener('click', closeDemo));
+        document.addEventListener('keydown', (e) => e.key === 'Escape' && !modal.classList.contains('hidden') && closeDemo());
+        if (location.hash === '#demo') openDemo();
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.classList.add('hidden');
+            if (!form.reportValidity()) return;
+            submit.disabled = true;
+            submit.querySelector('[data-demo-label]').textContent = 'Enviando…';
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    body: new FormData(form),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const first = data.errors ? Object.values(data.errors)[0][0] : null;
+                    throw new Error(first || data.message || (res.status === 429 ? 'Demasiados intentos. Espera un minuto.' : 'No se pudo enviar. Intenta de nuevo.'));
+                }
+                modal.querySelector('[data-demo-success-text]').textContent = data.message;
+                form.classList.add('hidden');
+                success.classList.remove('hidden');
+            } catch (err) {
+                errorBox.textContent = err.message;
+                errorBox.classList.remove('hidden');
+            } finally {
+                submit.disabled = false;
+                submit.querySelector('[data-demo-label]').textContent = 'Enviar solicitud';
+            }
+        });
+    })();
+
     (() => {
         // Barra de navegación: fondo al hacer scroll
         const nav = document.querySelector('[data-nav]');
