@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Prospects;
 
+use App\Livewire\Concerns\FillsAddressFromLocation;
 use App\Livewire\Concerns\Toasts;
 use App\Livewire\Concerns\WithTable;
 use App\Models\Plan;
@@ -28,7 +29,7 @@ use Livewire\Component;
 #[Title('Prospectos')]
 class Index extends Component
 {
-    use Toasts, WithTable;
+    use FillsAddressFromLocation, Toasts, WithTable;
 
     #[Url(as: 'vista', except: 'lista')]
     public string $view = 'lista';
@@ -156,6 +157,12 @@ class Index extends Component
             'message' => $p->has_coverage ? 'Con cobertura desde '.$p->nearestRepeater?->code.' a '.$p->distance_km.' km' : 'Sin cobertura: repetidor más cercano '.$p->nearestRepeater?->code.' a '.$p->distance_km.' km',
         ] : null;
         $this->showForm = true;
+    }
+
+    /** El prospecto solo tiene un campo de dirección: se llena con la dirección completa. */
+    protected function addressFields(): array
+    {
+        return ['address' => 'full'];
     }
 
     protected function rules(): array

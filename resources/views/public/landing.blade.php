@@ -1,5 +1,5 @@
 @php
-    $brand = config('wisp.brand.name', 'WISPCONTROL');
+    $brand = config('wisp.brand.name', 'ID-Hub');
 @endphp
 <!DOCTYPE html>
 <html lang="es" class="scroll-smooth">
@@ -13,7 +13,8 @@
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#071330">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     @vite(['resources/css/app.css'])
     <style>
         /* Aparición al hacer scroll (solo si hay JS; sin JS todo queda visible) */

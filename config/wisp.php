@@ -2,7 +2,7 @@
 
 /*
 |--------------------------------------------------------------------------
-| Catálogos y valores por defecto de WISPCONTROL
+| Catálogos y valores por defecto de ID-Hub
 |--------------------------------------------------------------------------
 | Etiquetas y colores de estados (usar siempre estos catálogos en vistas),
 | y configuración por defecto de cada WISP (se fusiona con tenants.settings).
@@ -15,12 +15,19 @@ return [
     'installer_enabled' => (bool) env('INSTALLER_ENABLED', false),
 
     'brand' => [
-        'name' => env('APP_NAME', 'WISPCONTROL'),
+        // Nombre comercial de la plataforma (independiente de APP_NAME para no depender del .env del servidor).
+        'name' => env('BRAND_NAME', 'ID-Hub'),
         'tagline' => 'Tu WISP bajo control',
         // Enlace "Agenda una demo" del login (WhatsApp, Calendly, formulario...). Vacío = no se muestra.
         'sales_url' => env('WISP_SALES_URL'),
         // Destino de las solicitudes de demo del formulario de la página pública.
         'sales_email' => env('WISP_SALES_EMAIL', 'dan@impactosdigitales.com'),
+    ],
+
+    // Dirección a partir del GPS (botón "Usar mi ubicación"): Nominatim de OpenStreetMap.
+    'geocoding' => [
+        'url' => env('GEOCODING_URL', 'https://nominatim.openstreetmap.org'),
+        'email' => env('GEOCODING_EMAIL', env('WISP_SALES_EMAIL', 'dan@impactosdigitales.com')),
     ],
 
     'roles' => [

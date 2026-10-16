@@ -84,7 +84,7 @@
 
                 <x-ui.card title="Suscripción">
                     <dl class="grid grid-cols-2 gap-3">
-                        <x-ui.detail label="Plan WISPCONTROL">{{ $tenant->saasPlan?->name ?? 'Sin plan' }}</x-ui.detail>
+                        <x-ui.detail label="Plan ID-Hub">{{ $tenant->saasPlan?->name ?? 'Sin plan' }}</x-ui.detail>
                         <x-ui.detail label="Vigencia">{{ $tenant->subscription_ends_at?->format('d/m/Y') ?? ($tenant->trial_ends_at ? 'Prueba hasta '.$tenant->trial_ends_at->format('d/m/Y') : '—') }}</x-ui.detail>
                         @foreach (['clients' => 'Clientes', 'devices' => 'Equipos MikroTik', 'users' => 'Usuarios'] as $res => $lbl)
                             @php $lim = $tenant->planLimit($res); $use = $tenant->usage($res); @endphp
@@ -157,7 +157,7 @@
         <div class="mb-4 flex gap-2 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-800">
             <x-heroicon-o-shield-check class="h-5 w-5 shrink-0" />
             <span>Las credenciales se guardan cifradas y nunca se muestran completas. Deja un campo vacío para conservar el valor actual.
-                La comisión de WISPCONTROL de tu plan es {{ pct($tenant->saasPlan?->commission_percent ?? 0, 2) }}{{ ($tenant->saasPlan?->commission_fixed ?? 0) > 0 ? ' + '.money($tenant->saasPlan->commission_fixed) : '' }} por pago en línea.</span>
+                La comisión de ID-Hub de tu plan es {{ pct($tenant->saasPlan?->commission_percent ?? 0, 2) }}{{ ($tenant->saasPlan?->commission_fixed ?? 0) > 0 ? ' + '.money($tenant->saasPlan->commission_fixed) : '' }} por pago en línea.</span>
         </div>
         <div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
             @foreach (config('wisp.gateways') as $p => $label)
@@ -319,7 +319,7 @@
             </x-ui.card>
             <x-ui.card title="Comisiones por pagos en línea" subtitle="Se descuentan de cada pago recibido por pasarela">
                 <dl class="grid grid-cols-2 gap-4">
-                    <x-ui.detail label="Comisión WISPCONTROL ({{ $tenant->saasPlan?->name ?? 'sin plan' }})">
+                    <x-ui.detail label="Comisión ID-Hub ({{ $tenant->saasPlan?->name ?? 'sin plan' }})">
                         {{ pct($tenant->saasPlan?->commission_percent ?? 0, 2) }}{{ ($tenant->saasPlan?->commission_fixed ?? 0) > 0 ? ' + '.money($tenant->saasPlan->commission_fixed) : '' }}
                     </x-ui.detail>
                     <x-ui.detail label="Comisiones de pasarelas">Configurables en “Pasarelas de pago”</x-ui.detail>

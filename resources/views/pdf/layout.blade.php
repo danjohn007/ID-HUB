@@ -49,6 +49,6 @@
         </table>
     </div>
     @yield('content')
-    <div class="footer">{{ $t?->name }} · Documento generado por WISPCONTROL</div>
+    <div class="footer">{{ $t?->name }} · Documento generado por ID-Hub</div>
 </body>
 </html>

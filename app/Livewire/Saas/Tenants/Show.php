@@ -81,7 +81,7 @@ class Show extends Component
                     'data' => $months->map(fn ($m) => round((float) ($rows[$m->format('Y-m')]->online ?? 0), 2))->all(),
                 ],
                 [
-                    'name' => 'Comisión WISPCONTROL', 'type' => 'line', 'yAxisIndex' => 1, 'smooth' => true, 'symbolSize' => 6,
+                    'name' => 'Comisión ID-Hub', 'type' => 'line', 'yAxisIndex' => 1, 'smooth' => true, 'symbolSize' => 6,
                     'itemStyle' => ['color' => '#1A7FF5'], 'lineStyle' => ['width' => 2.5],
                     'data' => $months->map(fn ($m) => round((float) ($rows[$m->format('Y-m')]->fees ?? 0), 2))->all(),
                 ],

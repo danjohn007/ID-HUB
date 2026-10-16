@@ -184,6 +184,6 @@ class Tenant extends Model
     {
         $label = self::LIMIT_RESOURCES[$resource][1] ?? $resource;
 
-        return "Tu plan {$this->saasPlan?->name} permite hasta ".number_format((int) $this->planLimit($resource))." {$label}. Contacta a WISPCONTROL para ampliar tu plan.";
+        return "Tu plan {$this->saasPlan?->name} permite hasta ".number_format((int) $this->planLimit($resource))." {$label}. Contacta a ID-Hub para ampliar tu plan.";
     }
 }

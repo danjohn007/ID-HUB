@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
- * Página pública de WISPCONTROL ("/"). Con sesión iniciada redirige al panel del usuario.
+ * Página pública de ID-Hub ("/"). Con sesión iniciada redirige al panel del usuario.
  * Los planes salen de saas_plans (Panel SaaS); si la tabla aún no existe se usan los de ProductionSeeder.
  */
 class LandingController extends Controller
@@ -43,7 +43,8 @@ class LandingController extends Controller
         ]);
         unset($data['website']);
 
-        $to = config('wisp.brand.sales_email');
+        // Respaldo por si el servidor tiene en caché una configuración anterior sin sales_email
+        $to = config('wisp.brand.sales_email') ?: 'dan@impactosdigitales.com';
         $body = implode("\n", [
             'Nueva solicitud de demo desde '.url('/'),
             '',

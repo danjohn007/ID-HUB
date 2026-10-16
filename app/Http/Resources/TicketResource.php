@@ -19,6 +19,7 @@ class TicketResource extends ApiResource
             'technician' => $this->whenLoaded('technician', fn () => $this->technician ? new UserSummaryResource($this->technician) : null),
             'repeater_id' => $this->repeater_id,
             'sla' => ['due_at' => self::datetime($this->sla_due_at), 'state' => $this->slaState(), 'breached' => (bool) $this->sla_breached],
+            'on_way_at' => self::datetime($this->on_way_at),
             'arrived_at' => self::datetime($this->arrived_at),
             'departed_at' => self::datetime($this->departed_at),
             'resolved_at' => self::datetime($this->resolved_at),
@@ -26,6 +27,12 @@ class TicketResource extends ApiResource
             'resolution' => $this->resolution,
             'comments' => TicketCommentResource::collection($this->whenLoaded('comments')),
             'attachments' => AttachmentResource::collection($this->whenLoaded('attachments')),
+            'materials' => InventoryMovementResource::collection($this->whenLoaded('materials')),
+            'signature' => $this->signature_path ? [
+                'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($this->signature_path),
+                'signed_by' => $this->signed_by_name,
+                'signed_at' => self::datetime($this->signed_at),
+            ] : null,
             'created_at' => self::datetime($this->created_at),
             'updated_at' => self::datetime($this->updated_at),
         ];

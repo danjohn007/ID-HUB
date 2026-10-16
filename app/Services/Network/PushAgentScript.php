@@ -34,7 +34,7 @@ class PushAgentScript
 
         return <<<RSC
 # =====================================================================
-#  WISPCONTROL - Agente push para {$name}
+#  ID-Hub - Agente push para {$name}
 #  Generado {$date}. Requiere RouterOS 7.13 o superior.
 #  Pega este script completo en la Terminal del MikroTik (Winbox > New Terminal).
 #  Cada {$interval} min envía telemetría y aplica los comandos pendientes.
@@ -55,17 +55,17 @@ class PushAgentScript
 :do { :set (\$d->"registrations") [/interface wireless registration-table print as-value proplist=mac-address,signal-strength,tx-rate,rx-rate,uptime] } on-error={}
 :do { :set (\$d->"ping") [/ping 8.8.8.8 count=5 as-value] } on-error={}
 :local body [:serialize to=json value=\$d]
-:do { /tool fetch url=(\$base . "/report") http-method=post http-header-field="Content-Type: application/json" http-data=\$body output=none{$https} } on-error={ :log warning "WISPCONTROL: no se pudo enviar el reporte" }
+:do { /tool fetch url=(\$base . "/report") http-method=post http-header-field="Content-Type: application/json" http-data=\$body output=none{$https} } on-error={ :log warning "ID-Hub: no se pudo enviar el reporte" }
 :do {
   /tool fetch url=(\$base . "/commands") dst-path="wispcontrol-cmd.rsc"{$https}
   :delay 1s
   /import file-name="wispcontrol-cmd.rsc"
   /file remove [find name="wispcontrol-cmd.rsc"]
-} on-error={ :log warning "WISPCONTROL: no se pudieron aplicar los comandos" }
+} on-error={ :log warning "ID-Hub: no se pudieron aplicar los comandos" }
 }
 /system scheduler add name="wispcontrol-agent" interval={$interval}m start-time=startup policy=read,write,test,policy,ftp,sensitive on-event="/system script run wispcontrol-agent"
 /system script run wispcontrol-agent
-:log info "WISPCONTROL: agente instalado"
+:log info "ID-Hub: agente instalado"
 RSC;
     }
 }

@@ -1,4 +1,4 @@
-# WISPCONTROL — API REST v1
+# ID-Hub — API REST v1
 
 Base: `https://<dominio>/api/v1` (local: `http://127.0.0.1:8000/api/v1`). Página pública: `/api/docs`.
 
@@ -133,9 +133,36 @@ curl -X POST "$API/field/stops/2/depart" -H "$H" -d "lat=20.7546&lng=-100.4513"
 curl -X POST "$API/field/location" -H "$H" -d "lat=20.70&lng=-100.44"           # users.last_lat/last_lng
 curl -X POST "$API/push-tokens" -H "$H" -d "token=<fcm-token>&platform=android"
 ```
-`/field/today` devuelve la ruta (`maps_url` de Google Maps con todas las paradas, cada parada con
-`navigation_url`, cliente y ticket/orden) y los tickets abiertos asignados ordenados por prioridad y SLA.
+`/field/today` devuelve `summary` (`services`, `clients`, `tickets`, `installations`, `done`), la ruta
+(`maps_url` de Google Maps con todas las paradas, cada parada con `navigation_url`, cliente y ticket/orden),
+los tickets abiertos asignados ordenados por prioridad y SLA, y las órdenes de instalación abiertas del técnico.
 Llegada/salida usan `App\Services\Field\FieldTracker` (actualiza la parada, el ticket y el estado de la ruta).
+
+### Materiales, firma e inventario
+```bash
+curl "$API/inventory?category=cable,conector&in_stock=1" -H "$H"     # existencias + resumen por categoría
+curl -X POST "$API/tickets/264/materials" -H "$H" -d "item_id=3&quantity=2&serial="   # type=instalacion|salida
+curl -X DELETE "$API/tickets/264/materials/88" -H "$H"               # devolución al almacén
+curl -X POST "$API/tickets/264/signature" -H "$H" -F "signed_by=María López" -F "signature=@firma.png"
+#   o JSON: {"signed_by": "...", "signature_data": "data:image/png;base64,..."}
+```
+Los materiales usan `InventoryService::move()` (bloqueo de existencia, 422 si no alcanza). `GET /tickets/{id}`
+incluye `materials`, `signature` (`url`, `signed_by`, `signed_at`) y `on_way_at`.
+
+### Órdenes de instalación (`installations.manage` o técnico asignado)
+| Endpoint | Uso |
+|---|---|
+| `GET /installations` | Asignadas al técnico (`status=open` por defecto; `all=1` con `installations.manage`) |
+| `GET /installations/{id}` | Contacto (cliente o prospecto), plan, repetidor, `checklist` [{key,label,done,auto}], `measures`, fotos, materiales, firma |
+| `POST /installations/{id}/start` | `en_proceso` |
+| `PATCH /installations/{id}/checklist` | `key`, `done` (fotografía y firma se marcan solas → 422) |
+| `PATCH /installations/{id}/measures` | `signal_dbm`, `speed_down`, `speed_up` (marcan `senal` / `velocidad`) |
+| `POST/DELETE /installations/{id}/attachments` | Foto (`file`, `kind`, `lat`, `lng`): marca `fotografia` |
+| `POST/DELETE /installations/{id}/materials` | Igual que en tickets |
+| `POST /installations/{id}/signature` | Igual que en tickets: marca `firma` |
+| `POST /installations/{id}/complete` | `instalada`; 422 si falta algún punto del checklist |
+
+La activación del cliente sigue en el panel (requiere `installations.manage`). Pruebas: `tests/Feature/FieldAppApiTest.php`.
 
 ## 5. App del cobrador
 
@@ -211,6 +238,4 @@ por `external_id` (repetir devuelve `"duplicate": true` y el pago original).
 
 ## Pendiente / limitaciones
 - Envío real de notificaciones push (FCM): la API registra los tokens; el envío lo hace el módulo de mensajería.
-- Firma del cliente y materiales usados en la app del técnico: usar `attachments` con `kind=firma`; el
-  consumo de inventario aún no se expone por API.
 - Sin versionado de respuestas por encabezado: cambios incompatibles irán en `/api/v2`.

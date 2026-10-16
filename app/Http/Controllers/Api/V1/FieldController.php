@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Resources\FieldRouteResource;
+use App\Http\Resources\InstallationOrderResource;
 use App\Http\Resources\RouteStopResource;
 use App\Http\Resources\TicketResource;
 use App\Models\FieldRoute;
+use App\Models\InstallationOrder;
 use App\Models\RouteStop;
 use App\Models\Ticket;
 use App\Services\Field\FieldTracker;
@@ -33,11 +35,25 @@ class FieldController extends ApiController
 
         $tickets = Ticket::query()->open()->where('technician_id', $user->id)->with('client')
             ->orderByRaw("FIELD(priority, 'critica', 'alta', 'media', 'baja')")->orderBy('sla_due_at')->limit(50)->get();
+        $installations = $type === 'tecnico'
+            ? InstallationOrder::query()->where('technician_id', $user->id)->whereIn('status', ['aceptada', 'programada', 'en_proceso'])
+                ->with(['client', 'prospect', 'plan', 'repeater'])->orderByRaw('scheduled_at IS NULL')->orderBy('scheduled_at')->limit(50)->get()
+            : collect();
+        $stopClients = $route?->stops->map(fn (RouteStop $s) => $s->stoppable instanceof \App\Models\Client ? $s->stoppable->id : $s->stoppable?->client_id)->filter();
 
         return $this->ok([
             'date' => $date,
+            'type' => $type,
+            'summary' => [
+                'services' => $route ? $route->stops->count() : $tickets->count() + $installations->count(),
+                'clients' => $route ? $stopClients->unique()->count() : $tickets->pluck('client_id')->merge($installations->pluck('client_id'))->filter()->unique()->count(),
+                'tickets' => $tickets->count(),
+                'installations' => $installations->count(),
+                'done' => $route ? $route->stops->whereIn('status', ['done', 'skipped'])->count() : 0,
+            ],
             'route' => $route ? new FieldRouteResource($route) : null,
             'open_tickets' => TicketResource::collection($tickets),
+            'installations' => InstallationOrderResource::collection($installations),
             'message' => $route ? null : 'No tienes una ruta planeada para esta fecha.',
         ]);
     }

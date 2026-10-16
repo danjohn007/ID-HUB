@@ -290,15 +290,24 @@ document.addEventListener('alpine:init', () => {
         clear() { const c = this.$refs.pad; this.ctx.clearRect(0, 0, c.width, c.height); this.empty = true; this.$wire.set(model, null); },
     }));
 
-    /** Obtiene ubicación GPS y la envía a Livewire: x-data="geo('lat','lng')" @click="locate()" */
-    Alpine.data('geo', (latField = 'lat', lngField = 'lng') => ({
+    /**
+     * Obtiene ubicación GPS y la envía a Livewire: x-data="geo('lat','lng')" @click="locate()".
+     * Con un tercer parámetro (método del componente) se llama después, p. ej. para llenar la dirección:
+     * x-data="geo('form.lat', 'form.lng', 'fillAddressFromLocation')"
+     */
+    Alpine.data('geo', (latField = 'lat', lngField = 'lng', afterMethod = null) => ({
         locating: false, error: null,
         locate() {
             this.locating = true;
             this.error = null;
             wispGeo.get()
-                .then((c) => { this.$wire.set(latField, c.lat.toFixed(7)); this.$wire.set(lngField, c.lng.toFixed(7)); })
-                .catch((e) => { this.error = e.message; })
+                .then(async (c) => {
+                    this.$wire.set(latField, c.lat.toFixed(7), false);
+                    this.$wire.set(lngField, c.lng.toFixed(7), false);
+                    await (afterMethod ? this.$wire.call(afterMethod) : this.$wire.$commit());
+                })
+                // Los formularios con dirección no muestran this.error: el motivo va en un aviso
+                .catch((e) => { this.error = e.message; if (afterMethod) wispGeo.warn(e); })
                 .finally(() => { this.locating = false; });
         },
     }));

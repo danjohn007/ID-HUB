@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\V1\ClientAppController;
 use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\CollectionController;
 use App\Http\Controllers\Api\V1\FieldController;
+use App\Http\Controllers\Api\V1\InstallationController;
 use App\Http\Controllers\Api\V1\IntegrationController;
+use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\NetworkController;
 use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\SignedDocumentController;
@@ -81,7 +83,27 @@ Route::prefix('v1')->name('api.v1.')->middleware([ApiForceJson::class, 'throttle
                 Route::patch('tickets/{id}/status', [TicketController::class, 'updateStatus'])->whereNumber('id')->name('tickets.status');
                 Route::post('tickets/{id}/comments', [TicketController::class, 'addComment'])->whereNumber('id')->name('tickets.comments.store');
                 Route::post('tickets/{id}/attachments', [TicketController::class, 'addAttachment'])->whereNumber('id')->name('tickets.attachments.store');
+                Route::post('tickets/{id}/materials', [TicketController::class, 'addMaterial'])->whereNumber('id')->name('tickets.materials.store');
+                Route::delete('tickets/{id}/materials/{movement}', [TicketController::class, 'returnMaterial'])->whereNumber(['id', 'movement'])->name('tickets.materials.destroy');
+                Route::post('tickets/{id}/signature', [TicketController::class, 'signature'])->whereNumber('id')->name('tickets.signature');
             });
+        });
+
+        Route::get('inventory', [InventoryController::class, 'index'])->middleware($can('inventory.view|field.work'))->name('inventory.index');
+
+        // Órdenes de instalación del técnico (la activación del cliente queda en el panel)
+        Route::prefix('installations')->name('installations.')->middleware($can('installations.manage|field.work'))->group(function () {
+            Route::get('/', [InstallationController::class, 'index'])->name('index');
+            Route::get('{id}', [InstallationController::class, 'show'])->whereNumber('id')->name('show');
+            Route::post('{id}/start', [InstallationController::class, 'start'])->whereNumber('id')->name('start');
+            Route::patch('{id}/checklist', [InstallationController::class, 'checklist'])->whereNumber('id')->name('checklist');
+            Route::patch('{id}/measures', [InstallationController::class, 'measures'])->whereNumber('id')->name('measures');
+            Route::post('{id}/attachments', [InstallationController::class, 'addAttachment'])->whereNumber('id')->name('attachments.store');
+            Route::delete('{id}/attachments/{attachment}', [InstallationController::class, 'deleteAttachment'])->whereNumber(['id', 'attachment'])->name('attachments.destroy');
+            Route::post('{id}/materials', [InstallationController::class, 'addMaterial'])->whereNumber('id')->name('materials.store');
+            Route::delete('{id}/materials/{movement}', [InstallationController::class, 'returnMaterial'])->whereNumber(['id', 'movement'])->name('materials.destroy');
+            Route::post('{id}/signature', [InstallationController::class, 'signature'])->whereNumber('id')->name('signature');
+            Route::post('{id}/complete', [InstallationController::class, 'complete'])->whereNumber('id')->name('complete');
         });
 
         Route::prefix('field')->name('field.')->middleware($can('field.work|collection.field'))->group(function () use ($can) {

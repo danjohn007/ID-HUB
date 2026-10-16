@@ -40,7 +40,7 @@ class DatabaseBackup
         $tables = collect(DB::select("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'"))->map(fn ($r) => array_values((array) $r)[0]);
 
         try {
-            $write('-- WISPCONTROL · respaldo de '.DB::connection()->getDatabaseName().' · '.now()->format('d/m/Y H:i:s')." · {$reason}\n");
+            $write('-- ID-Hub · respaldo de '.DB::connection()->getDatabaseName().' · '.now()->format('d/m/Y H:i:s')." · {$reason}\n");
             $write("SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS=0;\nSET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n\n");
 
             foreach ($tables as $table) {

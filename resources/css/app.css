@@ -12,7 +12,7 @@
 @source '../../config/*.php';
 
 /*
- * Identidad WISPCONTROL (tomada de los mockups del documento de requerimientos).
+ * Identidad ID-Hub (tomada de los mockups del documento de requerimientos).
  * brand = azul primario, navy = barra lateral. Colores semánticos para estados.
  * Cada WISP puede sobrescribir --color-brand-600 vía <style> en el layout (marca blanca).
  */

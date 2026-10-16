@@ -30,7 +30,7 @@
                     <x-ui.input label="Colonia" wire:model="form.colonia" filter="text" maxlength="120" />
                     <x-ui.input label="Latitud" wire:model.live.debounce.600ms="form.lat" filter="signed" />
                     <x-ui.input label="Longitud" wire:model.live.debounce.600ms="form.lng" filter="signed" />
-                    <div class="flex items-end" x-data="geo('form.lat', 'form.lng')">
+                    <div class="flex items-end" x-data="geo('form.lat', 'form.lng', 'fillAddressFromLocation')">
                         <x-ui.button variant="secondary" icon="map-pin" @click="locate()" class="w-full">
                             <span x-show="!locating">Usar mi ubicación</span><span x-show="locating">Ubicando...</span>
                         </x-ui.button>

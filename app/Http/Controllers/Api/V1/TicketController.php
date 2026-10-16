@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\RecordsFieldWork;
 use App\Http\Resources\AttachmentResource;
+use App\Http\Resources\InventoryMovementResource;
 use App\Http\Resources\TicketCommentResource;
 use App\Http\Resources\TicketResource;
 use App\Models\Attachment;
 use App\Models\Client;
+use App\Models\InventoryMovement;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Field\FieldTracker;
+use App\Services\InventoryService;
 use App\Services\TicketService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /**
@@ -21,6 +26,8 @@ use Illuminate\Validation\Rule;
  */
 class TicketController extends ApiController
 {
+    use RecordsFieldWork;
+
     public function index(Request $request)
     {
         $user = $this->apiUser();
@@ -39,7 +46,7 @@ class TicketController extends ApiController
 
     public function show(int $id): TicketResource
     {
-        $ticket = Ticket::query()->with(['client', 'technician', 'comments.user', 'attachments'])->findOrFail($id);
+        $ticket = Ticket::query()->with(['client', 'technician', 'comments.user', 'attachments', 'materials.item', 'materials.user'])->findOrFail($id);
 
         return new TicketResource($ticket);
     }
@@ -152,6 +159,48 @@ class TicketController extends ApiController
             array_filter(['attachment_id' => $attachment->id, 'lat' => $attachment->lat, 'lng' => $attachment->lng]));
 
         return $this->ok(['data' => new AttachmentResource($attachment)], 'Evidencia guardada.', 201);
+    }
+
+    /** Material usado en el ticket: se descuenta del inventario (sección 23 "Registrar materiales"). */
+    public function addMaterial(Request $request, int $id): JsonResponse
+    {
+        $ticket = $this->workable($id);
+        $movement = $this->recordMaterial($request, [
+            'ticket_id' => $ticket->id, 'client_id' => $ticket->client_id, 'reference' => $ticket->folio,
+            'notes' => 'Material usado en ticket '.$ticket->folio,
+        ]);
+        $ticket->addComment('Material registrado: '.app(InventoryService::class)->qty(abs((float) $movement->quantity)).' '
+            .$movement->item->unit.' de '.$movement->item->name, 'system');
+
+        return $this->ok(['data' => new InventoryMovementResource($movement)], 'Material registrado y descontado del inventario.', 201);
+    }
+
+    public function returnMaterial(int $id, int $movementId): JsonResponse
+    {
+        $ticket = $this->workable($id);
+        $m = InventoryMovement::query()->where('ticket_id', $ticket->id)->whereIn('type', ['instalacion', 'salida'])->findOrFail($movementId);
+        $this->returnMovement($m, [
+            'ticket_id' => $ticket->id, 'client_id' => $ticket->client_id, 'reference' => $ticket->folio,
+            'notes' => 'Devolución de material del ticket '.$ticket->folio,
+        ]);
+
+        return $this->ok([], 'Material devuelto al inventario.');
+    }
+
+    /** Firma de conformidad del cliente (sección 23 "Obtener firma del cliente"). */
+    public function signature(Request $request, int $id): JsonResponse
+    {
+        $ticket = $this->workable($id);
+        $sig = $this->signatureFrom($request);
+        $path = 'signatures/'.$ticket->tenant_id.'/ticket-'.$ticket->id.'-'.now()->format('YmdHis').'.png';
+        Storage::disk('public')->put($path, $sig['png']);
+        if ($ticket->signature_path) {
+            Storage::disk('public')->delete($ticket->signature_path);
+        }
+        $ticket->forceFill(['signature_path' => $path, 'signed_by_name' => $sig['signed_by'], 'signed_at' => now()])->save();
+        $ticket->addComment('Firma de conformidad capturada ('.$sig['signed_by'].')', 'system');
+
+        return $this->ok(['data' => new TicketResource($ticket->fresh(['client', 'technician']))], 'Firma guardada.', 201);
     }
 
     /** Ticket que el usuario puede operar: tickets.manage, o técnico asignado con field.work. */

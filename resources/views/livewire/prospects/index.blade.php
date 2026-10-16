@@ -237,7 +237,7 @@
             <div>
                 <div class="mb-1 flex items-center justify-between">
                     <span class="form-label mb-0">Ubicación (clic en el mapa)</span>
-                    <button type="button" x-data="geo('form.lat', 'form.lng')" @click="locate()" class="inline-flex items-center gap-1 text-xs font-semibold text-brand-600">
+                    <button type="button" x-data="geo('form.lat', 'form.lng', 'fillAddressFromLocation')" @click="locate()" class="inline-flex items-center gap-1 text-xs font-semibold text-brand-600">
                         <x-heroicon-m-map-pin class="h-4 w-4" /><span x-text="locating ? 'Obteniendo...' : 'Usar mi ubicación'"></span>
                     </button>
                 </div>

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Clients;
 
+use App\Livewire\Concerns\FillsAddressFromLocation;
 use App\Livewire\Concerns\Toasts;
 use App\Models\Client;
 use App\Models\NetworkDevice;
@@ -25,7 +26,7 @@ use Livewire\Component;
  */
 class Edit extends Component
 {
-    use Toasts;
+    use FillsAddressFromLocation, Toasts;
 
     public ?Client $client = null;
 
@@ -57,6 +58,11 @@ class Edit extends Component
                 'installation_date' => now()->toDateString(),
                 'pppoe_password' => Str::lower(Str::random(8)),
             ]);
+    }
+
+    protected function addressFields(): array
+    {
+        return ['address' => 'address', 'colonia' => 'colonia', 'community' => 'community'];
     }
 
     protected function fields(): array

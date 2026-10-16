@@ -14,7 +14,7 @@ use Livewire\Component;
 
 /**
  * Comisiones por pagos en línea (sección 49) y facturación mensual de la plataforma (sección 48):
- * importe, comisión del gateway, comisión WISPCONTROL y neto de cada WISP.
+ * importe, comisión del gateway, comisión ID-Hub y neto de cada WISP.
  */
 #[Title('Comisiones')]
 class Commissions extends Component
@@ -74,7 +74,7 @@ class Commissions extends Component
             'xAxis' => ['type' => 'category', 'data' => $months->map(fn ($m) => ucfirst($m->translatedFormat('M y')))->all(), 'axisTick' => ['show' => false]],
             'yAxis' => ['type' => 'value', 'splitLine' => ['lineStyle' => ['type' => 'dashed', 'color' => '#E2E8F0']]],
             'series' => [[
-                'name' => 'Comisión WISPCONTROL', 'type' => 'bar', 'barMaxWidth' => 22, 'itemStyle' => ['color' => '#1A7FF5', 'borderRadius' => [4, 4, 0, 0]],
+                'name' => 'Comisión ID-Hub', 'type' => 'bar', 'barMaxWidth' => 22, 'itemStyle' => ['color' => '#1A7FF5', 'borderRadius' => [4, 4, 0, 0]],
                 'data' => $months->map(fn ($m) => round((float) ($rows[$m->format('Y-m')]->fees ?? 0), 2))->all(),
             ]],
         ];

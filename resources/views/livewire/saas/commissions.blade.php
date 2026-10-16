@@ -6,7 +6,7 @@
     <div class="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <x-ui.stat label="Pagos en línea" :value="money($totals['amount'], false)" icon="credit-card" color="brand" :sub="number_format($totals['n']).' pagos en el mes'" />
         <x-ui.stat label="Comisión gateways" :value="money($totals['gateway_fee'])" icon="building-library" color="slate" />
-        <x-ui.stat label="Comisión WISPCONTROL" :value="money($totals['platform_fee'])" icon="banknotes" color="success" />
+        <x-ui.stat label="Comisión ID-Hub" :value="money($totals['platform_fee'])" icon="banknotes" color="success" />
         <x-ui.stat label="MRR de suscripciones" :value="money($mrr, false)" icon="arrow-trending-up" color="purple" sub="WISP activos con plan" />
     </div>
 
@@ -18,7 +18,7 @@
                     <th class="text-right">Pagos</th>
                     <th class="text-right">Importe</th>
                     <th class="text-right">Gateway</th>
-                    <th class="text-right">WISPCONTROL</th>
+                    <th class="text-right">ID-Hub</th>
                     <th class="text-right">Neto WISP</th>
                 </x-slot:head>
                 @forelse ($rows as $r)
@@ -49,7 +49,7 @@
             </x-ui.table>
         </x-ui.card>
 
-        <x-ui.card title="Comisión WISPCONTROL" subtitle="Últimos 12 meses">
+        <x-ui.card title="Comisión ID-Hub" subtitle="Últimos 12 meses">
             <x-ui.chart id="fees-chart" :options="$chart" height="250px" />
         </x-ui.card>
     </div>

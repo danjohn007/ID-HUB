@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Facturación de la plataforma SaaS (secciones 48 y 49):
- *  - Comisiones por pagos en línea de cada WISP (gateway + WISPCONTROL + neto WISP).
+ *  - Comisiones por pagos en línea de cada WISP (gateway + ID-Hub + neto WISP).
  *  - Factura mensual por WISP = mensualidad del plan + comisiones de plataforma del mes.
  * Consultas sin scope de tenant (panel del superadministrador / consola).
  */

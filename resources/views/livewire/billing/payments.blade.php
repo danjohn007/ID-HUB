@@ -16,7 +16,7 @@
     <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <x-ui.stat label="Importe cobrado (bruto)" :value="money($totals->gross)" icon="banknotes" color="brand" :sub="number_format($totals->n).' pagos aplicados'" />
         <x-ui.stat label="Comisión de pasarelas" :value="money($totals->gateway_fee)" icon="credit-card" color="warning" sub="Mercado Pago, Stripe, PayPal, OXXO" />
-        <x-ui.stat label="Comisión plataforma" :value="money($totals->platform_fee)" icon="building-office" color="purple" sub="Comisión WISPCONTROL" />
+        <x-ui.stat label="Comisión plataforma" :value="money($totals->platform_fee)" icon="building-office" color="purple" sub="Comisión ID-Hub" />
         <x-ui.stat label="Neto WISP" :value="money($totals->net)" icon="check-badge" color="success" :sub="$totals->gross > 0 ? pct($totals->net / $totals->gross * 100).' del bruto' : null" />
     </div>
 

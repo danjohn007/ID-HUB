@@ -91,7 +91,7 @@ class PushTransport implements Transport
     public static function pullScript(NetworkDevice $device): string
     {
         $lines = Cache::pull(static::queueKey($device->id), []);
-        $script = "# WISPCONTROL ".now()->format('Y-m-d H:i:s')." - {$device->name}\n";
+        $script = "# ID-Hub ".now()->format('Y-m-d H:i:s')." - {$device->name}\n";
         foreach ($lines as $line) {
             $script .= ":do { {$line} } on-error={}\n";
         }

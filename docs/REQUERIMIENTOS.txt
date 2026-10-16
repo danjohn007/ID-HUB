@@ -1,5 +1,5 @@
 REQUERIMIENTOS FUNCIONALES ID HUB Plataforma integral de gestión para WISP y comunidades Versión: 1.0 Fecha: 30 de septiembre de 2026 Modalidad: Plataforma Web + App Técnico/Cobrador + App Cliente Modelo: SaaS Multiempresa / Multi-WISP
-1. OBJETIVO GENERAL WISPCONTROL será una plataforma de gestión especializada para proveedores de Internet inalámbrico (WISP) que permita administrar de manera centralizada:
+1. OBJETIVO GENERAL ID-Hub será una plataforma de gestión especializada para proveedores de Internet inalámbrico (WISP) que permita administrar de manera centralizada:
 • Clientes. • Planes y servicios. • Cobranza. • Pagos. • Cortes y reconexiones. • Antenas y CPE. • Repetidores y torres. • Equipamiento MikroTik. • Tickets de soporte. • Técnicos y cobradores. • Rutas de trabajo. • Evidencias fotográﬁcas. • Geolocalización. • Portal cautivo. • Promociones. • Referidos. • Indicadores ﬁnancieros. • Crecimiento y cobertura. • Aplicación móvil del cliente. El sistema deberá sustituir procesos realizados actualmente mediante cuadernos, hojas de cálculo, mensajes de WhatsApp y controles manuales.
 2. ARQUITECTURA GENERAL La plataforma estará compuesta por: A. Panel administrativo web Para propietarios, administradores, cobranza, soporte y supervisores. B. Motor de integración de red Comunicación con equipos MikroTik y demás infraestructura compatible. C. Aplicación móvil de técnicos/cobradores Para ejecución y seguimiento de actividades en campo. D. Aplicación móvil del cliente Para consulta, pago, soporte y administración de su servicio.
 
@@ -21,7 +21,7 @@ E. Portal cautivo Para autenticación de usuarios y promoción/publicidad. F. Mo
 
 • Aviso de suspensión ejecutada. • Aviso de reconexión. Los mensajes podrán enviarse mediante: • WhatsApp. • SMS. • Correo electrónico. • Notiﬁcación push.
 7. PAGOS EN LÍNEA Integración conﬁgurable con:
-• Mercado Pago. • PayPal. • Stripe. • OXXO Pay. • Otros gateways mediante API. El cliente podrá recibir un enlace: "Pagar ahora" Al completar el pago: 1. Gateway conﬁrma operación. 2. WISPCONTROL registra el pago. 3. Actualiza estado de cuenta. 4. Genera comprobante. 5. Ejecuta reconexión si corresponde. 6. Envía conﬁrmación al cliente.
+• Mercado Pago. • PayPal. • Stripe. • OXXO Pay. • Otros gateways mediante API. El cliente podrá recibir un enlace: "Pagar ahora" Al completar el pago: 1. Gateway conﬁrma operación. 2. ID-Hub registra el pago. 3. Actualiza estado de cuenta. 4. Genera comprobante. 5. Ejecuta reconexión si corresponde. 6. Envía conﬁrmación al cliente.
 8. CORTE Y RECONEXIÓN AUTOMÁTICA Integración con MikroTik. Flujo: Fecha límite vencida → Periodo de gracia → Suspensión → MikroTik bloquea servicio Cuando el pago sea conﬁrmado: Pago recibido → Validación → Aplicación de pago → MikroTik habilita servicio El administrador podrá conﬁgurar:
 • Días de tolerancia. • Hora de corte. • Días de reconexión. • Recargo. • Bloqueo parcial. • Bloqueo total. • Reconexión automática.
 
@@ -133,7 +133,7 @@ Ejemplo: Usuario ADMIN suspendió cliente #1025 30/09/2026 08:42
 • Excel. • CSV. • PDF. Reportes: • Clientes. • Morosidad. • Cobranza. • Pagos. • Ingresos. • Cancelaciones. • Altas. • Tickets. • Técnicos. • Inventario. • Equipos. • Red. • Repetidores. • Consumo. • Referidos.
 45. ALERTAS INTELIGENTES El sistema deberá generar alertas para:
 • Repetidor saturado. • Repetidor caído. • Muchos clientes desconectados. • Cliente con señal anormal. • Cliente con retrasos recurrentes. • Ticket próximo a vencer. • Inventario bajo. • Equipo sin comunicación. • Aumento anormal de cancelaciones. • Zona con crecimiento acelerado.
-46. AUTOMATIZACIONES PRINCIPALES El corazón de WISPCONTROL será el motor de reglas: Evento → Condición → Acción
+46. AUTOMATIZACIONES PRINCIPALES El corazón de ID-Hub será el motor de reglas: Evento → Condición → Acción
 
 Ejemplo: Pago vencido ↓ Cliente supera días de tolerancia ↓ Suspender servicio en MikroTik ↓ Enviar WhatsApp ↓ Crear registro de suspensión Otro ejemplo: Repetidor desconectado ↓ Detectar 85 clientes afectados ↓ Generar alerta crítica ↓ Crear ticket automático ↓ Asignar técnico de guardia ↓ Enviar notiﬁcación
 47. BUSINESS INTELLIGENCE El sistema deberá permitir analizar: Rentabilidad por zona
@@ -142,10 +142,10 @@ Ejemplo: Usuario ADMIN suspendió cliente #1025 30/09/2026 08:42
 
 
 Cruce de: Prospectos + cobertura + distancia + capacidad + clientes existentes para apoyar la evaluación de nuevas zonas.
-48. SISTEMA DE SUSCRIPCIÓN SaaS WISPCONTROL podrá comercializarse mediante planes. Ejemplo STARTER
+48. SISTEMA DE SUSCRIPCIÓN SaaS ID-Hub podrá comercializarse mediante planes. Ejemplo STARTER
 • Hasta 100 clientes. • 5 equipos MikroTik. • Dashboard. • Cobranza. PRO • Hasta 500 clientes. • 25 equipos. • App técnico. • App cliente. • WhatsApp. • Mapas. ENTERPRISE • Hasta 5,000+ clientes. • Equipos ilimitados según contrato. • Multiusuario. • BI avanzado. • API. • White Label.
 49. COMISIONES POR PAGOS El sistema deberá registrar:
-• Importe del pago. • Comisión del gateway. • Comisión WISPCONTROL. • Importe neto WISP. Ejemplo: Pago: $450 Comisión: $15 Neto: $435 El administrador podrá consultar las comisiones acumuladas.
+• Importe del pago. • Comisión del gateway. • Comisión ID-Hub. • Importe neto WISP. Ejemplo: Pago: $450 Comisión: $15 Neto: $435 El administrador podrá consultar las comisiones acumuladas.
 
 50. API La plataforma deberá disponer de API para futuras integraciones. Posibles integraciones:
 • MikroTik. • WhatsApp. • Pasarelas de pago. • Aplicaciones móviles. • Sistemas contables. • CRM. • ERP. • Portal cautivo. • IoT.
@@ -194,11 +194,11 @@ Prospectos
 126
 
 53. FLUJOS PRINCIPALES Alta de cliente Prospecto → Cobertura → Contratación → Instalación → Activación → Cobranza recurrente Cobranza Factura/cargo → WhatsApp → Link de pago → Pago → Conﬁrmación → Reconexión Soporte Cliente → Ticket → Priorización → Técnico → Ruta → Evidencia → Cierre Falla de infraestructura Monitorización → Repetidor caído → Clientes afectados → Ticket automático → Técnico → Reparación → Validación → Cierre Expansión Prospectos → Mapa de demanda → Cobertura → Capacidad → Análisis de zona → Nuevo repetidor
-54. DIFERENCIADOR FUNCIONAL DE WISPCONTROL El concepto central del producto no debe ser únicamente "software para administrar clientes WISP". Debe plantearse como: WISPCONTROL integra en una sola plataforma la cobranza, la red, el mapa y las operaciones de campo. La ventaja funcional está en conectar:
+54. DIFERENCIADOR FUNCIONAL DE ID-Hub El concepto central del producto no debe ser únicamente "software para administrar clientes WISP". Debe plantearse como: ID-Hub integra en una sola plataforma la cobranza, la red, el mapa y las operaciones de campo. La ventaja funcional está en conectar:
 
 
 DINERO → Cobranza y pagos RED → MikroTik, antenas y repetidores CAMPO → Técnicos, rutas y evidencias CLIENTE → App, WhatsApp y soporte CRECIMIENTO → BI, demanda y expansión Todo alimentado por una misma base de datos operativa. 55. PANEL PRINCIPAL PROPUESTO La pantalla inicial podría organizarse visualmente así:
 
-Resultado esperado WISPCONTROL debe convertir el negocio de: "vendo Internet y llevo el control en un cuaderno" a: "opero una red WISP automatizada, medible y escalable". La arquitectura funcional propuesta permite que el producto tenga MVP comercial desde una primera versión, pero conserve una ruta clara para llegar a una plataforma capaz de administrar miles de clientes, múltiples WISP y miles de dispositivos. PROTOTIPOS PARA FUTURAS APPS MÓVILES (Cliente y Técnico):
+Resultado esperado ID-Hub debe convertir el negocio de: "vendo Internet y llevo el control en un cuaderno" a: "opero una red WISP automatizada, medible y escalable". La arquitectura funcional propuesta permite que el producto tenga MVP comercial desde una primera versión, pero conserve una ruta clara para llegar a una plataforma capaz de administrar miles de clientes, múltiples WISP y miles de dispositivos. PROTOTIPOS PARA FUTURAS APPS MÓVILES (Cliente y Técnico):
 
 

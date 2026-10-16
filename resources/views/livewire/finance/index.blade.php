@@ -132,7 +132,7 @@
     </div>
 
     {{-- Comisiones --}}
-    <x-ui.card class="mt-5" title="Comisiones de pagos en línea" subtitle="Sección 49: importe del pago, comisión del gateway, comisión WISPCONTROL e importe neto para tu WISP">
+    <x-ui.card class="mt-5" title="Comisiones de pagos en línea" subtitle="Sección 49: importe del pago, comisión del gateway, comisión ID-Hub e importe neto para tu WISP">
         <x-slot:actions>
             @if (Route::has('reports.index'))
                 <x-ui.button size="sm" variant="secondary" icon="document-chart-bar" :href="route('reports.index', ['reporte' => 'pagos'])">Ver pagos</x-ui.button>
@@ -142,7 +142,7 @@
             <x-ui.detail label="Pagos en línea">{{ number_format($commissions['count']) }}</x-ui.detail>
             <x-ui.detail label="Importe cobrado">{{ money($commissions['amount']) }}</x-ui.detail>
             <x-ui.detail label="Comisión gateway"><span class="text-danger-600">-{{ money($commissions['gateway_fee']) }}</span></x-ui.detail>
-            <x-ui.detail label="Comisión WISPCONTROL"><span class="text-danger-600">-{{ money($commissions['platform_fee']) }}</span></x-ui.detail>
+            <x-ui.detail label="Comisión ID-Hub"><span class="text-danger-600">-{{ money($commissions['platform_fee']) }}</span></x-ui.detail>
             <x-ui.detail label="Neto para el WISP"><span class="text-base font-bold text-success-600">{{ money($commissions['net']) }}</span></x-ui.detail>
         </div>
         @if ($commissions['amount'] > 0)

@@ -1,4 +1,4 @@
-# WISPCONTROL — Guía de desarrollo
+# ID-Hub — Guía de desarrollo
 
 Plataforma SaaS multi-WISP en **Laravel 12 + Livewire 3 + Alpine + Tailwind 4**.
 Restricciones de producción: **cPanel con PHP ≥ 8.2 y MySQL 5.7** (sin Node, sin Redis, sin workers permanentes).

@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>API v1 · {{ config('wisp.brand.name') }}</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <style>
         :root { --brand:#1A7FF5; --navy:#0B1B3A; --bg:#F5F7FB; --card:#fff; --text:#1E293B; --muted:#64748B; --line:#E2E8F0;
                 --get:#0E9F6E; --post:#1A7FF5; --patch:#D97706; --put:#D97706; --delete:#DC2626; }

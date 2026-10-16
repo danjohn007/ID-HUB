@@ -1,6 +1,6 @@
 # Despliegue en cPanel (PHP + MySQL 5.7)
 
-WISPCONTROL está diseñado para hosting compartido con cPanel: **no necesita Node, Redis, Supervisor ni SSH**.
+ID-Hub está diseñado para hosting compartido con cPanel: **no necesita Node, Redis, Supervisor ni SSH**.
 Todo el trabajo en segundo plano (cortes, recordatorios, monitoreo de red, mensajes y campañas) corre con
 **un solo cron cada minuto**.
 
