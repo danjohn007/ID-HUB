@@ -24,6 +24,18 @@ return [
         'sales_email' => env('WISP_SALES_EMAIL', 'dan@impactosdigitales.com'),
     ],
 
+    // Agenda de demos del CRM de ventas (Panel SaaS → Ventas). Horario en la zona de config('app.timezone').
+    'demos' => [
+        'self_booking' => env('WISP_DEMO_SELF_BOOKING', true),  // el prospecto elige horario desde la página pública
+        'duration' => 45,                                       // minutos
+        'weekdays' => [1, 2, 3, 4, 5],                          // 1 = lunes … 7 = domingo
+        'hours' => ['10:00', '11:00', '12:00', '13:00', '16:00', '17:00'],
+        'horizon_days' => 14,                                   // cuántos días hacia adelante se ofrecen
+        'min_notice_hours' => 18,                               // anticipación mínima para autoagendar
+        'meeting_url' => env('WISP_DEMO_MEETING_URL'),          // enlace fijo de videollamada (Meet/Zoom), opcional
+        'trial_days' => 14,                                     // prueba gratuita al convertir un prospecto en WISP
+    ],
+
     // Dirección a partir del GPS (botón "Usar mi ubicación"): Nominatim de OpenStreetMap.
     'geocoding' => [
         'url' => env('GEOCODING_URL', 'https://nominatim.openstreetmap.org'),

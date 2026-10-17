@@ -10,6 +10,15 @@
         <x-ui.stat label="MRR plataforma" :value="money($kpi['mrr'], false)" icon="banknotes" color="success" :sub="'Comisiones del mes '.money($kpi['commissions'])" />
     </div>
 
+    @if ($sales)
+        <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <x-ui.stat variant="soft" label="Demos de hoy" :value="number_format($sales['today'])" icon="calendar-days" color="purple" :href="route('saas.sales.agenda', ['vista' => 'lista'])" />
+            <x-ui.stat variant="soft" label="Prospectos nuevos" :value="number_format($sales['new'])" icon="sparkles" color="brand" :href="route('saas.sales.leads')" />
+            <x-ui.stat variant="soft" label="Seguimientos vencidos" :value="number_format($sales['overdue'])" icon="clock" :color="$sales['overdue'] ? 'danger' : 'success'" :href="route('saas.sales.leads', ['vencidos' => 1])" />
+            <x-ui.stat variant="soft" label="Pruebas por vencer (5 días)" :value="number_format($sales['trials'])" icon="clock" :color="$sales['trials'] ? 'warning' : 'teal'" :href="route('saas.tenants.index', ['estado' => 'trial'])" />
+        </div>
+    @endif
+
     <x-ui.card :padding="false">
         <div class="border-b border-slate-100 p-4">
             <x-ui.search wire:model.live.debounce.300ms="search" placeholder="Buscar WISP por nombre o identificador..." />
@@ -76,9 +85,19 @@
 
     {{-- Alta de WISP --}}
     <x-ui.modal wire:model="showForm" title="Nuevo WISP" size="2xl">
-        <form wire:submit="save" id="tenant-form" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <x-ui.input label="Nombre comercial" wire:model.live.debounce.400ms="form.name" filter="text" maxlength="120" required class="sm:col-span-2" />
-            <x-ui.input label="Identificador" wire:model="form.slug" filter="slug" maxlength="80" hint="Solo letras, números y guiones; también se usa como subdominio" required />
+        {{-- El identificador se arma en el navegador a partir del nombre (sin ir al servidor en cada tecla)
+             y deja de seguirlo en cuanto el usuario lo escribe a mano. --}}
+        @if ($leadName)
+            <div class="mb-4 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-800">
+                <x-heroicon-m-user-group class="h-4 w-4 shrink-0" /> <span>Datos tomados del prospecto <strong>{{ $leadName }}</strong>. Solo falta la contraseña del administrador.</span>
+            </div>
+        @endif
+        <form wire:submit="save" id="tenant-form" class="grid grid-cols-1 gap-4 sm:grid-cols-2" wire:key="tenant-form-{{ $formKey }}"
+              x-data="{ slugTouched: false, slugify: (v) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) }">
+            <x-ui.input label="Nombre comercial" wire:model="form.name" filter="text" maxlength="120" required class="sm:col-span-2"
+                        x-on:input="if (! slugTouched) { $refs.slug.value = slugify($event.target.value); $refs.slug.dispatchEvent(new Event('input')) }" />
+            <x-ui.input label="Identificador" wire:model="form.slug" filter="slug" maxlength="80" hint="Solo letras, números y guiones; también se usa como subdominio" required
+                        x-ref="slug" x-on:input="if ($event.isTrusted) slugTouched = $event.target.value !== ''" />
             <x-ui.select label="Plan SaaS" wire:model="form.saas_plan_id" :options="$plans" placeholder="Sin plan" />
             <x-ui.input label="Correo de contacto" type="email" wire:model="form.email" filter="email" />
             <x-ui.input label="Teléfono / WhatsApp" type="tel" wire:model="form.phone" filter="phone" />
@@ -87,6 +106,13 @@
             <x-ui.input label="Nombre" wire:model="form.admin_name" filter="name" maxlength="80" required />
             <x-ui.input label="Correo (usuario de acceso)" type="email" wire:model="form.admin_email" filter="email" required />
             <x-ui.input label="Contraseña" type="password" autocomplete="new-password" wire:model="form.admin_password" maxlength="255" hint="Mínimo 8 caracteres con letras y números" required class="sm:col-span-2" />
+
+            <div class="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+                <x-ui.toggle wire:model.live="form.trial" label="Prueba gratuita" description="El WISP entra en periodo de prueba; al pasarlo a Activo se marca como ganado en Ventas." />
+                @if (! empty($form['trial']))
+                    <x-ui.input type="number" min="1" max="90" wire:model="form.trial_days" suffix="días" class="w-36" aria-label="Días de prueba" />
+                @endif
+            </div>
         </form>
         <x-slot:footer>
             <x-ui.button variant="secondary" x-on:click="open = false">Cancelar</x-ui.button>

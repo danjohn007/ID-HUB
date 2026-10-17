@@ -4,9 +4,12 @@ namespace App\Livewire\Saas;
 
 use App\Livewire\Concerns\Toasts;
 use App\Livewire\Saas\Concerns\PlatformContext;
+use App\Models\DemoMeeting;
+use App\Models\DemoRequest;
 use App\Models\SaasPlan;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\DemoScheduler;
 use App\Services\SaasBillingService;
 use App\Services\TenantProvisioner;
 use App\Support\InputRules;
@@ -32,6 +35,12 @@ class Dashboard extends Component
 
     public array $form = [];
 
+    /** Cambia en cada alta para reiniciar el estado del formulario en el navegador (identificador automático). */
+    public int $formKey = 0;
+
+    /** Prospecto del CRM de ventas que se está convirtiendo en WISP de prueba. */
+    public ?int $leadId = null;
+
     public bool $showEdit = false;
 
     public ?int $editingId = null;
@@ -43,6 +52,26 @@ class Dashboard extends Component
     public function mount(): void
     {
         abort_unless(auth()->user()->isSuperadmin(), 403);
+        if ($leadId = (int) request()->query('prospecto')) {
+            $this->createFromLead($leadId);
+        }
+    }
+
+    /** "Iniciar prueba" desde Ventas → Prospectos: alta prellenada con los datos del prospecto. */
+    public function createFromLead(int $id): void
+    {
+        $lead = DemoRequest::find($id);
+        if (! $lead || $lead->tenant_id) {
+            return;
+        }
+        $this->create();
+        $this->leadId = $lead->id;
+        $name = $lead->company && ! in_array(mb_strtolower(trim($lead->company)), ['no tengo', 'ninguno', 'n/a', '-'], true) ? $lead->company : $lead->name;
+        $this->form = array_merge($this->form, [
+            'name' => $name, 'slug' => Str::slug($name), 'email' => (string) $lead->email, 'phone' => (string) $lead->phone,
+            'saas_plan_id' => $lead->planOrSuggested()?->id ?? $this->form['saas_plan_id'],
+            'admin_name' => $lead->name, 'admin_email' => (string) $lead->email, 'trial' => true,
+        ]);
     }
 
     public function editTenant(int $id): void
@@ -78,7 +107,13 @@ class Dashboard extends Component
         if ($data['status'] !== 'suspended') {
             $data['suspended_reason'] = null;
         }
+        $wasTrial = $t->status === 'trial';
         $this->withTenant($t, fn () => $t->update($data)); // auditado por el modelo con valores anterior/nuevo
+        // Prueba → activo: el prospecto del CRM de ventas se cierra como ganado
+        if ($wasTrial && $t->status === 'active') {
+            DemoRequest::where('tenant_id', $t->id)->whereNotIn('status', DemoRequest::CLOSED_STAGES)->get()
+                ->each(fn (DemoRequest $lead) => $lead->changeStage('won', [], "WISP {$t->name} activado"));
+        }
         $this->showEdit = false;
         $this->toast("WISP {$t->name} actualizado");
     }
@@ -89,19 +124,18 @@ class Dashboard extends Component
         $this->form = [
             'name' => '', 'slug' => '', 'email' => '', 'phone' => '', 'saas_plan_id' => SaasPlan::where('active', true)->orderBy('sort')->value('id'),
             'admin_name' => '', 'admin_email' => '', 'admin_password' => '',
+            'trial' => false, 'trial_days' => (string) DemoScheduler::config('trial_days'),
         ];
+        $this->leadId = null;
+        $this->formKey++;
         $this->showForm = true;
     }
 
-    public function updatedFormName(string $value): void
+    public function save(TenantProvisioner $provisioner)
     {
         if (blank($this->form['slug'] ?? '')) {
-            $this->form['slug'] = Str::slug($value);
+            $this->form['slug'] = Str::slug((string) ($this->form['name'] ?? ''));
         }
-    }
-
-    public function save(TenantProvisioner $provisioner): void
-    {
         $data = $this->validate([
             'form.name' => 'required|string|max:120|'.InputRules::TEXT,
             'form.slug' => ['required', 'alpha_dash', 'max:80', Rule::unique('tenants', 'slug')],
@@ -111,18 +145,22 @@ class Dashboard extends Component
             'form.admin_name' => 'required|string|max:80|'.InputRules::NAME,
             'form.admin_email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')],
             'form.admin_password' => ['required', 'string', 'max:255', Password::min(8)->letters()->numbers()],
+            'form.trial' => 'boolean',
+            'form.trial_days' => 'nullable|required_if:form.trial,true|integer|min:1|max:90',
         ], [], [
             'form.name' => 'nombre', 'form.slug' => 'identificador', 'form.email' => 'correo', 'form.phone' => 'teléfono',
             'form.saas_plan_id' => 'plan', 'form.admin_name' => 'nombre del administrador',
-            'form.admin_email' => 'correo del administrador', 'form.admin_password' => 'contraseña',
+            'form.admin_email' => 'correo del administrador', 'form.admin_password' => 'contraseña', 'form.trial_days' => 'días de prueba',
         ])['form'];
+        $trialEnds = ! empty($data['trial']) ? now()->addDays((int) $data['trial_days'])->startOfDay() : null;
 
-        $tenant = DB::transaction(function () use ($data, $provisioner) {
+        $tenant = DB::transaction(function () use ($data, $provisioner, $trialEnds) {
             $tenant = Tenant::create([
                 'name' => $data['name'], 'slug' => $data['slug'], 'subdomain' => $data['slug'],
                 'email' => $data['email'] ?: null, 'phone' => $data['phone'] ?: null, 'whatsapp' => $data['phone'] ?: null,
-                'saas_plan_id' => $data['saas_plan_id'] ?: null, 'status' => 'active',
-                'subscription_ends_at' => now()->addMonth()->startOfMonth(),
+                'saas_plan_id' => $data['saas_plan_id'] ?: null, 'status' => $trialEnds ? 'trial' : 'active',
+                'trial_ends_at' => $trialEnds,
+                'subscription_ends_at' => $trialEnds ?? now()->addMonth()->startOfMonth(),
             ]);
             $this->withTenant($tenant, function () use ($tenant, $data, $provisioner) {
                 $provisioner->provision($tenant);
@@ -137,7 +175,17 @@ class Dashboard extends Component
 
         $this->platformLog('tenant_created', "creó el WISP {$tenant->name}", $tenant, $tenant);
         $this->showForm = false;
-        $this->toast("WISP {$tenant->name} creado. Su administrador ya puede iniciar sesión.");
+        $this->toast("WISP {$tenant->name} creado".($trialEnds ? ' en prueba hasta el '.$trialEnds->format('d/m/Y') : '').'. Su administrador ya puede iniciar sesión.');
+
+        if ($this->leadId && ($lead = DemoRequest::find($this->leadId))) {
+            $lead->update(['tenant_id' => $tenant->id, 'saas_plan_id' => $tenant->saas_plan_id ?? $lead->saas_plan_id]);
+            $lead->changeStage('trial', [], "WISP {$tenant->name} creado".($trialEnds ? ', prueba hasta el '.$trialEnds->format('d/m/Y') : ''));
+            $this->leadId = null;
+
+            return $this->redirectRoute('saas.sales.leads.show', $lead, navigate: true);
+        }
+
+        return null;
     }
 
     public function toggleStatus(int $id): void
@@ -150,6 +198,21 @@ class Dashboard extends Component
             : ['status' => 'active', 'suspended_reason' => null]);
         $this->platformLog($suspend ? 'tenant_suspended' : 'tenant_activated', ($suspend ? 'suspendió' : 'reactivó')." el WISP {$tenant->name}", $tenant, $tenant, $old, ['status' => $tenant->status]);
         $this->toast($suspend ? "WISP {$tenant->name} suspendido." : "WISP {$tenant->name} reactivado.", $suspend ? 'warning' : 'success');
+    }
+
+    /** Resumen del CRM de ventas para el panel (vacío si la migración aún no se aplica). */
+    protected function salesSummary(): ?array
+    {
+        try {
+            return [
+                'today' => DemoMeeting::where('status', 'scheduled')->whereBetween('starts_at', [now()->startOfDay(), now()->endOfDay()])->count(),
+                'new' => DemoRequest::where('status', 'new')->count(),
+                'overdue' => DemoRequest::whereNotIn('status', DemoRequest::CLOSED_STAGES)->where('next_action_at', '<', now())->count(),
+                'trials' => Tenant::where('status', 'trial')->whereNotNull('trial_ends_at')->where('trial_ends_at', '<=', now()->addDays(5))->count(),
+            ];
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function render(SaasBillingService $billing)
@@ -168,6 +231,8 @@ class Dashboard extends Component
         $all = Tenant::with('saasPlan')->get();
 
         return view('livewire.saas.dashboard', [
+            'sales' => $this->salesSummary(),
+            'leadName' => $this->showForm && $this->leadId ? DemoRequest::whereKey($this->leadId)->value('name') : null,
             'tenants' => $tenants,
             'plans' => SaasPlan::orderBy('sort')->pluck('name', 'id')->all(),
             'stats' => compact('clients', 'activeClients', 'devices', 'online', 'payments'),

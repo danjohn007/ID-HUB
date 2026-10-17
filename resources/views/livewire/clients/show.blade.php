@@ -437,7 +437,7 @@
 
     <x-ui.modal wire:model="showSuspend" title="Suspender servicio" size="md">
         <p class="mb-3 text-sm text-slate-600">Se bloqueará el servicio en MikroTik ({{ ($client->plan?->block_type ?: tenant()->setting('billing.block_type')) === 'partial' ? 'bloqueo parcial: se redirige al portal de pago' : 'bloqueo total' }}) y se notificará al cliente.</p>
-        <x-ui.input label="Motivo" wire:model="reason" maxlength="190" placeholder="Falta de pago" />
+        <x-ui.input label="Motivo" id="f_reason_suspend" wire:model="reason" maxlength="190" placeholder="Falta de pago" />
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cancelar</x-ui.button>
             <x-ui.button variant="danger" icon="pause" wire:click="suspend">Suspender</x-ui.button>
@@ -446,7 +446,7 @@
 
     <x-ui.modal wire:model="showCancel" title="Cancelar servicio" size="md">
         <p class="mb-3 text-sm text-slate-600">El cliente pasará a estado <b>Cancelado</b> y se eliminará su usuario del MikroTik.</p>
-        <x-ui.select label="Motivo" wire:model="reason" :options="array_combine($r = ['Cambio de domicilio', 'Contrató otro proveedor', 'Problemas económicos', 'Mala señal', 'Ya no lo necesita', 'Otro'], $r)" placeholder="Selecciona..." />
+        <x-ui.select label="Motivo" id="f_reason_cancel" wire:model="reason" :options="array_combine($r = ['Cambio de domicilio', 'Contrató otro proveedor', 'Problemas económicos', 'Mala señal', 'Ya no lo necesita', 'Otro'], $r)" placeholder="Selecciona..." />
         <x-slot:footer>
             <x-ui.button variant="secondary" @click="open = false">Cerrar</x-ui.button>
             <x-ui.button variant="danger" icon="x-circle" wire:click="cancelService">Cancelar servicio</x-ui.button>

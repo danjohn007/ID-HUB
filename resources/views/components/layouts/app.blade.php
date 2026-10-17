@@ -22,6 +22,8 @@
         if ($user->isSuperadmin() && tenant()) {
             $sections = array_merge(config('navigation.saas'), $sections);
         }
+        // Contadores del menú (6.º elemento del ítem en config/navigation.php); se calculan solo si el ítem es visible
+        $badges = ['demo_requests' => fn () => \App\Models\DemoRequest::pendingCount(), 'demos_today' => fn () => \App\Services\DemoScheduler::todayCount()];
     @endphp
 
     {{-- Overlay móvil --}}
@@ -44,10 +46,20 @@
                             <div class="px-3 pb-1.5 text-[10.5px] font-semibold tracking-wider text-navy-400 uppercase">{{ $section['group'] }}</div>
                         @endif
                         <div class="space-y-0.5">
-                            @foreach ($items as [$label, $route, $icon, $ability, $pattern])
+                            @foreach ($items as $item)
+                                @php
+                                    [$label, $route, $icon, $ability, $pattern] = $item;
+                                    $badge = isset($item[5], $badges[$item[5]]) ? $badges[$item[5]]() : 0;
+                                @endphp
                                 <a href="{{ route($route) }}" wire:navigate class="nav-link {{ request()->routeIs($pattern) ? 'active' : '' }}">
                                     <x-dynamic-component :component="'heroicon-o-'.$icon" class="h-5 w-5 shrink-0" />
                                     <span class="truncate">{{ $label }}</span>
+                                    @isset($item[5])
+                                        {{-- Los componentes lo actualizan sin recargar con $this->dispatch('nav-badge', key: ..., count: ...) --}}
+                                        <span x-data="{ n: {{ (int) $badge }} }" x-on:nav-badge.window="if ($event.detail.key === '{{ $item[5] }}') n = $event.detail.count"
+                                              x-show="n > 0" x-text="n > 99 ? '99+' : n" @if (! $badge) style="display: none" @endif
+                                              class="ml-auto rounded-full bg-brand-500 px-1.5 py-px text-[10.5px] font-bold text-white">{{ $badge > 99 ? '99+' : $badge }}</span>
+                                    @endisset
                                 </a>
                             @endforeach
                         </div>

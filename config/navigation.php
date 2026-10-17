@@ -4,7 +4,8 @@
 |--------------------------------------------------------------------------
 | Menú lateral
 |--------------------------------------------------------------------------
-| Cada ítem: [label, route, icon (heroicon-o-*), ability, active pattern].
+| Cada ítem: [label, route, icon (heroicon-o-*), ability, active pattern, insignia opcional].
+| La insignia es una clave de $badges en components/layouts/app.blade.php (contador junto al texto).
 | Los ítems cuya ruta no existe o sin permiso se ocultan automáticamente.
 */
 
@@ -74,6 +75,10 @@ return [
             ['Planes SaaS', 'saas.plans', 'rectangle-group', 'saas.manage', 'saas.plans'],
             ['Comisiones', 'saas.commissions', 'banknotes', 'saas.manage', 'saas.commissions'],
             ['Sistema', 'saas.system', 'wrench', 'saas.manage', 'saas.system'],
+        ]],
+        ['group' => 'Ventas', 'items' => [
+            ['Prospectos', 'saas.sales.leads', 'user-group', 'saas.manage', 'saas.sales.leads*', 'demo_requests'],
+            ['Agenda de demos', 'saas.sales.agenda', 'calendar-days', 'saas.manage', 'saas.sales.agenda', 'demos_today'],
         ]],
     ],
 ];

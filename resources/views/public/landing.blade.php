@@ -774,6 +774,23 @@
                         @endforeach
                     </select>
                 </div>
+                @if ($demoSlots->isNotEmpty())
+                    {{-- Autoagenda: horarios libres de la agenda de demos (Panel SaaS → Ventas) --}}
+                    <div class="sm:col-span-2">
+                        <label for="demo-slot" class="form-label">¿Cuándo te gustaría la demo?</label>
+                        <select id="demo-slot" name="slot" class="form-input">
+                            <option value="">Prefiero que me contacten para acordarlo</option>
+                            @foreach ($demoSlots as $day => $slots)
+                                <optgroup label="{{ \Illuminate\Support\Str::ucfirst($slots->first()->translatedFormat('l j \d\e F')) }}">
+                                    @foreach ($slots as $s)
+                                        <option value="{{ $s->format('Y-m-d H:i') }}" @selected(old('slot') === $s->format('Y-m-d H:i'))>{{ \Illuminate\Support\Str::ucfirst($s->translatedFormat('D j M')) }} · {{ $s->format('H:i') }} h</option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-slate-500">Videollamada de {{ \App\Services\DemoScheduler::config('duration') }} minutos · hora del centro de México.</p>
+                    </div>
+                @endif
                 <div class="sm:col-span-2">
                     <label for="demo-message" class="form-label">¿Qué te gustaría resolver?</label>
                     <textarea id="demo-message" name="message" rows="3" maxlength="1500" class="form-input" placeholder="Ej. cobranza, cortes automáticos, app para técnicos…">{{ old('message') }}</textarea>

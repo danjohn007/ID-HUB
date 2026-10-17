@@ -5,13 +5,14 @@
 @props(['label' => null, 'name' => null, 'options' => [], 'placeholder' => null, 'hint' => null])
 @php
     $field = $name ?? $attributes->whereStartsWith('wire:model')->first();
-    $id = 'f_'.str_replace(['.', '[', ']'], '_', (string) $field).'_'.substr(md5(uniqid()), 0, 4);
+    // id estable entre renders (ver x-ui.input): Livewire lo usa como llave al actualizar el DOM
+    $id = $attributes->get('id') ?? 'f_'.($field ? str_replace(['.', '[', ']'], '_', (string) $field) : substr(md5(uniqid()), 0, 6));
 @endphp
 <div {{ $attributes->only('class') }}>
     @if ($label)
         <label for="{{ $id }}" class="form-label">{{ $label }} @if ($attributes->has('required'))<span class="text-danger-600">*</span>@endif</label>
     @endif
-    <select id="{{ $id }}" @if ($name) name="{{ $name }}" @endif {{ $attributes->except('class')->merge(['class' => 'form-input pr-8'.($field && $errors->has($field) ? ' border-danger-500' : '')]) }}>
+    <select id="{{ $id }}" @if ($name) name="{{ $name }}" @endif {{ $attributes->except(['class', 'id'])->merge(['class' => 'form-input pr-8'.($field && $errors->has($field) ? ' border-danger-500' : '')]) }}>
         @if ($placeholder !== null)<option value="">{{ $placeholder }}</option>@endif
         @foreach ($options as $value => $text)
             <option value="{{ $value }}">{{ is_array($text) ? $text[0] : $text }}</option>

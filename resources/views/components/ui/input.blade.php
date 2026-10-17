@@ -7,7 +7,9 @@
 @props(['label' => null, 'name' => null, 'hint' => null, 'prefix' => null, 'suffix' => null, 'type' => 'text', 'filter' => null])
 @php
     $field = $name ?? $attributes->whereStartsWith('wire:model')->first();
-    $id = $attributes->get('id') ?? 'f_'.str_replace(['.', '[', ']'], '_', (string) $field).'_'.substr(md5(uniqid()), 0, 4);
+    // id estable entre renders: Livewire usa el id como llave al actualizar el DOM; si cambiara, el campo se
+    // reemplazaría en cada petición (wire:model.live) y el usuario perdería el cursor y lo que iba escribiendo.
+    $id = $attributes->get('id') ?? 'f_'.($field ? str_replace(['.', '[', ']'], '_', (string) $field) : substr(md5(uniqid()), 0, 6));
     // Teclado del celular y longitud por omisión según el filtro
     $presets = [
         'name' => ['maxlength' => 80], 'text' => ['maxlength' => 190], 'alnum' => ['maxlength' => 120],
