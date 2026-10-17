@@ -22,39 +22,49 @@ class CampoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final session = context.watch<Session>();
+    final brand = context.select<Session, Color>((s) => s.brand);
 
     return MaterialApp(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(session.brand),
+      theme: buildTheme(brand),
       locale: const Locale('es', 'MX'),
       supportedLocales: const [Locale('es', 'MX'), Locale('es')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      home: session.restoring
-          ? const _Splash()
-          : session.loggedIn
-              // La clave reinicia la navegación al cambiar de usuario.
-              ? Shell(key: ValueKey('shell-${session.user!.id}'))
-              : const LoginScreen(),
+      home: const _Root(),
     );
   }
 }
 
-class _Splash extends StatelessWidget {
-  const _Splash();
+/// Al abrir: animación de marca (en la pantalla de login) y, según la sesión guardada,
+/// formulario o directo a la app. Los cambios login ↔ app entran con un fundido.
+class _Root extends StatefulWidget {
+  const _Root();
+
+  @override
+  State<_Root> createState() => _RootState();
+}
+
+class _RootState extends State<_Root> {
+  bool _introDone = false;
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.navy,
-      body: Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Image(image: AssetImage('assets/brand/logo_stacked_dark.png'), height: 130),
-          SizedBox(height: 32),
-          CircularProgressIndicator(color: Colors.white),
-        ]),
+    final session = context.watch<Session>();
+    final inApp = _introDone && session.loggedIn;
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 650),
+      switchInCurve: Motion.curve,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, anim) => FadeTransition(
+        opacity: anim,
+        child: ScaleTransition(scale: Tween(begin: 1.04, end: 1.0).animate(anim), child: child),
       ),
+      child: inApp
+          // La clave reinicia la navegación al cambiar de usuario.
+          ? Shell(key: ValueKey('shell-${session.user!.id}'))
+          : LoginScreen(key: const ValueKey('login'), intro: !_introDone, onIntroDone: () => setState(() => _introDone = true)),
     );
   }
 }

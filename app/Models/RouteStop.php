@@ -26,7 +26,7 @@ class RouteStop extends Model
     public function navigationUrl(): ?string
     {
         return $this->lat && $this->lng
-            ? 'https://www.google.com/maps/dir/?api=1&destination='.$this->lat.','.$this->lng
+            ? 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='.$this->lat.','.$this->lng
             : null;
     }
 }

@@ -36,3 +36,17 @@ flutter:
   uses-material-design: true
   assets:
     - assets/brand/
+
+  # Inter, la misma tipografía del panel web (licencia OFL en assets/fonts/OFL.txt).
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Inter-ExtraBold.ttf
+          weight: 800

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/format.dart';
 import '../../core/session.dart';
 import '../../models.dart';
+import '../../motion.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../open.dart';
@@ -70,8 +71,9 @@ class _CollectorHomeScreenState extends State<CollectorHomeScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               if (d.cut != null)
                 SectionCard(
+                  index: 1,
                   child: Row(children: [
-                    const CircleAvatar(backgroundColor: Color(0x1A16A34A), child: Icon(Icons.point_of_sale_rounded, color: AppColors.success)),
+                    CircleAvatar(backgroundColor: AppColors.success.withValues(alpha: .1), child: const Icon(Icons.point_of_sale_rounded, color: AppColors.success)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -84,6 +86,7 @@ class _CollectorHomeScreenState extends State<CollectorHomeScreen> {
                 ),
               const SizedBox(height: 12),
               SectionCard(
+                index: 2,
                 title: 'Próximos clientes',
                 trailing: TextButton(onPressed: () => Shell.of(context).go(2), child: const Text('Ver todos')),
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
@@ -98,7 +101,10 @@ class _CollectorHomeScreenState extends State<CollectorHomeScreen> {
                       ]),
               ),
               const SizedBox(height: 16),
-              OutlinedButton.icon(onPressed: () => Shell.of(context).go(ShellState.routeTab), icon: const Icon(Icons.route_outlined), label: const Text('Ver mi ruta de cobranza')),
+              FadeSlideIn(
+                index: 3,
+                child: OutlinedButton.icon(onPressed: () => Shell.of(context).go(ShellState.routeTab), icon: const Icon(Icons.route_outlined), label: const Text('Ver mi ruta de cobranza')),
+              ),
               const SizedBox(height: 24),
             ]),
           ),

@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wispcontrol_campo/core/api.dart';
+import 'package:wispcontrol_campo/core/geo.dart';
+import 'package:wispcontrol_campo/core/launch.dart';
 import 'package:wispcontrol_campo/models.dart';
 
 void main() {
@@ -8,6 +10,24 @@ void main() {
       expect(ApiClient.normalizeServer('midominio.com/'), 'https://midominio.com');
       expect(ApiClient.normalizeServer('http://127.0.0.1:8000/api/v1/'), 'http://127.0.0.1:8000');
       expect(ApiClient.normalizeServer(' https://a.mx/ID-HUB/wispcontrol/public '), 'https://a.mx/ID-HUB/wispcontrol/public');
+    });
+  });
+
+  group('Launch.directions', () {
+    const url = 'https://www.google.com/maps/dir/?api=1&destination=20.7,-100.4';
+
+    test('en auto y desde la ubicación GPS del teléfono', () {
+      final u = Uri.parse(Launch.directions(url, from: const GeoPoint(20.61, -100.39)));
+      expect(u.queryParameters['travelmode'], 'driving');
+      expect(u.queryParameters['origin'], '20.61,-100.39');
+      expect(u.queryParameters['destination'], '20.7,-100.4');
+    });
+
+    test('sin GPS deja que Maps elija el origen; respeta lo que ya trae la liga', () {
+      final u = Uri.parse(Launch.directions('$url&travelmode=walking'));
+      expect(u.queryParameters.containsKey('origin'), isFalse);
+      expect(u.queryParameters['travelmode'], 'walking');
+      expect(Launch.directions('https://ejemplo.com/recibo/1', from: const GeoPoint(1, 2)), 'https://ejemplo.com/recibo/1');
     });
   });
 

@@ -35,7 +35,7 @@ class InstallationOrderResource extends ApiResource
             'client' => $client ? new ClientSummaryResource($client) : null,
             'prospect_id' => $this->prospect_id,
             'location' => self::coords($lat, $lng),
-            'navigation_url' => $lat && $lng ? 'https://www.google.com/maps/dir/?api=1&destination='.$lat.','.$lng : null,
+            'navigation_url' => $lat && $lng ? 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='.$lat.','.$lng : null,
             'plan' => $this->plan ? ['id' => $this->plan->id, 'name' => $this->plan->name, 'download_mbps' => (int) $this->plan->download_mbps] : null,
             'repeater' => $this->repeater ? ['id' => $this->repeater->id, 'code' => $this->repeater->code, 'name' => $this->repeater->name] : null,
             'checklist' => collect(config('wisp.installation_checklist'))->map(fn ($label, $key) => [

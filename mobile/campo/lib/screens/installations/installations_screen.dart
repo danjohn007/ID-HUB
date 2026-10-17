@@ -16,15 +16,11 @@ class InstallationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Mis instalaciones'),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(48),
-            child: Container(color: Colors.white, child: const TabBar(tabs: [Tab(text: 'Pendientes'), Tab(text: 'Terminadas')])),
-          ),
-        ),
-        body: const TabBarView(children: [_List(status: 'open'), _List(status: 'instalada,activada')]),
+      child: const Scaffold(
+        body: Column(children: [
+          PageHeader(eyebrow: 'Altas en campo', title: 'Mis instalaciones', bottom: HeaderTabs(tabs: ['Pendientes', 'Terminadas'])),
+          Expanded(child: TabBarView(children: [_List(status: 'open'), _List(status: 'instalada,activada')])),
+        ]),
       ),
     );
   }
@@ -55,28 +51,54 @@ class _ListState extends State<_List> {
       builder: (context, list, reload) {
         if (list.isEmpty) return ListView(children: const [EmptyState(icon: Icons.router_outlined, title: 'Sin instalaciones')]);
         return ListView.separated(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           itemCount: list.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 8),
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
           itemBuilder: (context, i) {
             final o = list[i];
-            return Card(
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                leading: CircleAvatar(backgroundColor: AppColors.teal.withValues(alpha: .12), child: const Icon(Icons.router_outlined, color: AppColors.teal)),
-                title: Text(o.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text('${o.folio} · ${o.scheduledAt == null ? 'Sin fecha' : Fmt.dateTime(o.scheduledAt)}\n${o.address}', maxLines: 2, overflow: TextOverflow.ellipsis),
-                isThreeLine: true,
-                trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
+            final total = o.checklist.length;
+            final progress = total == 0 ? 0.0 : o.checklistDone / total;
+            return AccentCard(
+              accent: AppColors.semantic(o.status.color, brand: AppColors.teal),
+              index: i,
+              onTap: () async {
+                await Open.installation(context, o.id);
+                _loader.currentState?.reload();
+              },
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const IconBadge(Icons.router_rounded, color: AppColors.teal),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(o.folio, style: const TextStyle(color: AppColors.slate, fontSize: 12, fontWeight: FontWeight.w700)),
+                      Text(o.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.navy)),
+                    ]),
+                  ),
                   StatusChip.of(o.status, dense: true),
-                  const SizedBox(height: 4),
-                  Text('${o.checklistDone}/${o.checklist.length}', style: const TextStyle(fontSize: 12, color: AppColors.slate)),
                 ]),
-                onTap: () async {
-                  await Open.installation(context, o.id);
-                  _loader.currentState?.reload();
-                },
-              ),
+                if (o.address.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    const Icon(Icons.place_outlined, size: 15, color: AppColors.slate),
+                    const SizedBox(width: 4),
+                    Expanded(child: Text(o.address, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate, fontSize: 13))),
+                  ]),
+                ],
+                const SizedBox(height: 10),
+                Row(children: [
+                  Pill(label: o.scheduledAt == null ? 'Sin fecha' : Fmt.dateTime(o.scheduledAt), color: AppColors.navy, icon: Icons.event_rounded),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(value: progress, minHeight: 6, color: AppColors.teal, backgroundColor: AppColors.border),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('${o.checklistDone}/$total', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate)),
+                ]),
+              ]),
             );
           },
         );

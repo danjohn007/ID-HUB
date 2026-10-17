@@ -44,7 +44,7 @@ class CollectionController extends ApiController
             'overdue_amount' => round($c->overdueAmount(), 2),
             'overdue_days' => $billing->overdueDays($c),
             'next_due_date' => $c->next_due_date?->toDateString(),
-            'navigation_url' => $c->lat && $c->lng ? 'https://www.google.com/maps/dir/?api=1&destination='.$c->lat.','.$c->lng : null,
+            'navigation_url' => $c->lat && $c->lng ? 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='.$c->lat.','.$c->lng : null,
             'last_visit' => ($v = $lastVisits->get($c->id)) ? new CollectionVisitResource($v) : null,
         ]));
 

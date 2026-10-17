@@ -43,8 +43,8 @@ class Work extends Component
             't' => $t,
             'timeline' => $t->comments()->with('user:id,name')->limit(30)->get(),
             'nav' => $t->client?->lat
-                ? 'https://www.google.com/maps/dir/?api=1&destination='.$t->client->lat.','.$t->client->lng
-                : ($t->repeater?->lat ? 'https://www.google.com/maps/dir/?api=1&destination='.$t->repeater->lat.','.$t->repeater->lng : null),
+                ? 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='.$t->client->lat.','.$t->client->lng
+                : ($t->repeater?->lat ? 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='.$t->repeater->lat.','.$t->repeater->lng : null),
         ])->title('Ticket '.$t->folio);
     }
 }

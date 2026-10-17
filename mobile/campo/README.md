@@ -11,6 +11,9 @@ Consume la API v1 del panel (`docs/API.md`); no tiene backend propio.
 | Técnico (`field.work`) | Inicio · Ruta · Clientes · Tickets · Más | Ticket → Ejecución de servicio (fotos antes/durante/después, comentarios, materiales, firma, "Guardar servicio") · Instalación (checklist, señal/velocidad, fotos, materiales, firma, finalizar) · Inventario · Mis instalaciones |
 | Cobrador (`collection.field`) | Inicio · Ruta · Cobranza · Corte · Más | Ficha de cobro: pago en efectivo (con foto y GPS, comprobante por WhatsApp) o visita sin pago (no localizado, promesa, rechazo, cerrado) |
 
+Al abrir, la app dibuja el logo (iD + ondas de señal) y lo sube al formulario de inicio de sesión;
+con sesión guardada entra directo. Si el teléfono tiene "reducir animaciones", se omiten.
+
 El modo se elige con los permisos del token. El color de marca es el `primary_color` del WISP.
 Sin señal, Inicio, Ruta, Cobranza e Inventario muestran la última información guardada; las acciones
 (llegada, fotos, cobros…) necesitan conexión.
@@ -22,7 +25,10 @@ lib/
   config.dart          servidor por defecto (--dart-define=API_URL=...)
   core/                api (Dio + caché), session (token en almacenamiento seguro), geo, photos, launch, format
   models.dart          modelos de la API v1
-  widgets.dart theme.dart
+  theme.dart           paleta y tipografía (Inter) iguales a la web (resources/css/app.css)
+  brand.dart           isotipo en vector (se anima trazo por trazo), fondo de marca con ondas de señal
+  motion.dart          animaciones comunes: entrada escalonada, cifras que cuentan, esqueleto de carga
+  widgets.dart
   screens/
     shell.dart         barra inferior por rol
     tech/ route_screen.dart clients/ tickets/ installations/ work/ (evidencias, materiales, firma)
@@ -58,7 +64,7 @@ flutter build apk --release --dart-define=API_URL=https://midominio.com
 flutter build appbundle --release --dart-define=API_URL=https://midominio.com
 ```
 
-Si no se pasa `API_URL` se usa `https://quickmovewellness.fit/ID-HUB/wispcontrol/public`.
+Si no se pasa `API_URL` se usa `https://id-hub.digital` (la raíz del panel, sin `/campo`: esa ruta es la versión web del técnico).
 
 **Antes de publicar en Play Store / App Store:**
 - Firma: crear un keystore y configurar `signingConfigs.release` en `android/app/build.gradle.kts`

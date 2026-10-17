@@ -23,7 +23,7 @@ class ClientResource extends ApiResource
             'colonia' => $this->colonia,
             'community' => $this->community,
             'location' => self::coords($this->lat, $this->lng),
-            'navigation_url' => $this->lat && $this->lng ? 'https://www.google.com/maps/dir/?api=1&destination='.$this->lat.','.$this->lng : null,
+            'navigation_url' => $this->lat && $this->lng ? 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='.$this->lat.','.$this->lng : null,
             'zone' => $this->whenLoaded('zone', fn () => $this->zone ? ['id' => $this->zone->id, 'name' => $this->zone->name] : null),
             'plan' => $this->whenLoaded('plan', fn () => $this->plan ? new PlanResource($this->plan) : null),
             'repeater' => $this->whenLoaded('repeater', fn () => $this->repeater ? ['id' => $this->repeater->id, 'code' => $this->repeater->code, 'name' => $this->repeater->name] : null),

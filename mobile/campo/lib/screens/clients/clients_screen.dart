@@ -45,59 +45,105 @@ class _ClientsScreenState extends State<ClientsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Clientes'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(64),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: TextField(
-              onChanged: _onSearch,
-              textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Nombre, ID, teléfono o PPPoE', isDense: true),
-            ),
-          ),
+      body: Column(children: [
+        PageHeader(
+          eyebrow: 'Cartera',
+          title: 'Clientes',
+          bottom: HeaderSearch(hint: 'Nombre, ID, teléfono o PPPoE', onChanged: _onSearch),
         ),
-      ),
-      body: Loader<List<ClientSummary>>(
-        key: _loader,
-        load: _load,
-        builder: (context, clients, reload) {
-          if (clients.isEmpty) return ListView(children: const [EmptyState(icon: Icons.person_search_outlined, title: 'Sin resultados')]);
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: clients.length,
-            separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
-            itemBuilder: (context, i) {
-              final c = clients[i];
-              return ListTile(
-                leading: _Avatar(name: c.name),
-                title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text('#${c.code} · ${c.address}', maxLines: 1, overflow: TextOverflow.ellipsis),
-                trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  StatusChip.of(c.status, dense: true),
-                  if (c.balance > 0) Text(Fmt.money(c.balance), style: const TextStyle(fontSize: 12, color: AppColors.danger, fontWeight: FontWeight.w700)),
-                ]),
-                onTap: () => Open.client(context, c.id),
+        Expanded(
+          child: Loader<List<ClientSummary>>(
+            key: _loader,
+            load: _load,
+            builder: (context, clients, reload) {
+              if (clients.isEmpty) {
+                return ListView(children: [
+                  EmptyState(icon: Icons.person_search_outlined, title: 'Sin resultados', message: _search.isEmpty ? null : 'No hay clientes que coincidan con "$_search".'),
+                ]);
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                itemCount: clients.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (context, i) => _ClientCard(client: clients[i], index: i),
               );
             },
-          );
-        },
-      ),
+          ),
+        ),
+      ]),
     );
   }
 }
 
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name});
+class _ClientCard extends StatelessWidget {
+  const _ClientCard({required this.client, required this.index});
+
+  final ClientSummary client;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = client;
+    final status = AppColors.semantic(c.status.color, brand: Theme.of(context).colorScheme.primary);
+
+    return AccentCard(
+      accent: status,
+      index: index,
+      onTap: () => Open.client(context, c.id),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      child: Row(children: [
+        ClientAvatar(name: c.name),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.navy)),
+            const SizedBox(height: 2),
+            Row(children: [
+              Text('#${c.code}', style: const TextStyle(color: AppColors.slate, fontSize: 12, fontWeight: FontWeight.w700)),
+              if (c.address.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                const Icon(Icons.place_outlined, size: 13, color: AppColors.slate),
+                const SizedBox(width: 2),
+                Expanded(child: Text(c.address, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate, fontSize: 12.5))),
+              ],
+            ]),
+          ]),
+        ),
+        const SizedBox(width: 8),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          StatusChip.of(c.status, dense: true),
+          if (c.balance > 0) ...[
+            const SizedBox(height: 5),
+            Text(Fmt.money(c.balance), style: const TextStyle(fontSize: 13, color: AppColors.danger, fontWeight: FontWeight.w800)),
+          ],
+        ]),
+      ]),
+    );
+  }
+}
+
+/// Iniciales del cliente en un círculo con degradado de marca.
+class ClientAvatar extends StatelessWidget {
+  const ClientAvatar({super.key, required this.name, this.size = 46});
 
   final String name;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     final initials = parts.take(2).map((p) => p[0].toUpperCase()).join();
     final brand = Theme.of(context).colorScheme.primary;
-    return CircleAvatar(backgroundColor: brand.withValues(alpha: .12), child: Text(initials, style: TextStyle(color: brand, fontWeight: FontWeight.w800)));
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(colors: [brand, Color.lerp(brand, AppColors.navy, .35)!], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        boxShadow: [BoxShadow(color: brand.withValues(alpha: .3), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Text(initials, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: size * .34)),
+    );
   }
 }

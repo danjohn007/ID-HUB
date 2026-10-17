@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../core/session.dart';
+import '../motion.dart';
+import '../theme.dart';
 import 'clients/clients_screen.dart';
 import 'collection/cash_cut_screen.dart';
 import 'collection/collector_home.dart';
@@ -31,17 +34,31 @@ class Shell extends StatefulWidget {
   State<Shell> createState() => ShellState();
 }
 
-class ShellState extends State<Shell> {
+class ShellState extends State<Shell> with SingleTickerProviderStateMixin {
   int _index = 0;
 
   /// Pestañas ya abiertas: las demás no se construyen (ni piden datos) hasta visitarlas.
   final _visited = <int>{0};
 
+  /// Fundido al cambiar de pestaña.
+  late final _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 360), value: 1);
+
+  @override
+  void dispose() {
+    _fade.dispose();
+    super.dispose();
+  }
+
   /// Cambia de pestaña desde cualquier pantalla (p. ej. "Ver ruta" en Inicio).
-  void go(int index) => setState(() {
-        _index = index;
-        _visited.add(index);
-      });
+  void go(int index) {
+    if (index == _index) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _index = index;
+      _visited.add(index);
+    });
+    if (!reduceMotion(context)) _fade.forward(from: 0);
+  }
 
   static const routeTab = 1;
 
@@ -66,16 +83,22 @@ class ShellState extends State<Shell> {
     final tabs = _tabs(context.select<Session, AppMode>((s) => s.mode));
 
     return Scaffold(
-      body: IndexedStack(index: _index, children: [
-        for (final (i, t) in tabs.indexed) _visited.contains(i) ? t.page : const SizedBox.shrink(),
-      ]),
+      body: AnimatedBuilder(
+        animation: _fade,
+        builder: (_, child) {
+          final v = Motion.curve.transform(_fade.value);
+          return Opacity(
+            opacity: .35 + .65 * v,
+            child: Transform.translate(offset: Offset(0, 14 * (1 - v)), child: child),
+          );
+        },
+        child: IndexedStack(index: _index, children: [for (final (i, t) in tabs.indexed) _visited.contains(i) ? t.page : const SizedBox.shrink()]),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: go,
         height: 66,
-        destinations: [
-          for (final t in tabs) NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selectedIcon), label: t.label),
-        ],
+        destinations: [for (final t in tabs) NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selectedIcon), label: t.label)],
       ),
     );
   }

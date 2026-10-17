@@ -9,7 +9,7 @@ class AppConfig {
   /// URL base del panel (sin /api/v1).
   static const defaultServer = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'https://quickmovewellness.fit/ID-HUB/wispcontrol/public',
+    defaultValue: 'https://id-hub.digital',
   );
 
   static const apiPrefix = '/api/v1';

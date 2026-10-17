@@ -22,17 +22,15 @@ class TicketsScreen extends StatelessWidget {
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Mis tickets'),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(48),
-            child: Container(
-              color: Colors.white,
-              child: TabBar(tabs: [for (final t in _tabs) Tab(text: t.$1)]),
-            ),
+        body: Column(children: [
+          PageHeader(
+            eyebrow: 'Soporte en campo',
+            title: 'Mis tickets',
+            subtitle: 'Ordenados por vencimiento del SLA',
+            bottom: HeaderTabs(tabs: [for (final t in _tabs) t.$1]),
           ),
-        ),
-        body: TabBarView(children: [for (final t in _tabs) _TicketList(status: t.$2, closed: t.$2.startsWith('resuelto'))]),
+          Expanded(child: TabBarView(children: [for (final t in _tabs) _TicketList(status: t.$2, closed: t.$2.startsWith('resuelto'))])),
+        ]),
       ),
     );
   }
@@ -73,15 +71,20 @@ class _TicketListState extends State<_TicketList> with AutomaticKeepAliveClientM
       builder: (context, tickets, reload) {
         if (tickets.isEmpty) {
           return ListView(children: [
-            EmptyState(icon: Icons.inbox_outlined, title: widget.closed ? 'Sin tickets cerrados' : 'No tienes tickets aquí', message: 'Desliza hacia abajo para actualizar.'),
+            EmptyState(
+              icon: widget.closed ? Icons.task_alt_rounded : Icons.inbox_outlined,
+              title: widget.closed ? 'Sin tickets cerrados' : 'No tienes tickets aquí',
+              message: 'Desliza hacia abajo para actualizar.',
+            ),
           ]);
         }
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           itemCount: tickets.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (context, i) => TicketTile(
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
+          itemBuilder: (context, i) => TicketCard(
             ticket: tickets[i],
+            index: i,
             onTap: () async {
               await Open.ticket(context, tickets[i].id);
               _loader.currentState?.reload();

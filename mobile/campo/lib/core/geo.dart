@@ -43,4 +43,27 @@ class Geo {
       return null;
     }
   }
+
+  /// Ubicación rápida para abrir el navegador: la última conocida si tiene menos de 2 min;
+  /// si no, una lectura de hasta 6 s. Null si no hay GPS o permiso (Maps usa la suya).
+  static Future<GeoPoint?> quick() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return null;
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return null;
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null && DateTime.now().difference(last.timestamp) < const Duration(minutes: 2)) {
+        return GeoPoint(last.latitude, last.longitude);
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 6)),
+      );
+      return GeoPoint(pos.latitude, pos.longitude);
+    } catch (_) {
+      return null;
+    }
+  }
 }

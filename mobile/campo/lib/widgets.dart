@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'brand.dart';
 import 'core/api.dart';
 import 'core/format.dart';
 import 'models.dart';
+import 'motion.dart';
 import 'theme.dart';
 
 /// Chip de estado con el color semántico del catálogo.
@@ -27,31 +29,36 @@ class StatusChip extends StatelessWidget {
   }
 }
 
-/// Tarjeta con título para agrupar secciones de una pantalla.
+/// Tarjeta con título para agrupar secciones de una pantalla. Entra con un fundido;
+/// [index] escalona varias tarjetas de la misma pantalla.
 class SectionCard extends StatelessWidget {
-  const SectionCard({super.key, this.title, required this.child, this.trailing, this.padding = const EdgeInsets.all(16)});
+  const SectionCard({super.key, this.title, required this.child, this.trailing, this.padding = const EdgeInsets.all(16), this.index = 0});
 
   final String? title;
   final Widget child;
   final Widget? trailing;
   final EdgeInsets padding;
+  final int index;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: padding,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (title != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(children: [
-                Expanded(child: Text(title!, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.navy))),
-                ?trailing,
-              ]),
-            ),
-          child,
-        ]),
+    return FadeSlideIn(
+      index: index,
+      child: Card(
+        child: Padding(
+          padding: padding,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (title != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(children: [
+                  Expanded(child: Text(title!, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.navy))),
+                  ?trailing,
+                ]),
+              ),
+            child,
+          ]),
+        ),
       ),
     );
   }
@@ -116,17 +123,64 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = Theme.of(context).colorScheme.primary;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
       child: Column(children: [
-        Icon(icon, size: 48, color: AppColors.slate.withValues(alpha: .5)),
-        const SizedBox(height: 12),
+        _Floating(
+          child: Container(
+            width: 84,
+            height: 84,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(colors: [brand.withValues(alpha: .16), brand.withValues(alpha: .04)]),
+              border: Border.all(color: brand.withValues(alpha: .12)),
+            ),
+            child: Icon(icon, size: 38, color: brand.withValues(alpha: .8)),
+          ),
+        ),
+        const SizedBox(height: 16),
         Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
         if (message != null) ...[
           const SizedBox(height: 6),
           Text(message!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.slate)),
         ],
       ]),
+    );
+  }
+}
+
+/// Flota suavemente arriba y abajo (iconos de estados vacíos).
+class _Floating extends StatefulWidget {
+  const _Floating({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_Floating> createState() => _FloatingState();
+}
+
+class _FloatingState extends State<_Floating> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 3200));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!reduceMotion(context) && !_c.isAnimating) _c.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, child) => Transform.translate(offset: Offset(0, -6 * Curves.easeInOut.transform(_c.value)), child: child),
+      child: widget.child,
     );
   }
 }
@@ -219,7 +273,7 @@ class LoaderState<T> extends State<Loader<T>> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading && _data == null) return const Center(child: CircularProgressIndicator());
+    if (_loading && _data == null) return const SkeletonView();
     if (_data == null) return RefreshIndicator(onRefresh: reload, child: ErrorView(error: _error ?? 'Sin datos', onRetry: reload));
     return RefreshIndicator(onRefresh: reload, child: widget.builder(context, _data as T, reload));
   }
@@ -233,14 +287,24 @@ Future<bool> runAction(BuildContext context, Future<dynamic> Function() action, 
     final msg = success ?? (res is Map ? res['message'] as String? : null);
     HapticFeedback.lightImpact();
     if (msg != null && msg.isNotEmpty) {
-      messenger.showSnackBar(SnackBar(content: Text(msg), backgroundColor: AppColors.success));
+      messenger.showSnackBar(_snack(msg, Icons.check_circle_rounded, AppColors.success));
     }
     return true;
   } catch (e) {
-    messenger.showSnackBar(SnackBar(content: Text(e is ApiException ? e.detail : '$e'), backgroundColor: AppColors.danger));
+    HapticFeedback.heavyImpact();
+    messenger.showSnackBar(_snack(e is ApiException ? e.detail : '$e', Icons.error_outline_rounded, AppColors.danger));
     return false;
   }
 }
+
+SnackBar _snack(String text, IconData icon, Color color) => SnackBar(
+      backgroundColor: color,
+      content: Row(children: [
+        Icon(icon, color: Colors.white, size: 22),
+        const SizedBox(width: 10),
+        Expanded(child: Text(text)),
+      ]),
+    );
 
 /// Imagen remota (evidencias). En web usa <img> para no depender de CORS.
 class NetImage extends StatelessWidget {
@@ -269,16 +333,15 @@ class HeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
-      decoration: const BoxDecoration(
-        color: AppColors.navy,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      child: DefaultTextStyle(
-        style: const TextStyle(color: Colors.white),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+      child: SignalPanel(
+        radius: 24,
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
+        child: DefaultTextStyle(
+          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+          child: FadeSlideIn(offset: 10, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children)),
+        ),
       ),
     );
   }
@@ -294,19 +357,46 @@ class GreetingHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 16, 20, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [AppColors.navy, AppColors.navy2], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+    final brand = Theme.of(context).colorScheme.primary;
+    final first = name.split(' ').first;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: lightStatusBar,
+      child: SignalPanel(
+        padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 16, 20, 22),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                FadeSlideIn(offset: 10, child: Text('${Fmt.greeting()},', style: const TextStyle(color: AppColors.navy200, fontSize: 14))),
+                FadeSlideIn(
+                  index: 1,
+                  offset: 12,
+                  child: Text(first, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.6, height: 1.15)),
+                ),
+              ]),
+            ),
+            FadeSlideIn(
+              index: 1,
+              child: Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [brand, Color.lerp(brand, Colors.white, .25)!], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  border: Border.all(color: Colors.white.withValues(alpha: .25), width: 2),
+                  boxShadow: [BoxShadow(color: brand.withValues(alpha: .45), blurRadius: 16)],
+                ),
+                child: Text(first.isEmpty ? '?' : first[0].toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800)),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 4),
+          FadeSlideIn(index: 2, offset: 10, child: Text(subtitle, style: const TextStyle(color: AppColors.navy200, fontSize: 13))),
+          if (bottom != null) ...[const SizedBox(height: 18), FadeSlideIn(index: 3, child: bottom!)],
+        ]),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('${Fmt.greeting()},', style: const TextStyle(color: Color(0xFFB7C4DC), fontSize: 14)),
-        Text(name.split(' ').first, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 2),
-        Text(subtitle, style: const TextStyle(color: Color(0xFFB7C4DC), fontSize: 13)),
-        if (bottom != null) ...[const SizedBox(height: 18), bottom!],
-      ]),
     );
   }
 }
@@ -322,18 +412,22 @@ class StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Material(
-        color: Colors.white.withValues(alpha: .08),
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-            child: Column(children: [
-              FittedBox(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800))),
-              Text(label, style: const TextStyle(color: Color(0xFFB7C4DC), fontSize: 12)),
-            ]),
+      child: Pressable(
+        onTap: onTap,
+        child: Material(
+          color: Colors.white.withValues(alpha: .07),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.white.withValues(alpha: .11))),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 6),
+              child: Column(children: [
+                FittedBox(child: CountUpText(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -.4))),
+                const SizedBox(height: 2),
+                Text(label, style: const TextStyle(color: AppColors.navy200, fontSize: 12, fontWeight: FontWeight.w500)),
+              ]),
+            ),
           ),
         ),
       ),
@@ -353,6 +447,237 @@ class FolioTag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(color: Colors.white.withValues(alpha: .15), borderRadius: BorderRadius.circular(8)),
       child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
+    );
+  }
+}
+
+/// Encabezado navy de las pantallas principales (en lugar de la AppBar plana):
+/// rótulo pequeño, título grande, acciones y un bloque inferior (buscador, pestañas, cifras).
+class PageHeader extends StatelessWidget {
+  const PageHeader({super.key, required this.title, this.eyebrow, this.subtitle, this.actions = const [], this.bottom});
+
+  final String title;
+  final String? eyebrow;
+  final String? subtitle;
+  final List<Widget> actions;
+  final Widget? bottom;
+
+  @override
+  Widget build(BuildContext context) {
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final top = MediaQuery.paddingOf(context).top;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: lightStatusBar,
+      child: SignalPanel(
+        padding: EdgeInsets.fromLTRB(canPop ? 8 : 20, top + 10, 14, bottom == null ? 22 : 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            if (canPop) const BackButton(color: Colors.white),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (eyebrow != null)
+                  FadeSlideIn(
+                    offset: 8,
+                    child: Text(eyebrow!.toUpperCase(), style: const TextStyle(color: AppColors.brand400, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2)),
+                  ),
+                FadeSlideIn(
+                  index: 1,
+                  offset: 10,
+                  child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -.6, height: 1.2)),
+                ),
+              ]),
+            ),
+            ...actions,
+          ]),
+          if (subtitle != null)
+            Padding(
+              padding: EdgeInsets.only(left: canPop ? 48 : 0, top: 2),
+              child: FadeSlideIn(index: 2, offset: 8, child: Text(subtitle!, style: const TextStyle(color: AppColors.navy200, fontSize: 13))),
+            ),
+          if (bottom != null)
+            Padding(
+              padding: EdgeInsets.only(top: 16, left: canPop ? 12 : 0, right: 6),
+              child: FadeSlideIn(index: 3, child: bottom!),
+            ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Botón redondo translúcido para las acciones del encabezado navy.
+class HeaderAction extends StatelessWidget {
+  const HeaderAction({super.key, required this.icon, required this.onTap, this.tooltip});
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: Material(
+        color: Colors.white.withValues(alpha: .09),
+        shape: CircleBorder(side: BorderSide(color: Colors.white.withValues(alpha: .12))),
+        child: IconButton(onPressed: onTap, tooltip: tooltip, icon: Icon(icon, color: Colors.white, size: 21)),
+      ),
+    );
+  }
+}
+
+/// Buscador translúcido sobre el encabezado navy.
+class HeaderSearch extends StatelessWidget {
+  const HeaderSearch({super.key, required this.hint, required this.onChanged});
+
+  final String hint;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final border = OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.white.withValues(alpha: .12)));
+    return TextField(
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      cursorColor: Colors.white,
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        isDense: true,
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: .08),
+        hintText: hint,
+        hintStyle: const TextStyle(color: AppColors.navy200),
+        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.navy200),
+        border: border,
+        enabledBorder: border,
+        focusedBorder: border.copyWith(borderSide: const BorderSide(color: AppColors.brand400, width: 1.5)),
+      ),
+    );
+  }
+}
+
+/// Pestañas tipo píldora sobre el encabezado navy (usa el DefaultTabController de la pantalla).
+class HeaderTabs extends StatelessWidget {
+  const HeaderTabs({super.key, required this.tabs});
+
+  final List<String> tabs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 46,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.white.withValues(alpha: .1)),
+      ),
+      child: TabBar(
+        tabs: [for (final t in tabs) Tab(text: t)],
+        dividerHeight: 0,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .2), blurRadius: 10, offset: const Offset(0, 3))],
+        ),
+        labelColor: AppColors.navy,
+        unselectedLabelColor: AppColors.navy200,
+        labelStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w800, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13),
+        splashBorderRadius: BorderRadius.circular(11),
+        overlayColor: WidgetStatePropertyAll(Colors.white.withValues(alpha: .06)),
+      ),
+    );
+  }
+}
+
+/// Icono dentro de un cuadro redondeado de color (listas y menús).
+class IconBadge extends StatelessWidget {
+  const IconBadge(this.icon, {super.key, required this.color, this.size = 42});
+
+  final IconData icon;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * .32),
+        gradient: LinearGradient(colors: [color.withValues(alpha: .18), color.withValues(alpha: .08)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      ),
+      child: Icon(icon, color: color, size: size * .52),
+    );
+  }
+}
+
+/// Etiqueta con icono y fondo suave ("SLA en 2 h", "15 días de atraso").
+class Pill extends StatelessWidget {
+  const Pill({super.key, required this.label, required this.color, this.icon});
+
+  final String label;
+  final Color color;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: color.withValues(alpha: .1), borderRadius: BorderRadius.circular(20)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (icon != null) ...[Icon(icon, size: 13, color: color), const SizedBox(width: 4)],
+        Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 11.5)),
+      ]),
+    );
+  }
+}
+
+/// Tarjeta de lista con franja de color a la izquierda, entrada escalonada y respuesta al toque.
+class AccentCard extends StatelessWidget {
+  const AccentCard({super.key, required this.child, required this.accent, this.onTap, this.index = 0, this.padding = const EdgeInsets.fromLTRB(14, 14, 14, 14)});
+
+  final Widget child;
+  final Color accent;
+  final VoidCallback? onTap;
+  final int index;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeSlideIn(
+      index: index,
+      child: Pressable(
+        onTap: onTap,
+        scale: .98,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.border.withValues(alpha: .8)),
+            boxShadow: [BoxShadow(color: AppColors.navy.withValues(alpha: .05), blurRadius: 14, offset: const Offset(0, 5))],
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: onTap,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: IntrinsicHeight(
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Container(width: 5, color: accent),
+                    Expanded(child: Padding(padding: padding, child: child)),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

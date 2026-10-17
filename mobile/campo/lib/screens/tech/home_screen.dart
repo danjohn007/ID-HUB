@@ -7,6 +7,7 @@ import '../../core/geo.dart';
 import '../../core/launch.dart';
 import '../../core/session.dart';
 import '../../models.dart';
+import '../../motion.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../open.dart';
@@ -78,11 +79,12 @@ class _TechHomeScreenState extends State<TechHomeScreen> {
                 const SizedBox(height: 12),
               ],
               if (next != null)
-                _NextStop(stop: next, onOpen: () => _after(Open.stop(context, next, collector: false)))
+                FadeSlideIn(index: 2, child: _NextStop(stop: next, onOpen: () => _after(Open.stop(context, next, collector: false))))
               else if (stops.isNotEmpty)
-                const SectionCard(child: EmptyState(icon: Icons.task_alt_rounded, title: '¡Ruta terminada!', message: 'Atendiste todas las paradas de hoy.'))
+                const SectionCard(index: 2, child: EmptyState(icon: Icons.task_alt_rounded, title: '¡Ruta terminada!', message: 'Atendiste todas las paradas de hoy.'))
               else
                 SectionCard(
+                  index: 2,
                   child: Column(children: [
                     EmptyState(icon: Icons.route_outlined, title: 'Sin ruta planeada', message: day.message ?? 'Tu supervisor aún no arma la ruta de hoy. Abajo tienes tus pendientes.'),
                   ]),
@@ -90,6 +92,7 @@ class _TechHomeScreenState extends State<TechHomeScreen> {
               if (day.installations.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 SectionCard(
+                  index: 3,
                   title: 'Instalaciones',
                   trailing: Text('${day.installations.length}', style: const TextStyle(color: AppColors.slate, fontWeight: FontWeight.w700)),
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
@@ -109,6 +112,7 @@ class _TechHomeScreenState extends State<TechHomeScreen> {
               if (day.tickets.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 SectionCard(
+                  index: 4,
                   title: 'Tickets prioritarios',
                   trailing: TextButton(onPressed: () => Shell.of(context).go(3), child: const Text('Ver todos')),
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
@@ -118,7 +122,7 @@ class _TechHomeScreenState extends State<TechHomeScreen> {
                 ),
               ],
               const SizedBox(height: 16),
-              OutlinedButton.icon(onPressed: _shareLocation, icon: const Icon(Icons.my_location_rounded), label: const Text('Compartir mi ubicación')),
+              FadeSlideIn(index: 5, child: OutlinedButton.icon(onPressed: _shareLocation, icon: const Icon(Icons.my_location_rounded), label: const Text('Compartir mi ubicación'))),
               const SizedBox(height: 24),
             ]),
           ),
@@ -137,6 +141,7 @@ class _Progress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SectionCard(
+      index: 1,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const Text('Avance de la ruta', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -146,7 +151,12 @@ class _Progress extends StatelessWidget {
         const SizedBox(height: 10),
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(value: total == 0 ? 0 : done / total, minHeight: 8, backgroundColor: const Color(0xFFE2E8F0)),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: total == 0 ? 0 : done / total),
+            duration: const Duration(milliseconds: 1100),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, _) => LinearProgressIndicator(value: v, minHeight: 8, backgroundColor: AppColors.border),
+          ),
         ),
       ]),
     );

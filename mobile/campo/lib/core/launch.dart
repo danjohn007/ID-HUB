@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'geo.dart';
+
 /// Llamar, WhatsApp y navegación con la app de mapas del teléfono.
 class Launch {
   static Future<void> call(BuildContext context, String? phone) => _open(context, phone == null ? null : 'tel:${_digits(phone)}');
@@ -14,10 +16,31 @@ class Launch {
     return _open(context, 'https://wa.me/$d$q');
   }
 
-  static Future<void> navigate(BuildContext context, String? url) => _open(context, url);
+  /// Abre la ruta en Google Maps en auto y saliendo de la ubicación GPS actual del teléfono.
+  static Future<void> navigate(BuildContext context, String? url) async {
+    if (url == null || url.isEmpty) return _open(context, null);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(content: Text('Ubicando tu posición…'), duration: Duration(seconds: 8)));
+    final here = await Geo.quick();
+    messenger.hideCurrentSnackBar();
+    if (!context.mounted) return;
+    return _open(context, directions(url, from: here));
+  }
 
   static Future<void> mapsTo(BuildContext context, double? lat, double? lng) =>
-      _open(context, lat == null || lng == null ? null : 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+      navigate(context, lat == null || lng == null ? null : 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+
+  /// Ajusta una liga de indicaciones de Google Maps: en auto (sin travelmode, Maps usa el último modo
+  /// del teléfono, p. ej. transporte público) y con origen en [from] (sin origin, Maps toma su propia
+  /// ubicación, que puede estar desfasada). Otras ligas se regresan igual.
+  static String directions(String url, {GeoPoint? from}) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.host.contains('google.') || !uri.path.startsWith('/maps/dir')) return url;
+    final q = {...uri.queryParameters};
+    q.putIfAbsent('travelmode', () => 'driving');
+    if (from != null) q.putIfAbsent('origin', () => '${from.lat},${from.lng}');
+    return uri.replace(queryParameters: q).toString();
+  }
 
   static String _digits(String s) => s.replaceAll(RegExp(r'[^0-9+]'), '').replaceFirst('+', '');
 
