@@ -148,6 +148,53 @@ curl "$API/collection/cash-cut" -H "$H"
 El cobro en efectivo registra el pago (`collector_id` = cobrador), una visita `pago` y lo agrega al corte de
 caja abierto (`CashCutService::attach`), que el supervisor concilia en el panel.
 
+## 5.1 App de campo (técnicos y cobradores) — `mobile/`
+
+La app móvil de campo (`mobile/`, Expo) usa estos endpoints además de los anteriores. Reutilizan los
+mismos servicios que las pantallas web «Mi jornada», «Ticket» y «Mi cobranza», así que el resultado es idéntico.
+
+**Técnico**
+```bash
+curl "$API/field/today" -H "$H"            # ruta guardada o sugerida: suggested, stops[], summary, maps_url
+curl -X POST "$API/field/start-day" -H "$H" # guarda la sugerencia como ruta del día
+curl -X POST "$API/field/stops/12/skip" -H "$H"
+curl "$API/inventory/items?search=antena" -H "$H"
+curl -X POST "$API/tickets/264/materials" -H "$H" -d "item_id=3&quantity=1&type=instalacion&serial=LBE-9921"
+curl -X POST "$API/tickets/264/materials/88/return" -H "$H"
+curl -X POST "$API/tickets/264/signature" -H "$H" -d "signed_by=Juan Pérez&signature=data:image/png;base64,iVBOR..."
+curl -X DELETE "$API/tickets/264/attachments/51" -H "$H"
+curl "$API/installations?scope=open" -H "$H"
+curl -X POST "$API/installations/7/start" -H "$H"
+curl -X POST "$API/installations/7/checklist" -H "$H" -d "key=antena&done=1"
+curl -X POST "$API/installations/7/measures" -H "$H" -d "signal_dbm=-58&speed_down=30&speed_up=8"
+curl -X POST "$API/installations/7/attachments" -H "$H" -F "file=@antena.jpg" -F "kind=instalacion"
+curl -X POST "$API/installations/7/signature" -H "$H" -d "signed_by=Ana López&signature=data:image/png;base64,..."
+curl -X POST "$API/installations/7/complete" -H "$H"   # 422 con "missing" si falta checklist
+```
+- `GET /tickets/{id}` ahora incluye `client_detail` (plan, repetidor, señal, referencias), `materials`, `signature`,
+  `on_way_at`, `navigation_url` y `open`.
+- Reglas iguales a la web: el técnico sin `tickets.manage` sólo cambia a `en_proceso`, `en_espera` o `resuelto`
+  (403 en otros) y `resuelto` exige `note` (mín. 5 caracteres, 422).
+- Órdenes de instalación: se inician cuando están `programada` y se trabajan (checklist, mediciones, fotos, firma,
+  materiales, finalizar) sólo `en_proceso`. Fotografía y firma marcan su punto del checklist automáticamente.
+  Cotización, programación y activación siguen en el panel.
+
+**Cobrador**
+```bash
+curl "$API/collection/today?view=pendientes&lat=20.70&lng=-100.44" -H "$H"   # resumen, corte, ruta, clientes en orden
+curl "$API/collection/today?view=visitados" -H "$H"
+curl "$API/collection/clients/62" -H "$H"         # cargos pendientes, últimos pagos y visitas
+curl -X POST "$API/collection/payments" -H "$H" -d "client_id=62&amount=200&method=transferencia&reference=SPEI-1"
+curl -X POST "$API/collection/cash-cut/close" -H "$H" -d "counted_amount=1450&notes=Entrego en oficina"
+curl "$API/collection/cash-cuts" -H "$H"
+```
+- `collection/today` ordena como «Mi cobranza»: primero las paradas de la ruta del día y después por cercanía
+  desde `lat/lng` (o la última ubicación). Excluye a los visitados hoy (`view=visitados` los lista).
+- Visitas y cobros marcan como atendida la parada del cliente en la ruta del día.
+- Sólo se opera sobre clientes asignados al cobrador (`billing.manage` puede operar cualquiera).
+- **Hacer el corte** cierra el corte abierto (`closed`, «por entregar»); el efectivo contado queda en las notas.
+  El supervisor registra la entrega y concilia en *Cobranza → Cortes de caja* (`delivered` → `reconciled`).
+
 ## 6. Red, alertas y métricas
 
 ```bash
@@ -211,6 +258,5 @@ por `external_id` (repetir devuelve `"duplicate": true` y el pago original).
 
 ## Pendiente / limitaciones
 - Envío real de notificaciones push (FCM): la API registra los tokens; el envío lo hace el módulo de mensajería.
-- Firma del cliente y materiales usados en la app del técnico: usar `attachments` con `kind=firma`; el
-  consumo de inventario aún no se expone por API.
+- Firma del cliente y materiales usados en la app del técnico: ya disponibles (sección 5.1).
 - Sin versionado de respuestas por encabezado: cambios incompatibles irán en `/api/v2`.

@@ -171,24 +171,13 @@ trait ManagesTicketWork
     {
         $this->ensureCanWork();
         $this->validate(['signedBy' => 'required|string|min:3|max:120|'.InputRules::NAME], [], ['signedBy' => 'nombre de quien firma']);
-        if (! $this->signature || ! preg_match('/^data:image\/png;base64,([A-Za-z0-9+\/=]+)$/', $this->signature, $m)) {
-            $this->addError('signature', 'Captura la firma del cliente.');
+        try {
+            app(TicketService::class)->saveSignature($this->ticket, (string) $this->signature, $this->signedBy);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->addError('signature', $e->validator->errors()->first('signature'));
 
             return;
         }
-        $png = base64_decode($m[1], true);
-        if ($png === false || strlen($png) > 2 * 1024 * 1024 || ! str_starts_with($png, "\x89PNG")) {
-            $this->addError('signature', 'La firma no es válida.');
-
-            return;
-        }
-        $path = 'signatures/'.$this->ticket->tenant_id.'/ticket-'.$this->ticket->id.'-'.now()->format('YmdHis').'.png';
-        Storage::disk('public')->put($path, $png);
-        if ($this->ticket->signature_path) {
-            Storage::disk('public')->delete($this->ticket->signature_path);
-        }
-        $this->ticket->forceFill(['signature_path' => $path, 'signed_by_name' => trim($this->signedBy), 'signed_at' => now()])->save();
-        $this->ticket->addComment('Firma de conformidad capturada ('.trim($this->signedBy).')', 'system');
         $this->reset('signature');
         $this->dispatch('signature-saved');
         $this->toast('Firma guardada');

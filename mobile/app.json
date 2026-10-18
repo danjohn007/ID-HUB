@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "WISPCONTROL Campo",
+    "slug": "wispcontrol-campo",
+    "scheme": "wispcontrol-campo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#f4f7fb",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.impactosdigitales.wispcontrol.campo",
+      "infoPlist": {
+        "NSCameraUsageDescription": "La cámara se usa para tomar las evidencias fotográficas del trabajo y de los cobros.",
+        "NSPhotoLibraryUsageDescription": "Se usa para adjuntar fotos de evidencia desde tu galería.",
+        "NSLocationWhenInUseUsageDescription": "Tu ubicación se registra al llegar, salir, cobrar y tomar evidencias, y sirve para ordenar tu ruta.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
+    },
+    "android": {
+      "package": "com.impactosdigitales.wispcontrol.campo",
+      "adaptiveIcon": {
+        "backgroundColor": "#0b1b3a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#0b1b3a"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Tu ubicación se registra al llegar, salir, cobrar y tomar evidencias, y sirve para ordenar tu ruta."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "La cámara se usa para tomar las evidencias fotográficas del trabajo y de los cobros.",
+          "photosPermission": "Se usa para adjuntar fotos de evidencia desde tu galería."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-image",
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "apiUrl": ""
+    }
+  }
+}

@@ -179,6 +179,8 @@ class AuthController extends ApiController
             'secondary_color' => $tenant->secondary_color,
             'currency' => $tenant->currency,
             'timezone' => $tenant->timezone,
+            // Igual que el panel web: logo y color propios sólo con la función "white_label" del plan
+            'white_label' => $tenant->hasFeature('white_label'),
         ];
     }
 }

@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\RegistersMaterials;
 use App\Http\Resources\AttachmentResource;
 use App\Http\Resources\TicketCommentResource;
 use App\Http\Resources\TicketResource;
 use App\Models\Attachment;
 use App\Models\Client;
+use App\Models\InventoryMovement;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Field\FieldTracker;
+use App\Services\InventoryService;
 use App\Services\TicketService;
+use App\Support\InputRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /**
@@ -21,6 +26,11 @@ use Illuminate\Validation\Rule;
  */
 class TicketController extends ApiController
 {
+    use RegistersMaterials;
+
+    /** Estados que puede elegir un técnico sin "tickets.manage" (igual que la app de campo web). */
+    public const FIELD_STATUSES = ['en_proceso', 'en_espera', 'resuelto'];
+
     public function index(Request $request)
     {
         $user = $this->apiUser();
@@ -39,9 +49,7 @@ class TicketController extends ApiController
 
     public function show(int $id): TicketResource
     {
-        $ticket = Ticket::query()->with(['client', 'technician', 'comments.user', 'attachments'])->findOrFail($id);
-
-        return new TicketResource($ticket);
+        return new TicketResource($this->detailed(Ticket::query()->findOrFail($id)));
     }
 
     public function store(Request $request): JsonResponse
@@ -72,8 +80,13 @@ class TicketController extends ApiController
             'lat' => 'nullable|numeric|between:-90,90',
             'lng' => 'nullable|numeric|between:-180,180',
         ]);
-        if (in_array($data['status'], ['cerrado', 'cancelado'], true) && ! $this->allows('tickets.manage')) {
-            $this->deny('Sólo soporte o supervisión pueden cerrar o cancelar tickets.');
+        if (! $this->allows('tickets.manage') && ! in_array($data['status'], self::FIELD_STATUSES, true)) {
+            $this->deny(in_array($data['status'], ['cerrado', 'cancelado'], true)
+                ? 'Sólo soporte o supervisión pueden cerrar o cancelar tickets.'
+                : 'Desde campo sólo puedes marcar el ticket en proceso, en espera o resuelto.');
+        }
+        if ($data['status'] === 'resuelto' && $data['status'] !== $ticket->status && mb_strlen(trim((string) ($data['note'] ?? ''))) < 5) {
+            $this->fail('note', 'Describe la solución aplicada.');
         }
         if (isset($data['lat'], $data['lng'])) {
             app(FieldTracker::class)->updateLocation($this->apiUser(), $data['lat'], $data['lng']);
@@ -152,6 +165,85 @@ class TicketController extends ApiController
             array_filter(['attachment_id' => $attachment->id, 'lat' => $attachment->lat, 'lng' => $attachment->lng]));
 
         return $this->ok(['data' => new AttachmentResource($attachment)], 'Evidencia guardada.', 201);
+    }
+
+    /** Elimina una evidencia (quien la subió o soporte). */
+    public function deleteAttachment(int $id, int $attachmentId): JsonResponse
+    {
+        $ticket = $this->workable($id);
+        $a = $ticket->attachments()->findOrFail($attachmentId);
+        if (! $this->allows('tickets.manage') && (int) $a->uploaded_by !== (int) $this->apiUser()->id) {
+            $this->deny('Sólo puedes eliminar las evidencias que tú subiste.');
+        }
+        Storage::disk('public')->delete($a->path);
+        $a->delete();
+
+        return $this->ok([], 'Evidencia eliminada.');
+    }
+
+    /** Material usado en el ticket: descuenta inventario (sección 23). */
+    public function addMaterial(Request $request, int $id): JsonResponse
+    {
+        $ticket = $this->openWorkable($id);
+        $resource = $this->registerMaterial($request, ['ticket_id' => $ticket->id, 'client_id' => $ticket->client_id], $ticket->folio, 'ticket');
+        $m = $resource->resource;
+        $ticket->addComment('Material registrado: '.app(InventoryService::class)->qty(abs((float) $m->quantity)).' '.$m->item->unit.' de '.$m->item->name, 'system');
+        $ticket->touch();
+
+        return $this->ok(['data' => $resource], 'Material registrado y descontado del inventario.', 201);
+    }
+
+    /** Devuelve al almacén un material registrado por error. */
+    public function returnMaterial(int $id, int $movementId): JsonResponse
+    {
+        $ticket = $this->openWorkable($id);
+        $m = InventoryMovement::query()->where('ticket_id', $ticket->id)->whereIn('type', ['instalacion', 'salida'])->with('item')->findOrFail($movementId);
+        $resource = $this->returnMaterialMovement($m, ['ticket_id' => $ticket->id, 'client_id' => $ticket->client_id], $ticket->folio, 'Devolución de material del ticket '.$ticket->folio);
+
+        return $this->ok(['data' => $resource], 'Material devuelto al inventario.', 201);
+    }
+
+    /** Firma de conformidad del cliente: PNG en base64 (data URL) o archivo PNG. */
+    public function signature(Request $request, int $id): JsonResponse
+    {
+        $ticket = $this->workable($id);
+        $data = $this->check($request, [
+            'signed_by' => 'required|string|min:3|max:120|'.InputRules::NAME,
+            'signature' => 'required_without:file|nullable|string|max:3000000',
+            'file' => 'required_without:signature|nullable|file|mimes:png|max:2048',
+        ], ['signed_by' => 'nombre de quien firma', 'signature' => 'firma', 'file' => 'firma']);
+        $dataUrl = $request->hasFile('file')
+            ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($request->file('file')->getRealPath()))
+            : (string) $data['signature'];
+        app(TicketService::class)->saveSignature($ticket, $dataUrl, $data['signed_by']);
+
+        return $this->ok(['data' => new TicketResource($this->detailed($ticket->fresh()))], 'Firma guardada.');
+    }
+
+    /** Ticket con todo lo que muestra la pantalla de trabajo (cliente, evidencias, materiales, historial). */
+    protected function detailed(Ticket $ticket): Ticket
+    {
+        return $ticket->load([
+            'client.plan', 'client.repeater', 'client.zone', 'technician', 'repeater',
+            'comments' => fn ($q) => $q->with('user'),
+            'attachments', 'materials' => fn ($q) => $q->with('item', 'user')->latest(),
+        ]);
+    }
+
+    protected function openWorkable(int $id): Ticket
+    {
+        $ticket = $this->workable($id);
+        if (! $ticket->isOpen()) {
+            $this->deny('El ticket ya está cerrado.', 422);
+        }
+
+        return $ticket;
+    }
+
+    /** Error de validación 422 con el formato estándar de la API. */
+    protected function fail(string $field, string $message): never
+    {
+        abort(response()->json(['message' => $message, 'errors' => [$field => [$message]]], 422));
     }
 
     /** Ticket que el usuario puede operar: tickets.manage, o técnico asignado con field.work. */

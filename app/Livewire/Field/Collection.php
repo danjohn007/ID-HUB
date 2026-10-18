@@ -6,13 +6,11 @@ use App\Livewire\Concerns\Toasts;
 use App\Models\Charge;
 use App\Models\Client;
 use App\Models\CollectionVisit;
-use App\Models\FieldRoute;
 use App\Models\Payment;
-use App\Models\RouteStop;
 use App\Services\Billing\CashCutService;
 use App\Services\BillingService;
+use App\Services\Field\CollectionRoute;
 use App\Support\InputRules;
-use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -140,7 +138,7 @@ class Collection extends Component
                 'payment_id' => $payment->id, 'notes' => $this->payForm['notes'] ?: null, 'evidence_path' => $evidence,
                 'lat' => $lat, 'lng' => $lng, 'visited_at' => now(),
             ]);
-            $this->completeStop($client->id);
+            app(CollectionRoute::class)->completeStop(auth()->id(), $client->id);
 
             return $payment;
         });
@@ -178,100 +176,18 @@ class Collection extends Component
             'lng' => is_numeric($this->visitForm['lng']) ? $this->visitForm['lng'] : null,
             'visited_at' => now(),
         ]);
-        $this->completeStop($client->id);
+        app(CollectionRoute::class)->completeStop(auth()->id(), $client->id);
         $this->showVisit = false;
         $this->toast('Visita registrada: '.\App\Support\Catalog::label('visit_results', $this->visitForm['result']));
     }
 
-    protected function completeStop(int $clientId): void
-    {
-        $route = $this->todayRoute();
-        if ($route) {
-            RouteStop::where('field_route_id', $route->id)->where('stoppable_type', 'client')->where('stoppable_id', $clientId)
-                ->update(['status' => 'done', 'departed_at' => now(), 'arrived_at' => DB::raw('COALESCE(arrived_at, NOW())')]);
-            if ($route->status === 'planned') {
-                $route->update(['status' => 'in_progress']);
-            }
-        }
-    }
-
-    protected function todayRoute(): ?FieldRoute
-    {
-        return FieldRoute::query()->where('user_id', auth()->id())->where('type', 'cobranza')
-            ->whereDate('date', now()->toDateString())->with('stops')->latest('id')->first();
-    }
-
-    /** Ordena: paradas de la ruta del día y después vecino más cercano desde la última posición. */
-    protected function order(SupportCollection $clients, ?FieldRoute $route): SupportCollection
-    {
-        $ordered = collect();
-        $remaining = $clients->keyBy('id');
-        $cursor = is_numeric($this->myLat) ? [(float) $this->myLat, (float) $this->myLng] : null;
-
-        if ($route) {
-            foreach ($route->stops as $stop) {
-                if ($stop->stoppable_type === 'client' && $remaining->has($stop->stoppable_id)) {
-                    $c = $remaining->pull($stop->stoppable_id);
-                    $c->route_seq = $stop->sequence;
-                    $ordered->push($c);
-                    if ($c->lat) {
-                        $cursor = [(float) $c->lat, (float) $c->lng];
-                    }
-                }
-            }
-        }
-
-        if (! $cursor) {
-            $u = auth()->user();
-            $cursor = $u->last_lat ? [(float) $u->last_lat, (float) $u->last_lng] : null;
-        }
-        $withCoords = $remaining->filter(fn ($c) => $c->lat && $c->lng);
-        $noCoords = $remaining->reject(fn ($c) => $c->lat && $c->lng);
-        if (! $cursor && $withCoords->isNotEmpty()) {
-            $first = $withCoords->sortByDesc('balance')->first();
-            $cursor = [(float) $first->lat, (float) $first->lng];
-        }
-        while ($withCoords->isNotEmpty()) {
-            $best = null;
-            $bestD = INF;
-            foreach ($withCoords as $c) {
-                $d = haversine_km($cursor[0], $cursor[1], (float) $c->lat, (float) $c->lng);
-                if ($d < $bestD) {
-                    $bestD = $d;
-                    $best = $c;
-                }
-            }
-            $best->distance_km = round($bestD, 2);
-            $ordered->push($best);
-            $withCoords->forget($best->id);
-            $cursor = [(float) $best->lat, (float) $best->lng];
-        }
-
-        return $ordered->concat($noCoords->sortByDesc('balance')->values())->values();
-    }
-
-    public function render(CashCutService $cuts)
+    public function render(CashCutService $cuts, CollectionRoute $routes)
     {
         $me = auth()->user();
-        $today = now()->startOfDay();
-        $route = $this->todayRoute();
-
-        $visitsToday = CollectionVisit::query()->where('collector_id', $me->id)->where('visited_at', '>=', $today)
-            ->with('payment:id,folio,amount')->orderByDesc('visited_at')->get();
-        $visitedIds = $visitsToday->pluck('client_id')->unique();
-
-        $base = Client::query()->where('collector_id', $me->id)->whereIn('service_status', Client::BILLABLE)
-            ->with(['zone:id,name', 'plan:id,name,price'])
-            ->addSelect(['clients.*', 'oldest_due' => Charge::query()->selectRaw('MIN(due_date)')->whereColumn('charges.client_id', 'clients.id')->whereIn('charges.status', ['pending', 'partial'])])
-            ->search($this->search);
-
-        if ($this->view === 'visitados') {
-            $clients = (clone $base)->whereIn('clients.id', $visitedIds)->get()
-                ->sortBy(fn ($c) => $visitedIds->search($c->id))->values();
-        } else {
-            $pending = (clone $base)->where('balance', '>', 0)->whereNotIn('clients.id', $visitedIds)->get();
-            $clients = $this->order($pending, $route);
-        }
+        $route = $routes->todayRoute($me->id);
+        $visitsToday = $routes->visitsToday($me->id);
+        $cursor = is_numeric($this->myLat) ? [(float) $this->myLat, (float) $this->myLng] : null;
+        $clients = $routes->clients($me, $this->view, $this->search, $cursor, $visitsToday);
 
         $history = collect();
         if ($this->expanded) {
@@ -282,7 +198,6 @@ class Collection extends Component
             ];
         }
 
-        $myPaymentsToday = Payment::query()->revenue()->where('collector_id', $me->id)->where('paid_at', '>=', $today);
         $cut = $cuts->openCutFor($me->id, false);
 
         return view('livewire.field.collection', [
@@ -290,13 +205,7 @@ class Collection extends Component
             'route' => $route,
             'visitsToday' => $visitsToday->keyBy('client_id'),
             'history' => $history,
-            'summary' => [
-                'collected' => (float) (clone $myPaymentsToday)->sum('amount'),
-                'payments' => (clone $myPaymentsToday)->count(),
-                'visits' => $visitsToday->count(),
-                'pending' => Client::query()->where('collector_id', $me->id)->whereIn('service_status', Client::BILLABLE)->where('balance', '>', 0)->whereNotIn('id', $visitedIds)->count(),
-                'pending_amount' => (float) Client::query()->where('collector_id', $me->id)->whereIn('service_status', Client::BILLABLE)->where('balance', '>', 0)->sum('balance'),
-            ],
+            'summary' => $routes->summary($me, $visitsToday),
             'cut' => $cut,
             'actionClient' => $this->clientId ? Client::find($this->clientId) : null,
             'lastPayment' => $this->lastPaymentId ? Payment::find($this->lastPaymentId) : null,

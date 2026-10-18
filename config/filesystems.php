@@ -40,7 +40,9 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            // Hosting sin enlaces simbólicos (p. ej. app en una subcarpeta de public_html):
+            // PUBLIC_DISK_IN_WEBROOT=true guarda los archivos públicos directo en <public>/storage.
+            'root' => env('PUBLIC_DISK_IN_WEBROOT', false) ? public_path('storage') : storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,

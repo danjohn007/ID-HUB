@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\V1\ClientAppController;
 use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\CollectionController;
 use App\Http\Controllers\Api\V1\FieldController;
+use App\Http\Controllers\Api\V1\InstallationController;
 use App\Http\Controllers\Api\V1\IntegrationController;
+use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\NetworkController;
 use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\SignedDocumentController;
@@ -81,11 +83,35 @@ Route::prefix('v1')->name('api.v1.')->middleware([ApiForceJson::class, 'throttle
                 Route::patch('tickets/{id}/status', [TicketController::class, 'updateStatus'])->whereNumber('id')->name('tickets.status');
                 Route::post('tickets/{id}/comments', [TicketController::class, 'addComment'])->whereNumber('id')->name('tickets.comments.store');
                 Route::post('tickets/{id}/attachments', [TicketController::class, 'addAttachment'])->whereNumber('id')->name('tickets.attachments.store');
+                Route::delete('tickets/{id}/attachments/{attachment}', [TicketController::class, 'deleteAttachment'])->whereNumber(['id', 'attachment'])->name('tickets.attachments.destroy');
+                Route::post('tickets/{id}/materials', [TicketController::class, 'addMaterial'])->whereNumber('id')->name('tickets.materials.store');
+                Route::post('tickets/{id}/materials/{movement}/return', [TicketController::class, 'returnMaterial'])->whereNumber(['id', 'movement'])->name('tickets.materials.return');
+                Route::post('tickets/{id}/signature', [TicketController::class, 'signature'])->whereNumber('id')->name('tickets.signature');
             });
+        });
+
+        // Catálogo de inventario para registrar materiales en campo
+        Route::get('inventory/items', [InventoryController::class, 'items'])->middleware($can('field.work|inventory.view'))->name('inventory.items');
+
+        // Órdenes de instalación del técnico (secciones 23 y 40)
+        Route::prefix('installations')->name('installations.')->middleware($can('field.work|installations.manage'))->group(function () {
+            Route::get('/', [InstallationController::class, 'index'])->name('index');
+            Route::get('{id}', [InstallationController::class, 'show'])->whereNumber('id')->name('show');
+            Route::post('{id}/start', [InstallationController::class, 'start'])->whereNumber('id')->name('start');
+            Route::post('{id}/checklist', [InstallationController::class, 'checklist'])->whereNumber('id')->name('checklist');
+            Route::post('{id}/measures', [InstallationController::class, 'measures'])->whereNumber('id')->name('measures');
+            Route::post('{id}/attachments', [InstallationController::class, 'addAttachment'])->whereNumber('id')->name('attachments.store');
+            Route::delete('{id}/attachments/{attachment}', [InstallationController::class, 'deleteAttachment'])->whereNumber(['id', 'attachment'])->name('attachments.destroy');
+            Route::post('{id}/signature', [InstallationController::class, 'signature'])->whereNumber('id')->name('signature');
+            Route::post('{id}/materials', [InstallationController::class, 'addMaterial'])->whereNumber('id')->name('materials.store');
+            Route::post('{id}/materials/{movement}/return', [InstallationController::class, 'returnMaterial'])->whereNumber(['id', 'movement'])->name('materials.return');
+            Route::post('{id}/complete', [InstallationController::class, 'complete'])->whereNumber('id')->name('complete');
         });
 
         Route::prefix('field')->name('field.')->middleware($can('field.work|collection.field'))->group(function () use ($can) {
             Route::get('today', [FieldController::class, 'today'])->name('today');
+            Route::post('start-day', [FieldController::class, 'startDay'])->name('start-day');
+            Route::post('stops/{stop}/skip', [FieldController::class, 'skip'])->whereNumber('stop')->name('stops.skip');
             Route::post('stops/{stop}/arrive', [FieldController::class, 'arrive'])->whereNumber('stop')->name('stops.arrive');
             Route::post('stops/{stop}/depart', [FieldController::class, 'depart'])->whereNumber('stop')->name('stops.depart');
             Route::post('location', [FieldController::class, 'location'])->name('location');
@@ -97,11 +123,15 @@ Route::prefix('v1')->name('api.v1.')->middleware([ApiForceJson::class, 'throttle
         });
 
         Route::prefix('collection')->name('collection.')->middleware($can('collection.field'))->group(function () {
+            Route::get('today', [CollectionController::class, 'today'])->name('today');
             Route::get('pending', [CollectionController::class, 'pending'])->name('pending');
+            Route::get('clients/{id}', [CollectionController::class, 'client'])->whereNumber('id')->name('client');
             Route::get('clients/{id}/visits', [CollectionController::class, 'history'])->whereNumber('id')->name('history');
             Route::post('visits', [CollectionController::class, 'visit'])->name('visits.store');
             Route::post('payments', [CollectionController::class, 'payment'])->name('payments.store');
             Route::get('cash-cut', [CollectionController::class, 'cashCut'])->name('cash-cut');
+            Route::post('cash-cut/close', [CollectionController::class, 'closeCashCut'])->name('cash-cut.close');
+            Route::get('cash-cuts', [CollectionController::class, 'cashCuts'])->name('cash-cuts');
         });
     });
 

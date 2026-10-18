@@ -119,15 +119,15 @@ class CashCutService
         return $cut;
     }
 
-    /** Cerrar corte: asigna cobros pendientes y fija el importe esperado. */
-    public function close(CashCut $cut): CashCut
+    /** Cerrar corte: asigna cobros pendientes y fija el importe esperado. $notes se agrega a las notas. */
+    public function close(CashCut $cut, ?string $notes = null): CashCut
     {
         if ($cut->status !== 'open' || $cut->closed_at) {
             return $cut;
         }
-        DB::transaction(function () use ($cut) {
+        DB::transaction(function () use ($cut, $notes) {
             $this->sweep($cut);
-            $cut->forceFill(['closed_at' => now()])->save();
+            $cut->forceFill(['closed_at' => now(), 'notes' => $this->appendNote($cut->notes, $notes)])->save();
         });
         Audit::log('cash_cut', "cerró corte de caja {$cut->folio}: esperado ".money($cut->expected_amount), $cut);
 

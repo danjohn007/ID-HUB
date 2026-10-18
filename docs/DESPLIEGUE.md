@@ -127,3 +127,9 @@ El instalador (`/install`) solo sirve para la primera instalación.
 - Esos respaldos quedan en el mismo servidor: descarga uno periódicamente o activa además cPanel →
   **Copias de seguridad** para tener una copia externa (incluye `wispcontrol/storage/app` con los archivos subidos).
 - Restaurar: phpMyAdmin → base de datos → **Importar** el `.sql.gz` (o `gunzip -c archivo.sql.gz | mysql -u USUARIO -p BASE`).
+
+## Instalación en una subcarpeta (p. ej. `public_html/api_mobile`, API de la app móvil)
+
+`bash deploy/build-api-mobile.sh` genera `Upload_zip/api_mobile.zip`. El paquete se descomprime dentro de la subcarpeta: los archivos públicos van en su raíz y la aplicación en `wispcontrol/`, con acceso web bloqueado. Usa `PUBLIC_DISK_IN_WEBROOT=true`, así que no necesita el enlace `storage`.
+
+Con `DUMP_DB=1` el script también exporta `Upload_zip/base_datos_demo.sql.gz`. El paso a paso está en `deploy/INSTRUCCIONES-api-mobile.md`.

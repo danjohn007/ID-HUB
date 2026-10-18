@@ -24,7 +24,7 @@ npm run build >/dev/null
 echo "▶ Copiando aplicación…"
 rm -rf "$DIST"
 mkdir -p "$STAGE/wispcontrol" "$STAGE/public_html"
-tar --exclude=./node_modules --exclude=./vendor --exclude=./.git --exclude=./dist --exclude=./tests \
+tar --exclude=./node_modules --exclude=./vendor --exclude=./.git --exclude=./dist --exclude=./tests --exclude=./mobile \
     --exclude=./.env --exclude=./public/hot --exclude=./public/storage \
     --exclude='./storage/logs/*' --exclude='./storage/framework/cache/data/*' \
     --exclude='./storage/framework/sessions/*' --exclude='./storage/framework/views/*' \

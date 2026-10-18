@@ -23,3 +23,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /vendor.zip
+
+# Paquetes generados para subir al servidor (contienen APP_KEY y base de datos)
+/dist
+/Upload_zip

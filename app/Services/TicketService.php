@@ -6,6 +6,8 @@ use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Messaging\MessageService;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Ciclo de vida de tickets: creación con SLA, asignación, cambios de estado e historial.
@@ -81,6 +83,32 @@ class TicketService
         if (in_array($status, ['resuelto', 'cerrado'], true) && $ticket->outage && ! $ticket->outage->ended_at) {
             $ticket->outage->update(['ended_at' => now()]);
         }
+
+        return $ticket;
+    }
+
+    /**
+     * Firma de conformidad del cliente (sección 23): PNG en data URL (data:image/png;base64,...).
+     * La usan el detalle del ticket, la app de campo web y la API móvil.
+     *
+     * @throws ValidationException
+     */
+    public function saveSignature(Ticket $ticket, string $dataUrl, string $signedBy, string $field = 'signature'): Ticket
+    {
+        if (! preg_match('/^data:image\/png;base64,([A-Za-z0-9+\/=]+)$/', $dataUrl, $m)) {
+            throw ValidationException::withMessages([$field => 'Captura la firma del cliente.']);
+        }
+        $png = base64_decode($m[1], true);
+        if ($png === false || strlen($png) > 2 * 1024 * 1024 || ! str_starts_with($png, "\x89PNG")) {
+            throw ValidationException::withMessages([$field => 'La firma no es válida.']);
+        }
+        $path = 'signatures/'.$ticket->tenant_id.'/ticket-'.$ticket->id.'-'.now()->format('YmdHis').'.png';
+        Storage::disk('public')->put($path, $png);
+        if ($ticket->signature_path) {
+            Storage::disk('public')->delete($ticket->signature_path);
+        }
+        $ticket->forceFill(['signature_path' => $path, 'signed_by_name' => trim($signedBy), 'signed_at' => now()])->save();
+        $ticket->addComment('Firma de conformidad capturada ('.trim($signedBy).')', 'system');
 
         return $ticket;
     }
