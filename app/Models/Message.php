@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Message extends TenantModel
 {
-    protected $casts = ['sent_at' => 'datetime'];
+    protected $casts = ['sent_at' => 'datetime', 'meta' => 'array'];
 
     public const STATUS = [
         'queued' => ['En cola', 'slate'],

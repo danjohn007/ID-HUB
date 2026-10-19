@@ -218,7 +218,30 @@
                     <x-ui.select label="Proveedor" wire:model.live="messaging.whatsapp_provider" :options="['simulated' => 'Simulado (demo, no envía)', 'meta' => 'WhatsApp Cloud API (Meta)', 'twilio' => 'Twilio WhatsApp']" />
                     @if ($messaging['whatsapp_provider'] === 'meta')
                         <x-ui.input label="Phone number ID" wire:model="messaging.whatsapp_phone_id" filter="digits" maxlength="80" />
-                        <x-ui.input label="Token de acceso" type="password" autocomplete="off" maxlength="1000" wire:model="secrets.whatsapp_token" :placeholder="$maskedSecrets['whatsapp_token'] ? 'Guardado: '.$maskedSecrets['whatsapp_token'] : 'Sin configurar'" />
+                        <x-ui.input label="Token de acceso (permanente)" type="password" autocomplete="off" maxlength="1000" wire:model="secrets.whatsapp_token" :placeholder="$maskedSecrets['whatsapp_token'] ? 'Guardado: '.$maskedSecrets['whatsapp_token'] : 'Sin configurar'" />
+                        <x-ui.select label="Idioma de las plantillas" wire:model="messaging.whatsapp_language" :options="\App\Livewire\Settings\Index::WHATSAPP_LANGUAGES" />
+                        <x-ui.input label="Secreto de la app (App secret)" type="password" autocomplete="off" maxlength="200" wire:model="secrets.whatsapp_app_secret" :placeholder="$maskedSecrets['whatsapp_app_secret'] ? 'Guardado: '.$maskedSecrets['whatsapp_app_secret'] : 'Sin configurar'" />
+                        <div class="space-y-2 rounded-lg bg-slate-50 p-3 text-xs" x-data="{ copied: null, copy(k, v) { navigator.clipboard.writeText(v); this.copied = k; setTimeout(() => this.copied = null, 1500) } }">
+                            <div class="font-semibold text-slate-700">Webhook (estado de entrega)</div>
+                            <p class="text-slate-500">En Meta → tu app → WhatsApp → Configuración → Webhook, captura estos datos y suscríbete al campo <b>messages</b>.</p>
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 shrink-0 text-slate-500">URL de devolución</span>
+                                <code class="min-w-0 flex-1 break-all text-slate-800">{{ $metaWebhook['url'] }}</code>
+                                <button type="button" class="font-semibold text-brand-700 hover:underline" @click="copy('url', @js($metaWebhook['url']))" x-text="copied === 'url' ? 'Copiado' : 'Copiar'"></button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 shrink-0 text-slate-500">Token de verificación</span>
+                                @if ($metaWebhook['verify_token'])
+                                    <code class="min-w-0 flex-1 break-all text-slate-800">{{ $metaWebhook['verify_token'] }}</code>
+                                    <button type="button" class="font-semibold text-brand-700 hover:underline" @click="copy('token', @js($metaWebhook['verify_token']))" x-text="copied === 'token' ? 'Copiado' : 'Copiar'"></button>
+                                @else
+                                    <span class="text-warning-700">Se genera al guardar la mensajería.</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <x-ui.button type="button" variant="secondary" size="sm" icon="signal" wire:click="testMeta" wire:loading.attr="disabled" wire:target="testMeta">Probar conexión</x-ui.button>
+                        </div>
                     @elseif ($messaging['whatsapp_provider'] === 'twilio')
                         <x-ui.input label="Número de WhatsApp (Twilio)" wire:model="messaging.twilio_whatsapp_from" filter="phone" placeholder="+14155238886" />
                         <p class="text-xs text-slate-500">Usa las credenciales de Twilio de la sección SMS.</p>
@@ -234,6 +257,10 @@
                             <x-ui.input label="Account SID" wire:model="messaging.twilio_sid" filter="code" maxlength="80" />
                             <x-ui.input label="Auth token" type="password" autocomplete="off" maxlength="200" wire:model="secrets.twilio_token" :placeholder="$maskedSecrets['twilio_token'] ? 'Guardado: '.$maskedSecrets['twilio_token'] : 'Sin configurar'" />
                             <x-ui.input label="Número remitente SMS" wire:model="messaging.twilio_from" filter="phone" placeholder="+15005550006" class="md:col-span-2" />
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <p class="min-w-0 break-all text-xs text-slate-500">El estado de entrega (Entregado / Fallido) se actualiza solo: Twilio avisa a {{ \App\Services\Messaging\MessageService::twilioStatusUrl() ?? 'este panel cuando esté publicado con https' }}.</p>
+                            <x-ui.button type="button" variant="secondary" size="sm" icon="signal" wire:click="testTwilio" wire:loading.attr="disabled" wire:target="testTwilio">Probar credenciales</x-ui.button>
                         </div>
                     @endif
                 </div>

@@ -10,6 +10,15 @@
         </div>
         <x-ui.button variant="secondary" icon="calendar-days" :href="route('saas.sales.agenda')">Agenda</x-ui.button>
         <x-ui.button icon="plus" wire:click="create">Nuevo prospecto</x-ui.button>
+        <x-ui.dropdown width="w-72">
+            <x-slot:trigger><x-ui.button variant="secondary" icon="ellipsis-vertical" title="Más opciones" /></x-slot:trigger>
+            <x-ui.dropdown-item icon="beaker" wire:click="generateSamples" wire:confirm="Se cargarán 45 prospectos de ejemplo (correo @prospecto-demo.mx) con historial y demos. No se envía ningún correo. ¿Continuar?">
+                {{ $samples ? 'Regenerar prospectos de ejemplo' : 'Cargar prospectos de ejemplo' }}
+            </x-ui.dropdown-item>
+            @if ($samples)
+                <x-ui.dropdown-item icon="trash" danger wire:click="clearSamples" wire:confirm="¿Eliminar los {{ $samples }} prospectos de ejemplo? Los prospectos reales no se tocan.">Eliminar prospectos de ejemplo ({{ $samples }})</x-ui.dropdown-item>
+            @endif
+        </x-ui.dropdown>
     </x-ui.page-header>
 
     <div class="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">

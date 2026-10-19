@@ -9,6 +9,7 @@ use App\Livewire\Saas\Sales\Concerns\HandlesStages;
 use App\Livewire\Saas\Sales\Concerns\SalesContext;
 use App\Models\DemoMeeting;
 use App\Models\DemoRequest;
+use App\Services\SampleProspects;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
@@ -69,6 +70,23 @@ class Leads extends Component
     public function refreshAfterMeeting(): void
     {
         $this->refreshBadge();
+    }
+
+    /** Datos de ejemplo para ver el CRM con movimiento (correo @prospecto-demo.mx, sin enviar correos). */
+    public function generateSamples(SampleProspects $samples): void
+    {
+        $n = $samples->generate();
+        $this->platformLog('sample_prospects_generated', "generó {$n} prospectos de ejemplo en Ventas");
+        $this->refreshBadge();
+        $this->toast("Se cargaron {$n} prospectos de ejemplo. Puedes eliminarlos desde el mismo menú.");
+    }
+
+    public function clearSamples(SampleProspects $samples): void
+    {
+        $n = $samples->clear();
+        $this->platformLog('sample_prospects_deleted', "eliminó {$n} prospectos de ejemplo de Ventas");
+        $this->refreshBadge();
+        $this->toast("Se eliminaron {$n} prospectos de ejemplo.", 'warning');
     }
 
     public function create(): void
@@ -195,7 +213,7 @@ class Leads extends Component
 
     public function render()
     {
-        $data = ['users' => $this->salesUsers()];
+        $data = ['users' => $this->salesUsers(), 'samples' => SampleProspects::count()];
         if ($this->view === 'tablero') {
             $data['columns'] = $this->board();
         } elseif ($this->view === 'lista') {

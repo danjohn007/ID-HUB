@@ -80,10 +80,47 @@
                                 @endforeach
                             </div>
                         </div>
-                        @if ($channel === 'whatsapp')
+                        @if ($channel === 'whatsapp' && in_array($whatsappProvider, ['twilio', 'meta'], true))
+                            @php($isMeta = $whatsappProvider === 'meta')
+                            <div class="space-y-3 rounded-xl border border-slate-200 p-3.5">
+                                <div>
+                                    <div class="text-sm font-semibold text-slate-800">Plantilla aprobada de WhatsApp ({{ $isMeta ? 'Meta' : 'Twilio' }})</div>
+                                    @if ($isMeta)
+                                        <p class="mt-0.5 text-xs text-slate-500">WhatsApp solo entrega avisos iniciados por la empresa con una plantilla aprobada. Créala en Meta → WhatsApp Manager → Plantillas de mensajes (categoría <b>Utilidad</b>, idioma <b>{{ $whatsappLanguage }}</b>) con este texto, espera la aprobación y escribe aquí su nombre.</p>
+                                    @else
+                                        <p class="mt-0.5 text-xs text-slate-500">WhatsApp solo entrega avisos iniciados por la empresa con una plantilla aprobada. Crea la plantilla en Twilio → Messaging → Content Template Builder con este texto, espera la aprobación y pega aquí su Content SID.</p>
+                                    @endif
+                                </div>
+                                <div x-data="{ copied: false }">
+                                    <div class="mb-1 flex items-center justify-between">
+                                        <span class="text-xs font-medium text-slate-500">Texto para {{ $isMeta ? 'Meta' : 'Twilio' }}</span>
+                                        <button type="button" class="text-xs font-semibold text-brand-700 hover:underline" @click="navigator.clipboard.writeText($refs.ptext.innerText); copied = true; setTimeout(() => copied = false, 1500)" x-text="copied ? 'Copiado' : 'Copiar'"></button>
+                                    </div>
+                                    <div x-ref="ptext" class="whitespace-pre-line break-words rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700">{{ $providerText }}</div>
+                                    @if ($providerVars)
+                                        <div class="mt-1.5 flex flex-wrap gap-1 text-[11px] text-slate-500">
+                                            @foreach ($providerVars as $i => $v)
+                                                <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono">&#123;&#123;{{ $i + 1 }}&#125;&#125; = &#123;{{ $v }}&#125;</span>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                                @if ($providerWarning)
+                                    <p class="rounded-lg bg-warning-50 px-3 py-2 text-xs text-warning-800">{{ $providerWarning }}</p>
+                                @endif
+                                @if ($isMeta)
+                                    <x-ui.input label="Nombre de la plantilla en Meta" wire:model.live.debounce.400ms="form.provider_template" placeholder="aviso_{{ $event }}" maxlength="80" />
+                                @else
+                                    <x-ui.input label="Content SID" wire:model.live.debounce.400ms="form.provider_template" placeholder="HX0123456789abcdef0123456789abcdef" maxlength="34" />
+                                @endif
+                                @if (blank($form['provider_template'] ?? ''))
+                                    <p class="text-xs text-warning-700">Sin plantilla aprobada se manda como texto libre: solo llega si el cliente escribió en las últimas 24 h.</p>
+                                @endif
+                            </div>
+                        @elseif ($channel === 'whatsapp')
                             <div class="flex gap-2 rounded-lg bg-warning-50 px-3 py-2.5 text-xs text-warning-800">
                                 <x-heroicon-o-information-circle class="h-4 w-4 shrink-0" />
-                                <span>WhatsApp Business (Meta) exige <b>plantillas aprobadas</b> para mensajes iniciados por la empresa fuera de la ventana de 24 h desde el último mensaje del cliente. Registra este texto como plantilla en tu cuenta de Meta para que los avisos automáticos se entreguen.</span>
+                                <span>WhatsApp Business exige <b>plantillas aprobadas</b> para mensajes iniciados por la empresa fuera de la ventana de 24 h desde el último mensaje del cliente. Con el proveedor <b>Meta</b> o <b>Twilio</b> (Configuración → Mensajería) puedes asignar aquí la plantilla aprobada de cada aviso.</span>
                             </div>
                         @elseif ($channel === 'sms')
                             <p class="text-xs text-slate-500">Los SMS se cobran por segmentos de 160 caracteres (70 si llevan acentos o emojis en algunos operadores).</p>

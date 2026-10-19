@@ -432,6 +432,9 @@ return [
             'whatsapp_provider' => 'simulated', // simulated | meta | twilio
             'whatsapp_token' => null,
             'whatsapp_phone_id' => null,
+            'whatsapp_language' => 'es_MX',     // idioma con el que se aprobaron las plantillas en Meta
+            'whatsapp_app_secret' => null,      // secreto de la app de Meta: valida la firma del webhook
+            'whatsapp_verify_token' => null,    // se genera al guardar; se captura en Meta al dar de alta el webhook
             'sms_provider' => 'simulated',      // simulated | twilio
             'twilio_sid' => null,
             'twilio_token' => null,

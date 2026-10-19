@@ -10,6 +10,7 @@ use App\Models\Zone;
 use App\Support\Audit;
 use App\Support\InputRules;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -51,7 +52,10 @@ class Index extends Component
 
     public const RULE_RECONNECT = 'Reconexión automática al recibir pago';
 
-    public const MESSAGING_SECRETS = ['whatsapp_token', 'twilio_token'];
+    public const MESSAGING_SECRETS = ['whatsapp_token', 'whatsapp_app_secret', 'twilio_token'];
+
+    /** Idiomas de plantilla de WhatsApp más usados (código de Meta). */
+    public const WHATSAPP_LANGUAGES = ['es_MX' => 'Español (México)', 'es' => 'Español', 'es_ES' => 'Español (España)', 'es_AR' => 'Español (Argentina)', 'en_US' => 'Inglés (EE. UU.)'];
 
     #[Url]
     public string $tab = 'empresa';
@@ -69,7 +73,7 @@ class Index extends Component
 
     public array $messaging = [];
 
-    public array $secrets = ['whatsapp_token' => '', 'twilio_token' => ''];
+    public array $secrets = ['whatsapp_token' => '', 'whatsapp_app_secret' => '', 'twilio_token' => ''];
 
     public array $network = [];
 
@@ -111,7 +115,7 @@ class Index extends Component
         $this->messaging = collect($t->settingsFor('messaging'))->except(self::MESSAGING_SECRETS)->all();
         $this->messaging['email_enabled'] = (bool) $this->messaging['email_enabled'];
         $this->messaging['default_channels'] = array_values((array) $this->messaging['default_channels']);
-        $this->secrets = ['whatsapp_token' => '', 'twilio_token' => ''];
+        $this->secrets = ['whatsapp_token' => '', 'whatsapp_app_secret' => '', 'twilio_token' => ''];
         $this->network = $t->settingsFor('network');
         $this->bi = $t->settingsFor('bi');
         $this->contract = (string) $t->setting('contract.template');
@@ -351,6 +355,7 @@ class Index extends Component
         $data = $this->validate([
             'messaging.whatsapp_provider' => 'required|in:simulated,meta,twilio',
             'messaging.whatsapp_phone_id' => 'nullable|string|max:80|'.InputRules::DIGITS,
+            'messaging.whatsapp_language' => ['required', Rule::in(array_keys(self::WHATSAPP_LANGUAGES))],
             'messaging.sms_provider' => 'required|in:simulated,twilio',
             'messaging.twilio_sid' => 'nullable|string|max:80|'.InputRules::CODE,
             'messaging.twilio_from' => 'nullable|string|max:20|'.InputRules::PHONE,
@@ -360,6 +365,7 @@ class Index extends Component
             'messaging.default_channels' => 'array|min:1',
             'messaging.default_channels.*' => ['string', Rule::in(array_keys(config('wisp.channels')))],
             'secrets.whatsapp_token' => 'nullable|string|max:1000',
+            'secrets.whatsapp_app_secret' => 'nullable|string|max:200',
             'secrets.twilio_token' => 'nullable|string|max:200',
         ], ['messaging.default_channels.min' => 'Selecciona al menos un canal.'], [
             'messaging.whatsapp_phone_id' => 'Phone number ID', 'messaging.twilio_sid' => 'Account SID',
@@ -368,6 +374,7 @@ class Index extends Component
         $m = $data['messaging'];
         $current = tenant()->settingsFor('messaging');
         $token = trim((string) $this->secrets['whatsapp_token']) ?: $current['whatsapp_token'];
+        $appSecret = trim((string) $this->secrets['whatsapp_app_secret']) ?: $current['whatsapp_app_secret'];
         $twilioToken = trim((string) $this->secrets['twilio_token']) ?: $current['twilio_token'];
 
         $usesTwilio = $m['whatsapp_provider'] === 'twilio' || $m['sms_provider'] === 'twilio';
@@ -392,12 +399,61 @@ class Index extends Component
         $values = $this->nullify(collect($m)->except('default_channels')->all()) + [
             'default_channels' => array_values($m['default_channels']),
             'whatsapp_token' => $token ?: null,
+            'whatsapp_app_secret' => $appSecret ?: null,
             'twilio_token' => $twilioToken ?: null,
+            // Token que Meta pide al dar de alta el webhook; se genera una vez y se conserva.
+            'whatsapp_verify_token' => $current['whatsapp_verify_token'] ?: Str::random(40),
         ];
         $values['email_enabled'] = (bool) $m['email_enabled'];
         $this->saveSection('messaging', 'mensajería', $values, self::MESSAGING_SECRETS);
-        $this->secrets = ['whatsapp_token' => '', 'twilio_token' => ''];
+        $this->secrets = ['whatsapp_token' => '', 'whatsapp_app_secret' => '', 'twilio_token' => ''];
         $this->toast('Configuración de mensajería guardada');
+    }
+
+    /** Prueba Phone number ID + token de Meta (el capturado o el guardado) sin guardar nada. */
+    public function testMeta(\App\Services\Messaging\MessageService $messages): void
+    {
+        $phoneId = trim((string) ($this->messaging['whatsapp_phone_id'] ?? ''));
+        $token = trim((string) $this->secrets['whatsapp_token']) ?: (string) (tenant()->settingsFor('messaging')['whatsapp_token'] ?? '');
+        if ($phoneId === '' || $token === '') {
+            $this->toast('Captura el Phone number ID y el token de acceso de Meta', 'warning');
+
+            return;
+        }
+        try {
+            $n = $messages->checkMeta($phoneId, $token);
+        } catch (\Throwable $e) {
+            $this->toast('WhatsApp: '.$e->getMessage(), 'error');
+
+            return;
+        }
+        $this->toast('Conexión correcta: '.trim(($n['name'] ?? '').' '.($n['number'] ?? '')).(($n['quality'] ?? null) ? ' · calidad '.$n['quality'] : ''));
+    }
+
+    /** Prueba Account SID + Auth token (el capturado o el guardado) sin guardar nada. */
+    public function testTwilio(\App\Services\Messaging\MessageService $messages): void
+    {
+        $sid = trim((string) ($this->messaging['twilio_sid'] ?? ''));
+        $token = trim((string) $this->secrets['twilio_token']) ?: (string) (tenant()->settingsFor('messaging')['twilio_token'] ?? '');
+        if ($sid === '' || $token === '') {
+            $this->toast('Captura el Account SID y el Auth token de Twilio', 'warning');
+
+            return;
+        }
+        try {
+            $account = $messages->checkTwilio($sid, $token);
+        } catch (\Throwable $e) {
+            $this->toast('Twilio: '.$e->getMessage(), 'error');
+
+            return;
+        }
+        if (($account['status'] ?? '') !== 'active') {
+            $this->toast('La cuenta de Twilio "'.$account['name'].'" está '.$account['status'], 'warning');
+        } elseif (($account['type'] ?? '') === 'Trial') {
+            $this->toast('Conexión correcta con "'.$account['name'].'". Es una cuenta de prueba: solo envía a números verificados en Twilio y agrega un texto de Twilio a cada SMS.', 'warning');
+        } else {
+            $this->toast('Conexión correcta con la cuenta de Twilio "'.$account['name'].'"');
+        }
     }
 
     // ------------------------------------------------------------ Red / BI
@@ -527,7 +583,8 @@ class Index extends Component
         }
         if ($this->tab === 'mensajeria') {
             $m = $tenant->settingsFor('messaging');
-            $data['maskedSecrets'] = ['whatsapp_token' => $this->mask($m['whatsapp_token'] ?? null), 'twilio_token' => $this->mask($m['twilio_token'] ?? null)];
+            $data['maskedSecrets'] = ['whatsapp_token' => $this->mask($m['whatsapp_token'] ?? null), 'whatsapp_app_secret' => $this->mask($m['whatsapp_app_secret'] ?? null), 'twilio_token' => $this->mask($m['twilio_token'] ?? null)];
+            $data['metaWebhook'] = ['url' => \App\Services\Messaging\MessageService::metaWebhookUrl($tenant), 'verify_token' => $m['whatsapp_verify_token'] ?? null];
         }
         if ($this->tab === 'cobranza') {
             $data['rules'] = AutomationRule::query()->whereIn('name', [self::RULE_SUSPEND, self::RULE_RECONNECT])->pluck('active', 'name');

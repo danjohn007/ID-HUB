@@ -43,9 +43,10 @@ class MessageService
             }
             $body = $this->render($raw, $vars);
             $subject = $this->render($template?->subject ?? DefaultTemplates::subject($event), $vars);
+            $meta = $channel === 'whatsapp' ? $this->templateMeta($template?->provider_template, $raw, $vars) : null;
 
             foreach ($this->destinations($client, $channel) as $to) {
-                $sent->push($this->queue($tenant, $channel, $to, $body, $subject, $client, $event));
+                $sent->push($this->queue($tenant, $channel, $to, $body, $subject, $client, $event, null, $meta));
             }
         }
 
@@ -53,7 +54,7 @@ class MessageService
     }
 
     /** Mensaje directo (campañas, avisos a personal). */
-    public function queue(Tenant $tenant, string $channel, string $to, string $body, ?string $subject = null, ?Client $client = null, ?string $event = null, ?int $campaignId = null): Message
+    public function queue(Tenant $tenant, string $channel, string $to, string $body, ?string $subject = null, ?Client $client = null, ?string $event = null, ?int $campaignId = null, ?array $meta = null): Message
     {
         $message = Message::withoutGlobalScopes()->create([
             'tenant_id' => $tenant->id,
@@ -64,6 +65,7 @@ class MessageService
             'to' => $to,
             'subject' => $subject,
             'body' => $body,
+            'meta' => $meta,
             'status' => 'queued',
         ]);
         DeliverMessage::dispatch($message->id);
@@ -99,6 +101,59 @@ class MessageService
         }
 
         return strtr($text, $replace);
+    }
+
+    /**
+     * Variables de la plantilla en orden de aparición: {nombre} → 1, {plan} → 2...
+     * Una variable repetida conserva su número.
+     */
+    public static function templateVariables(string $text): array
+    {
+        preg_match_all('/\{([a-z_]+)\}/', $text, $m);
+
+        return array_values(array_unique($m[1]));
+    }
+
+    /** Texto con {{1}}, {{2}}... tal como se registra la plantilla en Twilio / WhatsApp. */
+    public static function providerText(string $text): string
+    {
+        $replace = [];
+        foreach (self::templateVariables($text) as $i => $name) {
+            $replace['{'.$name.'}'] = '{{'.($i + 1).'}}';
+        }
+
+        return strtr($text, $replace);
+    }
+
+    /**
+     * Datos de envío por plantilla aprobada de WhatsApp: nombre de la plantilla en Meta
+     * (recordatorio_pago) o Content SID de Twilio (HX...), con sus variables {{1}}, {{2}}...
+     * WhatsApp rechaza variables vacías o con saltos de línea: un valor vacío se manda como "-".
+     */
+    public function templateMeta(?string $template, string $raw, array $vars): ?array
+    {
+        if (! $template) {
+            return null;
+        }
+        $variables = [];
+        foreach (self::templateVariables($raw) as $i => $name) {
+            $value = trim((string) preg_replace('/\s+/u', ' ', (string) ($vars[$name] ?? '')));
+            $variables[(string) ($i + 1)] = $value === '' ? '-' : $value;
+        }
+
+        return ['template' => $template, 'variables' => $variables];
+    }
+
+    /** Nombre de plantilla de Meta: minúsculas, números y guion bajo. */
+    public static function isMetaTemplate(?string $value): bool
+    {
+        return (bool) preg_match('/^[a-z0-9_]{1,512}$/', (string) $value);
+    }
+
+    /** Content SID de Twilio: HX + 32 hexadecimales. */
+    public static function isTwilioTemplate(?string $value): bool
+    {
+        return (bool) preg_match('/^HX[0-9a-fA-F]{32}$/', (string) $value);
     }
 
     public function clientVars(Client $client): array
@@ -151,22 +206,54 @@ class MessageService
     {
         return match ($cfg['whatsapp_provider'] ?? 'simulated') {
             'meta' => $this->metaWhatsApp($cfg, $m),
-            'twilio' => $this->twilio($cfg, 'whatsapp:'.$m->to, 'whatsapp:'.($cfg['twilio_whatsapp_from'] ?? ''), $m->body),
+            'twilio' => $this->twilio($cfg, 'whatsapp:'.$m->to, 'whatsapp:'.($cfg['twilio_whatsapp_from'] ?? ''), $this->twilioContent($m)),
             default => ['simulated', null],
         };
     }
 
+    /**
+     * Con plantilla aprobada (Content SID) se manda la plantilla y sus variables: así WhatsApp
+     * entrega los avisos fuera de la ventana de 24 h. Sin plantilla se manda el texto libre.
+     */
+    protected function twilioContent(Message $m): array
+    {
+        $sid = $m->meta['template'] ?? null;
+
+        return self::isTwilioTemplate($sid)
+            ? ['ContentSid' => $sid, 'ContentVariables' => json_encode((object) ($m->meta['variables'] ?? []), JSON_UNESCAPED_UNICODE)]
+            : ['Body' => $m->body];
+    }
+
+    protected static function graphUrl(string $path): string
+    {
+        return 'https://graph.facebook.com/'.config('services.whatsapp.graph_version', 'v23.0').'/'.ltrim($path, '/');
+    }
+
+    /**
+     * WhatsApp Cloud API. Con plantilla aprobada se manda type=template (llega aunque el cliente
+     * no haya escrito en 24 h); sin plantilla, texto libre (solo dentro de la ventana de 24 h).
+     */
     protected function metaWhatsApp(array $cfg, Message $m): array
     {
+        $template = $m->meta['template'] ?? null;
+        $payload = ['messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => ltrim($m->to, '+')];
+        if (self::isMetaTemplate($template)) {
+            $parameters = array_map(fn ($v) => ['type' => 'text', 'text' => (string) $v], array_values($m->meta['variables'] ?? []));
+            $payload += ['type' => 'template', 'template' => array_filter([
+                'name' => $template,
+                'language' => ['code' => $cfg['whatsapp_language'] ?? 'es_MX'],
+                'components' => $parameters ? [['type' => 'body', 'parameters' => $parameters]] : null,
+            ])];
+        } else {
+            $payload += ['type' => 'text', 'text' => ['preview_url' => true, 'body' => $m->body]];
+        }
+
         $response = Http::withToken((string) $cfg['whatsapp_token'])->timeout(15)
-            ->post('https://graph.facebook.com/v20.0/'.$cfg['whatsapp_phone_id'].'/messages', [
-                'messaging_product' => 'whatsapp',
-                'to' => ltrim($m->to, '+'),
-                'type' => 'text',
-                'text' => ['body' => $m->body],
-            ]);
+            ->post(self::graphUrl($cfg['whatsapp_phone_id'].'/messages'), $payload);
         if ($response->failed()) {
-            throw new \RuntimeException('WhatsApp: '.($response->json('error.message') ?? $response->status()));
+            $code = $response->json('error.code');
+            $detail = $response->json('error.error_data.details') ?? $response->json('error.message') ?? $response->status();
+            throw new \RuntimeException('WhatsApp'.($code ? " $code" : '').': '.(MetaErrors::describe($code) ?? $detail));
         }
 
         return ['sent', $response->json('messages.0.id')];
@@ -175,19 +262,69 @@ class MessageService
     protected function sendSms(array $cfg, Message $m): array
     {
         return ($cfg['sms_provider'] ?? 'simulated') === 'twilio'
-            ? $this->twilio($cfg, $m->to, (string) $cfg['twilio_from'], $m->body)
+            ? $this->twilio($cfg, $m->to, (string) $cfg['twilio_from'], ['Body' => $m->body])
             : ['simulated', null];
     }
 
-    protected function twilio(array $cfg, string $to, string $from, string $body): array
+    /** $content: ['Body' => ...] o ['ContentSid' => ..., 'ContentVariables' => ...]. */
+    protected function twilio(array $cfg, string $to, string $from, array $content): array
     {
+        $params = ['To' => $to, 'From' => $from] + $content;
+        if ($callback = self::twilioStatusUrl()) {
+            $params['StatusCallback'] = $callback;
+        }
         $response = Http::asForm()->withBasicAuth((string) $cfg['twilio_sid'], (string) $cfg['twilio_token'])->timeout(15)
-            ->post("https://api.twilio.com/2010-04-01/Accounts/{$cfg['twilio_sid']}/Messages.json", ['To' => $to, 'From' => $from, 'Body' => $body]);
+            ->post("https://api.twilio.com/2010-04-01/Accounts/{$cfg['twilio_sid']}/Messages.json", $params);
         if ($response->failed()) {
-            throw new \RuntimeException('Twilio: '.($response->json('message') ?? $response->status()));
+            $code = $response->json('code');
+            throw new \RuntimeException('Twilio'.($code ? " $code" : '').': '.(TwilioErrors::describe($code) ?? $response->json('message') ?? $response->status()));
         }
 
         return ['sent', $response->json('sid')];
+    }
+
+    /**
+     * URL a la que Twilio avisa si el mensaje se entregó o falló. Solo con una URL pública https
+     * (Twilio no puede llamar a localhost).
+     */
+    public static function twilioStatusUrl(): ?string
+    {
+        $url = route('messaging.twilio.status');
+        $host = (string) parse_url($url, PHP_URL_HOST);
+
+        return str_starts_with($url, 'https://') && ! in_array($host, ['localhost', '127.0.0.1'], true) && ! str_ends_with($host, '.test')
+            ? $url
+            : null;
+    }
+
+    /** Valida Account SID + Auth token consultando la cuenta en Twilio. */
+    public function checkTwilio(string $sid, string $token): array
+    {
+        $response = Http::withBasicAuth($sid, $token)->timeout(15)->get("https://api.twilio.com/2010-04-01/Accounts/{$sid}.json");
+        if ($response->failed()) {
+            throw new \RuntimeException($response->status() === 401 ? 'Account SID o Auth token incorrectos.' : 'Twilio respondió '.$response->status().': '.($response->json('message') ?? ''));
+        }
+
+        return ['name' => $response->json('friendly_name'), 'type' => $response->json('type'), 'status' => $response->json('status')];
+    }
+
+    /** Valida Phone number ID + token consultando el número en Meta. */
+    public function checkMeta(string $phoneId, string $token): array
+    {
+        $response = Http::withToken($token)->timeout(15)
+            ->get(self::graphUrl($phoneId), ['fields' => 'display_phone_number,verified_name,quality_rating']);
+        if ($response->failed()) {
+            $code = $response->json('error.code');
+            throw new \RuntimeException(MetaErrors::describe($code) ?? ('Meta respondió '.$response->status().': '.($response->json('error.message') ?? '')));
+        }
+
+        return ['number' => $response->json('display_phone_number'), 'name' => $response->json('verified_name'), 'quality' => $response->json('quality_rating')];
+    }
+
+    /** URL del webhook de WhatsApp (Meta) del WISP: se captura en la app de Meta. */
+    public static function metaWebhookUrl(Tenant $tenant): string
+    {
+        return route('messaging.meta.webhook', $tenant->id);
     }
 
     protected function sendEmail(array $cfg, Message $m, Tenant $tenant): array

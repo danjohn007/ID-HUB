@@ -28,7 +28,7 @@ class Templates extends Component
     #[Url(as: 'canal')]
     public string $channel = 'whatsapp';
 
-    public array $form = ['active' => true, 'subject' => '', 'body' => ''];
+    public array $form = ['active' => true, 'subject' => '', 'body' => '', 'provider_template' => ''];
 
     public ?int $sampleId = null;
 
@@ -71,6 +71,11 @@ class Templates extends Component
         $this->dirty = true;
     }
 
+    protected function whatsappProvider(): string
+    {
+        return (string) tenant()->setting('messaging.whatsapp_provider', 'simulated');
+    }
+
     protected function template(): ?NotificationTemplate
     {
         return NotificationTemplate::query()->where('event', $this->event)->where('channel', $this->channel)->first();
@@ -83,6 +88,7 @@ class Templates extends Component
             'active' => $tpl ? (bool) $tpl->active : true,
             'subject' => $tpl?->subject ?? DefaultTemplates::subject($this->event),
             'body' => $tpl?->body ?? DefaultTemplates::body($this->event),
+            'provider_template' => $tpl?->provider_template ?? '',
         ];
         $this->dirty = false;
         $this->resetValidation();
@@ -94,11 +100,20 @@ class Templates extends Component
             'form.body' => 'required|string|max:1600',
             'form.subject' => 'nullable|string|max:150',
             'form.active' => 'boolean',
-        ], [], ['form.body' => 'mensaje', 'form.subject' => 'asunto'])['form'];
+            'form.provider_template' => ['nullable', 'string', 'max:80', ...match ($this->whatsappProvider()) {
+                'twilio' => ['regex:/^HX[0-9a-fA-F]{32}$/'],
+                'meta' => ['regex:/^[a-z0-9_]+$/'],
+                default => [],
+            }],
+        ], ['form.provider_template.regex' => $this->whatsappProvider() === 'twilio'
+                ? 'El Content SID empieza con HX seguido de 32 caracteres (cópialo de Twilio → Content Template Builder).'
+                : 'El nombre de la plantilla de Meta solo lleva minúsculas, números y guion bajo (p. ej. recordatorio_pago).'],
+            ['form.body' => 'mensaje', 'form.subject' => 'asunto', 'form.provider_template' => 'plantilla aprobada'])['form'];
 
         $tpl = NotificationTemplate::updateOrCreate(
             ['event' => $this->event, 'channel' => $this->channel],
-            ['body' => $data['body'], 'subject' => $data['subject'] ?: null, 'active' => (bool) $data['active']]
+            ['body' => $data['body'], 'subject' => $data['subject'] ?: null, 'active' => (bool) $data['active'],
+                'provider_template' => $this->channel === 'whatsapp' ? (trim((string) $data['provider_template']) ?: null) : null]
         );
         Audit::log('updated', 'actualizó la plantilla '.config("wisp.message_events.{$this->event}").' ('.config("wisp.channels.{$this->channel}").')', $tpl);
         $this->dirty = false;
@@ -138,8 +153,10 @@ class Templates extends Component
         $to = $this->channel === 'email' ? $this->testTo : $messages->phone($this->testTo);
         $client = $this->sampleId ? Client::with(['plan', 'zone'])->find($this->sampleId) : null;
         $vars = $this->sampleVars($messages, $client);
-        $m = $messages->queue(tenant(), $this->channel, $to, '[PRUEBA] '.$messages->render($this->form['body'], $vars),
-            $messages->render((string) $this->form['subject'], $vars) ?: tenant()->name, null, 'test');
+        // Con plantilla aprobada la prueba manda la plantilla (sin el prefijo [PRUEBA], que no forma parte de ella).
+        $meta = $this->channel === 'whatsapp' ? $messages->templateMeta(trim((string) ($this->form['provider_template'] ?? '')) ?: null, $this->form['body'], $vars) : null;
+        $m = $messages->queue(tenant(), $this->channel, $to, ($meta ? '' : '[PRUEBA] ').$messages->render($this->form['body'], $vars),
+            $messages->render((string) $this->form['subject'], $vars) ?: tenant()->name, null, 'test', null, $meta);
         $m->refresh();
         $this->toast($m->status === 'failed' ? 'Falló el envío: '.$m->error : 'Mensaje de prueba enviado a '.$to.($m->status === 'simulated' ? ' (modo simulado)' : ''), $m->status === 'failed' ? 'error' : 'success');
     }
@@ -171,6 +188,25 @@ class Templates extends Component
             'samples' => Client::query()->whereIn('service_status', Client::BILLABLE)->orderByDesc('balance')->limit(30)->get()
                 ->mapWithKeys(fn ($c) => [$c->id => "#{$c->code} · {$c->full_name} (".money($c->balance).')']),
             'defaultChannels' => (array) tenant()->setting('messaging.default_channels', ['whatsapp']),
+            'whatsappProvider' => $this->whatsappProvider(),
+            'whatsappLanguage' => tenant()->setting('messaging.whatsapp_language', 'es_MX'),
+            'providerText' => MessageService::providerText((string) $this->form['body']),
+            'providerVars' => MessageService::templateVariables((string) $this->form['body']),
+            'providerWarning' => $this->providerWarning((string) $this->form['body']),
         ]);
+    }
+
+    /** Reglas de WhatsApp que hacen que rechacen la plantilla. */
+    protected function providerWarning(string $body): ?string
+    {
+        $text = trim($body);
+        if (preg_match('/^\{[a-z_]+\}/', $text) || preg_match('/\{[a-z_]+\}[\s.!?]*$/u', $text)) {
+            return 'WhatsApp no aprueba plantillas que empiezan o terminan con una variable: agrega texto antes o después (p. ej. "Gracias." al final).';
+        }
+        if (preg_match('/\}\s*\{/', $text)) {
+            return 'WhatsApp no aprueba dos variables juntas: sepáralas con texto.';
+        }
+
+        return null;
     }
 }

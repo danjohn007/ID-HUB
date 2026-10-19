@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    // WhatsApp Cloud API (Meta). Las credenciales son de cada WISP (Configuración → Mensajería).
+    'whatsapp' => [
+        'graph_version' => env('WHATSAPP_GRAPH_VERSION', 'v23.0'),
+    ],
+
 ];

@@ -13,6 +13,7 @@ use App\Models\DemoRequest;
 use App\Models\SaasPlan;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\SampleProspects;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
@@ -234,5 +235,28 @@ class SalesCrmTest extends TestCase
 
         $this->assertSame('no_show', $m->refresh()->status);
         $this->assertSame('demo_scheduled', $lead->refresh()->status);
+    }
+
+    public function test_sample_prospects_can_be_loaded_and_removed(): void
+    {
+        $real = $this->lead();
+
+        Livewire::actingAs($this->admin)->test(Leads::class)->call('generateSamples')->assertHasNoErrors();
+        $this->assertSame(45, SampleProspects::count());
+        foreach (['new' => 6, 'contacted' => 7, 'won' => 6, 'lost' => 7] as $stage => $n) {
+            $this->assertSame($n, DemoRequest::where('email', 'like', '%@prospecto-demo.mx')->where('status', $stage)->count());
+        }
+        $this->assertSame(6, DemoMeeting::where('status', 'scheduled')->where('starts_at', '>=', now())->count());
+        $this->assertTrue(DemoRequest::where('status', 'lost')->whereNull('lost_reason')->doesntExist());
+        Mail::assertNothingSent();
+
+        foreach (['tablero', 'lista', 'metricas'] as $view) {
+            $this->actingAs($this->admin)->get(route('saas.sales.leads', ['vista' => $view]))->assertOk();
+        }
+        $this->get(route('saas.sales.agenda', ['vista' => 'semana']))->assertOk();
+
+        $this->artisan('saas:sample-prospects --clear')->expectsOutputToContain('eliminados: 45')->assertSuccessful();
+        $this->assertSame(0, SampleProspects::count());
+        $this->assertModelExists($real);
     }
 }
