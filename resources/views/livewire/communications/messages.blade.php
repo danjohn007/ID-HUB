@@ -73,10 +73,10 @@
                     <td>
                         @if ($m->client)
                             <div class="font-semibold text-slate-800">{{ $m->client->full_name }}</div>
-                            <div class="text-xs text-slate-500">#{{ $m->client->code }} · {{ $m->to }}</div>
+                            <div class="max-w-[220px] truncate text-xs text-slate-500">#{{ $m->client->code }} · {{ MC::destination($m) }}</div>
                         @else
-                            <div class="text-sm text-slate-700">{{ $m->to }}</div>
-                            <div class="text-xs text-slate-400">Sin cliente</div>
+                            <div class="max-w-[220px] truncate text-sm text-slate-700">{{ MC::destination($m) }}</div>
+                            <div class="text-xs text-slate-400">{{ $m->status === 'received' ? 'No coincide con ningún cliente' : 'Sin cliente' }}</div>
                         @endif
                     </td>
                     <td>
@@ -131,7 +131,7 @@
                         <x-ui.detail label="Cliente">
                             @if ($detail->client)<a href="{{ route('clients.show', $detail->client) }}" wire:navigate class="link">{{ $detail->client->full_name }}</a>@endif
                         </x-ui.detail>
-                        <x-ui.detail label="Destino">{{ $detail->to }}</x-ui.detail>
+                        <x-ui.detail :label="$detail->status === 'received' ? 'Remitente' : 'Destino'"><span class="break-all">{{ MC::destination($detail) }}</span></x-ui.detail>
                         <x-ui.detail label="Evento">{{ MC::eventLabel($detail->event) }}</x-ui.detail>
                         <x-ui.detail label="Campaña">
                             @if ($detail->campaign)<a href="{{ route('communications.campaigns.show', $detail->campaign) }}" wire:navigate class="link">{{ $detail->campaign->name }}</a>@endif
@@ -188,15 +188,17 @@
                             @php $lastDay = $m->created_at->toDateString(); @endphp
                             <div class="flex justify-center py-1"><span class="rounded-lg bg-white/80 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 shadow-xs">{{ $m->created_at->translatedFormat('d \d\e F Y') }}</span></div>
                         @endif
-                        <div class="flex justify-end" wire:key="b{{ $m->id }}">
-                            <div @class(['relative max-w-[82%] rounded-xl rounded-tr-sm px-3 py-2 text-sm shadow-xs', 'bg-[#D9FDD3]' => $m->status !== 'failed', 'bg-danger-50 ring-1 ring-danger-100' => $m->status === 'failed'])>
-                                @if ($m->channel !== 'whatsapp' || $m->event)
+                        @php $in = $m->status === 'received'; @endphp
+                        <div @class(['flex', 'justify-end' => ! $in, 'justify-start' => $in]) wire:key="b{{ $m->id }}">
+                            <div @class(['relative max-w-[82%] rounded-xl px-3 py-2 text-sm shadow-xs', 'rounded-tr-sm' => ! $in, 'rounded-tl-sm bg-white' => $in, 'bg-[#D9FDD3]' => ! $in && $m->status !== 'failed', 'bg-danger-50 ring-1 ring-danger-100' => $m->status === 'failed'])>
+                                @if (! $in && ($m->channel !== 'whatsapp' || $m->event))
                                     <div class="mb-0.5 text-[10.5px] font-semibold text-teal-700">{{ $channels[$m->channel] ?? $m->channel }} · {{ MC::eventLabel($m->event) }}</div>
                                 @endif
                                 <div class="whitespace-pre-line text-slate-800">{{ $m->body }}</div>
                                 <div class="mt-1 flex items-center justify-end gap-1 text-[10.5px] text-slate-500">
                                     {{ $m->created_at->format('H:i') }}
-                                    @if ($m->status === 'failed')
+                                    @if ($in)
+                                    @elseif ($m->status === 'failed')
                                         <x-heroicon-m-exclamation-circle class="h-3.5 w-3.5 text-danger-600" title="{{ $m->error }}" />
                                     @elseif ($m->status === 'queued')
                                         <x-heroicon-m-clock class="h-3.5 w-3.5" />
@@ -222,6 +224,9 @@
                         </button>
                     </div>
                     @error('chatBody')<p class="mt-1 text-xs font-medium text-danger-600">{{ $message }}</p>@enderror
+                    @if ($chatWindow)
+                        <p class="mt-1.5 text-[11px] text-slate-500">El cliente escribió por WhatsApp: puedes responderle con texto libre hasta el {{ $chatWindow->format('d/m H:i') }} (ventana de 24 h).</p>
+                    @endif
                 </form>
             @endif
         </div>

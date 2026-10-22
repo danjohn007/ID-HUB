@@ -39,7 +39,7 @@ class RuleCatalog
     ];
 
     /** Acciones que necesitan un cliente (el sujeto o el cliente del ticket). */
-    public const CLIENT_ACTIONS = ['suspend_service', 'reconnect_service', 'send_message', 'add_late_fee', 'set_status'];
+    public const CLIENT_ACTIONS = ['suspend_service', 'reconnect_service', 'send_message', 'add_late_fee', 'set_status', 'change_plan', 'address_list'];
 
     public const ACTION_ICONS = [
         'suspend_service' => 'no-symbol',
@@ -51,17 +51,22 @@ class RuleCatalog
         'create_alert' => 'exclamation-triangle',
         'add_late_fee' => 'currency-dollar',
         'set_status' => 'tag',
+        'change_plan' => 'arrows-up-down',
+        'address_list' => 'shield-check',
     ];
+
+    /** Tipos de alerta que disparan el evento "anomaly_detected". */
+    public const ANOMALY_TYPES = ['anomaly_unauthorized', 'anomaly_mac', 'anomaly_cpe_change', 'anomaly_multi_device', 'anomaly_duplicate_ip', 'anomaly_usage', 'anomaly_flapping'];
 
     public const PLACEHOLDERS = ['{cliente}', '{codigo}', '{repetidor}', '{afectados}', '{zona}', '{saldo}', '{folio}'];
 
     public static function subjectFor(string $event): string
     {
         return match ($event) {
-            'repeater_down', 'repeater_saturated' => 'repeater',
+            'repeater_down', 'repeater_saturated', 'mass_disconnect' => 'repeater',
             'device_offline' => 'device',
             'ticket_created', 'ticket_sla_risk' => 'ticket',
-            'low_stock' => 'inventory_item',
+            'low_stock', 'over_stock' => 'inventory_item',
             default => 'client',
         };
     }
@@ -107,6 +112,7 @@ class RuleCatalog
             'inventory_item' => [
                 'stock' => ['Existencia', 'number', []],
                 'min_stock' => ['Mínimo', 'number', []],
+                'max_stock' => ['Máximo', 'number', []],
                 'category' => ['Categoría', 'enum', $enum('inventory_categories')],
             ],
             default => [
@@ -120,6 +126,14 @@ class RuleCatalog
                 'repeater_id' => ['Repetidor', 'enum', static::repeaters()],
                 'online' => ['En línea', 'bool', []],
             ],
+        };
+
+        $fields += match ($event) {
+            'mass_disconnect' => ['offline' => ['Clientes desconectados', 'number', []]],
+            'abnormal_signal' => ['signal_dbm' => ['Señal (dBm)', 'number', []]],
+            'data_cap_exceeded' => ['month_usage_gb' => ['Consumo del mes (GB)', 'number', []], 'data_cap_gb' => ['Límite del plan (GB)', 'number', []]],
+            'anomaly_detected' => ['alert_type' => ['Tipo de anomalía', 'enum', collect(self::ANOMALY_TYPES)->mapWithKeys(fn ($t) => [$t => config("wisp.alert_types.$t", $t)])->all()]],
+            default => [],
         };
 
         if ($event === 'payment_received') {
@@ -139,6 +153,10 @@ class RuleCatalog
             'payment_overdue' => ['overdue_days' => 'Días de atraso'],
             'payment_received' => ['amount' => 'Monto del pago', 'method' => 'Método (clave)', 'folio' => 'Folio'],
             'repeater_down' => ['affected_clients' => 'Clientes afectados'],
+            'mass_disconnect' => ['offline' => 'Clientes desconectados'],
+            'abnormal_signal' => ['signal_dbm' => 'Señal (dBm)'],
+            'data_cap_exceeded' => ['data_cap_gb' => 'Límite del plan (GB)'],
+            'anomaly_detected' => ['alert_type' => 'Tipo de anomalía (clave)'],
             default => [],
         };
     }
@@ -153,6 +171,8 @@ class RuleCatalog
             'set_status' => ['status' => 'en_revision'],
             'suspend_service' => ['notify' => false],
             'reconnect_service' => ['require_zero_balance' => true, 'notify' => true],
+            'change_plan' => ['plan_id' => '', 'keep_billing' => false],
+            'address_list' => ['list' => '', 'operation' => 'add'],
             default => [],
         };
     }
@@ -220,6 +240,8 @@ class RuleCatalog
             'set_status' => Catalog::label('client_status', $p['status'] ?? ''),
             'suspend_service' => ! empty($p['notify']) ? 'con aviso' : null,
             'reconnect_service' => ($p['require_zero_balance'] ?? true) ? 'si saldo en cero' : null,
+            'change_plan' => (static::plans()[$p['plan_id'] ?? ''] ?? 'plan sin elegir').(! empty($p['keep_billing']) ? ', solo velocidad' : ''),
+            'address_list' => (($p['operation'] ?? 'add') === 'remove' ? 'quitar de ' : 'agregar a ').($p['list'] ?? '—'),
             default => null,
         };
 
@@ -325,6 +347,13 @@ class RuleCatalog
     protected static function zones(): array
     {
         return static::$cache['zones'.tenant()?->id] ??= Zone::orderBy('name')->pluck('name', 'id')->all();
+    }
+
+    /** Planes para el selector de la acción "Cambiar plan / velocidad". */
+    public static function planOptions(): array
+    {
+        return Plan::orderBy('price')->get(['id', 'name', 'download_mbps', 'upload_mbps'])
+            ->mapWithKeys(fn ($p) => [$p->id => $p->name.' · '.(float) $p->download_mbps.'/'.(float) $p->upload_mbps.' Mbps'])->all();
     }
 
     protected static function plans(): array

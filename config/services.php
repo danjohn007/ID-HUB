@@ -40,4 +40,10 @@ return [
         'graph_version' => env('WHATSAPP_GRAPH_VERSION', 'v23.0'),
     ],
 
+    // Firebase Cloud Messaging (HTTP v1) para las notificaciones push de las apps móviles.
+    // Es de la plataforma (un solo proyecto de Firebase para todos los WISP): JSON de la cuenta de servicio.
+    'firebase' => [
+        'credentials' => env('FIREBASE_CREDENTIALS', storage_path('app/private/firebase.json')),
+    ],
+
 ];

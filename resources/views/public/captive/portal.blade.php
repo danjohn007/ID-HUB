@@ -74,8 +74,9 @@
                     <input name="password" type="password" maxlength="80" autocomplete="current-password" placeholder="Contraseña" class="cp-input form-input">
                 </div>
                 <div data-panel="codigo" @class(['space-y-3', 'hidden' => $method !== 'codigo'])>
-                    <p class="text-sm text-slate-500">Escribe tu número de cliente; lo encuentras en tu recibo o estado de cuenta.</p>
+                    <p class="text-sm text-slate-500">Escribe tu número de cliente (está en tu recibo o estado de cuenta) y los últimos 4 dígitos del teléfono que registraste.</p>
                     <input name="code" value="{{ request('code') }}" maxlength="30" pattern="[A-Za-z0-9_\-]+" title="Letras, números y guiones" autocapitalize="characters" placeholder="Código de cliente" class="cp-input form-input font-mono uppercase tracking-wider">
+                    <input name="phone4" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" title="4 dígitos" autocomplete="off" placeholder="Últimos 4 dígitos de tu teléfono" class="cp-input form-input font-mono tracking-[0.3em]">
                 </div>
                 <div data-panel="voucher" @class(['space-y-3', 'hidden' => $method !== 'voucher'])>
                     <p class="text-sm text-slate-500">Escribe el código de tu ficha de Internet.</p>

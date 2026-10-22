@@ -48,6 +48,8 @@ class StaffMetrics
         $pendingInstalls = InstallationOrder::query()->whereIn('technician_id', $ids)->whereIn('status', FieldPlanner::INSTALL_STATUSES)
             ->selectRaw('technician_id, COUNT(*) n')->groupBy('technician_id')->pluck('n', 'technician_id');
 
+        // Pago por instalación terminada (Configuración → Comisiones)
+        $installFee = (float) tenant()?->setting('commissions.technician_install_fee', 0);
         $out = [];
         foreach ($ids as $id) {
             $r = $resolved[$id] ?? null;
@@ -59,6 +61,7 @@ class StaffMetrics
                 'sla_pct' => $r && $r->n ? round($r->in_sla / $r->n * 100, 1) : null,
                 'installs' => (int) ($installs[$id] ?? 0),
                 'pending_installs' => (int) ($pendingInstalls[$id] ?? 0),
+                'commission' => round((int) ($installs[$id] ?? 0) * $installFee, 2),
             ] + $this->todayStops($id);
         }
 
@@ -76,6 +79,8 @@ class StaffMetrics
         $portfolio = Client::query()->whereIn('collector_id', $ids)->where('balance', '>', 0)
             ->selectRaw('collector_id, COUNT(*) n, SUM(balance) due')->groupBy('collector_id')->get()->keyBy('collector_id');
 
+        // Comisión del cobrador: % de lo cobrado en el periodo (Configuración → Comisiones)
+        $percent = (float) tenant()?->setting('commissions.collector_percent', 0);
         $out = [];
         foreach ($ids as $id) {
             $v = $visits[$id] ?? null;
@@ -87,6 +92,7 @@ class StaffMetrics
                 'promises' => (int) ($v->promises ?? 0),
                 'pending_clients' => (int) ($portfolio[$id]->n ?? 0),
                 'pending_amount' => (float) ($portfolio[$id]->due ?? 0),
+                'commission' => round((float) ($paid[$id]->total ?? 0) * $percent / 100, 2),
             ] + $this->todayStops($id);
         }
 

@@ -5,6 +5,7 @@ namespace App\Services\MikroTik;
 use App\Models\Client;
 use App\Models\NetworkDevice;
 use App\Models\Plan;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Operaciones de alto nivel sobre un MikroTik: consulta de estado y
@@ -118,9 +119,160 @@ class MikroTikService
         return $this->transport()->print('/ip/address');
     }
 
+    /** Menús de tabla de registro: wireless (v6 / v7 legacy), wifi (v7.13+) y wifiwave2 (v7 previo a 7.13). */
+    public const REGISTRATION_MENUS = ['/interface/wireless/registration-table', '/interface/wifi/registration-table', '/interface/wifiwave2/registration-table'];
+
+    /**
+     * Tabla de registro inalámbrica consolidada de los tres paquetes de RouterOS. Cada fila trae
+     * 'signal_dbm' (float) y 'signal-strength' normalizado a "-63dBm". Los menús que el equipo no
+     * tiene se omiten (y se recuerdan unas horas para no consultarlos en cada ciclo).
+     */
     public function registrations(): array
     {
-        return $this->transport()->print('/interface/wireless/registration-table');
+        $out = [];
+        $failed = 0;
+        foreach (self::REGISTRATION_MENUS as $menu) {
+            $skip = 'mikrotik:nomenu:'.$this->device->id.':'.md5($menu);
+            if (Cache::has($skip)) {
+                $failed++;
+
+                continue;
+            }
+            try {
+                $rows = $this->transport()->print($menu);
+            } catch (MikroTikException $e) {
+                // "no such command": el paquete no está instalado en este equipo (otros errores no se recuerdan)
+                if (preg_match('/no such|unknown|not found|bad request|REST 40[04]/i', $e->getMessage())) {
+                    Cache::put($skip, true, now()->addHours(6));
+                }
+                $failed++;
+
+                continue;
+            }
+            foreach ($rows as $r) {
+                $out[] = static::normalizeRegistration($r, $menu);
+            }
+        }
+        if ($failed === count(self::REGISTRATION_MENUS)) {
+            throw new MikroTikException('El equipo no tiene tabla de registro inalámbrica');
+        }
+
+        return $out;
+    }
+
+    /** Normaliza una fila de registration-table (wireless / wifi / wifiwave2). */
+    public static function normalizeRegistration(array $r, string $menu = ''): array
+    {
+        $dbm = static::signalDbm($r);
+        $r['signal_dbm'] = $dbm;
+        if ($dbm !== null) {
+            $r['signal-strength'] = $dbm.'dBm';
+        }
+        $r['_menu'] = $menu;
+
+        return $r;
+    }
+
+    /**
+     * Señal en dBm de una fila de registro. wireless: "signal-strength" = "-63dBm@6Mbps" o "-63dBm@HT20-7";
+     * wifi / wifiwave2 (v7): "signal" = "-63". Se toma el primer número con signo.
+     */
+    public static function signalDbm(array $r): ?float
+    {
+        foreach (['signal-strength', 'signal', 'signal-strength-ch0', 'rx-signal'] as $k) {
+            if (isset($r[$k]) && preg_match('/-?\d+(?:\.\d+)?/', (string) $r[$k], $m)) {
+                $v = (float) $m[0];
+                if ($v < 0 && $v > -120) {
+                    return $v;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public function simpleQueues(): array
+    {
+        return $this->transport()->print('/queue/simple');
+    }
+
+    /**
+     * Ping ejecutado POR EL MIKROTIK hacia $address (/ping address=X count=N).
+     *
+     * @return array{latency: ?float, loss: ?float, sent: int, received: int}
+     */
+    public function ping(string $address, int $count = 3): array
+    {
+        if ($this->isDeferred()) {
+            throw new MikroTikException('En modo push el ping lo ejecuta el agente del equipo');
+        }
+        $count = max(1, min(10, $count));
+        $rows = $this->transport()->command('/ping', ['address' => $address, 'count' => $count, 'interval' => '200ms']);
+
+        return static::parsePing($rows, $count);
+    }
+
+    /**
+     * Interpreta la salida de /ping (API, REST o "as-value" del agente push).
+     * Usa los acumulados (sent / received / avg-rtt) cuando existen; si no, cuenta respuestas y timeouts.
+     *
+     * @return array{latency: ?float, loss: ?float, sent: int, received: int}
+     */
+    public static function parsePing(array $rows, int $expected = 0): array
+    {
+        $rows = array_values(array_filter($rows, fn ($r) => is_array($r) && ! in_array($r['!type'] ?? '!re', ['!done', '!trap', '!fatal'], true)));
+        $last = $rows ? end($rows) : [];
+        if (isset($last['sent'], $last['received']) && (int) $last['sent'] > 0) {
+            $sent = (int) $last['sent'];
+            $received = min($sent, (int) $last['received']);
+            $avg = isset($last['avg-rtt']) ? static::durationMs((string) $last['avg-rtt']) : null;
+            if ($avg === null && $received > 0) {
+                $times = array_filter(array_map(fn ($r) => isset($r['time']) ? static::durationMs((string) $r['time']) : null, $rows), fn ($t) => $t !== null);
+                $avg = $times ? array_sum($times) / count($times) : null;
+            }
+
+            return ['latency' => $received > 0 && $avg !== null ? round($avg, 2) : null, 'loss' => round(($sent - $received) / $sent * 100, 2), 'sent' => $sent, 'received' => $received];
+        }
+
+        $times = [];
+        foreach ($rows as $r) {
+            $t = isset($r['time']) && ($r['status'] ?? '') === '' ? static::durationMs((string) $r['time']) : null;
+            if ($t !== null) {
+                $times[] = $t;
+            }
+        }
+        // Sin filas no hay dato (no se asume pérdida); con filas, las que falten frente a "count" se cuentan perdidas
+        $sent = $rows ? max(count($rows), $expected) : 0;
+        if ($sent === 0) {
+            return ['latency' => null, 'loss' => null, 'sent' => 0, 'received' => 0];
+        }
+        $received = min($sent, count($times));
+
+        return ['latency' => $times ? round(array_sum($times) / count($times), 2) : null, 'loss' => round(($sent - $received) / $sent * 100, 2), 'sent' => $sent, 'received' => $received];
+    }
+
+    /** Duración de RouterOS a milisegundos: "12ms345us", "1ms", "850us", "1s200ms", "00:00:00.012345". */
+    public static function durationMs(string $t): ?float
+    {
+        $t = trim($t);
+        if ($t === '') {
+            return null;
+        }
+        if (preg_match('/^(\d+):(\d+):(\d+(?:\.\d+)?)$/', $t, $m)) {
+            return ((int) $m[1] * 3600 + (int) $m[2] * 60 + (float) $m[3]) * 1000;
+        }
+        if (is_numeric($t)) {
+            return (float) $t;
+        }
+        if (! preg_match_all('/(\d+(?:\.\d+)?)(ms|us|s|m|h)/', $t, $parts, PREG_SET_ORDER)) {
+            return null;
+        }
+        $ms = 0.0;
+        foreach ($parts as [, $n, $unit]) {
+            $ms += (float) $n * ['h' => 3600000, 'm' => 60000, 's' => 1000, 'ms' => 1, 'us' => 0.001][$unit];
+        }
+
+        return $ms;
     }
 
     public function suspendedList(): array
@@ -163,9 +315,14 @@ class MikroTikService
         }
         $signal = null;
         if ($client->mac_address) {
-            foreach ($this->registrations() as $r) {
+            try {
+                $regs = $this->registrations();
+            } catch (MikroTikException) {
+                $regs = []; // equipo sin paquete inalámbrico
+            }
+            foreach ($regs as $r) {
                 if (strcasecmp($r['mac-address'] ?? '', $client->mac_address) === 0) {
-                    $signal = (float) filter_var($r['signal-strength'] ?? '', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+                    $signal = $r['signal_dbm'];
                     break;
                 }
             }
@@ -286,6 +443,31 @@ class MikroTikService
         }
 
         return $this->applyQueue($client, $plan);
+    }
+
+    /** Agrega la IP del cliente a una address-list (sin duplicar si el equipo permite consultarla). */
+    public function addToAddressList(Client $client, string $list, ?string $comment = null): string
+    {
+        if (! $client->ip_address) {
+            throw new MikroTikException('El cliente no tiene IP para agregarla a la address-list.');
+        }
+        $t = $this->transport();
+        if (! $this->isDeferred() && $t->print('/ip/firewall/address-list', ['list' => $list, 'address' => $client->ip_address])) {
+            return "IP {$client->ip_address} ya estaba en {$list}";
+        }
+        $t->add('/ip/firewall/address-list', ['list' => $list, 'address' => $client->ip_address, 'comment' => $comment ?: $client->code]);
+
+        return "IP {$client->ip_address} agregada a {$list}";
+    }
+
+    public function removeFromAddressList(Client $client, string $list): string
+    {
+        if (! $client->ip_address) {
+            throw new MikroTikException('El cliente no tiene IP para retirarla de la address-list.');
+        }
+        $n = $this->transport()->delete('/ip/firewall/address-list', ['list' => $list, 'address' => $client->ip_address]);
+
+        return $n === 0 ? "IP {$client->ip_address} no estaba en {$list}" : "IP {$client->ip_address} retirada de {$list}";
     }
 
     public function removeClient(Client $client): void

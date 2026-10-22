@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\Client;
 use App\Models\InstallationOrder;
+use App\Models\InventoryMovement;
+use App\Models\NetworkDevice;
 use App\Models\Plan;
 use App\Models\Repeater;
+use App\Services\Network\MonitoringService;
 use App\Support\Audit;
+use App\Support\Evidence;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Flujo de la orden de instalación (sección 40):
@@ -77,15 +80,15 @@ class InstallationService
         $order->update(['checklist' => $list]);
     }
 
-    /** Guarda la firma (data URL PNG) en disco público y marca el punto "firma" del checklist. */
+    /** Guarda la firma (data URL PNG) en el disco privado de evidencias y marca el punto "firma" del checklist. */
     public function saveSignature(InstallationOrder $order, string $dataUrl, string $signedBy): void
     {
         $png = base64_decode(preg_replace('#^data:image/\w+;base64,#', '', $dataUrl), true);
         abort_if($png === false || strlen($png) < 100, 422, 'Firma inválida');
         $path = 'signatures/'.$order->tenant_id.'/'.$order->folio.'-'.now()->format('YmdHis').'.png';
-        Storage::disk('public')->put($path, $png);
+        Evidence::put($path, $png);
         if ($order->signature_path && $order->signature_path !== $path) {
-            Storage::disk('public')->delete($order->signature_path);
+            Evidence::delete($order->signature_path);
         }
         $list = $order->checklist ?? [];
         $list['firma'] = true;
@@ -151,6 +154,7 @@ class InstallationService
         });
 
         $client->refresh();
+        $this->linkCpe($order, $client, $repeater);
         $event = app(ServiceControl::class)->activate($client);
 
         $charged = 0.0;
@@ -167,6 +171,64 @@ class InstallationService
         Audit::log('activate', "activó la orden de instalación {$order->folio} (cliente #{$client->code})", $order);
 
         return ['client' => $client, 'event' => $event, 'charged' => $charged];
+    }
+
+    /**
+     * Completa la cadena cliente → instalación → CPE → repetidor → torre: registra (o vincula) el CPE
+     * del cliente con la MAC / IP del cliente y el modelo / serie del equipo descargado del inventario
+     * en esta instalación. Si el cliente ya tiene CPE vinculado no crea otro.
+     */
+    public function linkCpe(InstallationOrder $order, Client $client, ?Repeater $repeater = null): ?NetworkDevice
+    {
+        $repeater ??= $client->repeater_id ? Repeater::find($client->repeater_id) : null;
+        $existing = ($client->cpe_device_id ? NetworkDevice::find($client->cpe_device_id) : null)
+            ?? NetworkDevice::query()->where('client_id', $client->id)->whereIn('type', ['cpe', 'antenna'])->whereNotIn('status', ['retired'])->first();
+
+        if ($existing) {
+            $existing->forceFill(array_filter([
+                'client_id' => $existing->client_id ?: $client->id,
+                'repeater_id' => $existing->repeater_id ?: $repeater?->id,
+                'tower_id' => $existing->tower_id ?: $repeater?->tower_id,
+                'parent_id' => $existing->parent_id ?: $repeater?->ap_device_id,
+            ], fn ($v) => $v !== null))->save();
+            if ((int) $client->cpe_device_id !== $existing->id) {
+                $client->forceFill(['cpe_device_id' => $existing->id])->saveQuietly();
+            }
+
+            return $existing;
+        }
+
+        // Equipo (antena / CPE) entregado en esta instalación según los movimientos de inventario
+        $movement = InventoryMovement::query()->where('installation_order_id', $order->id)
+            ->whereHas('item', fn ($q) => $q->whereIn('category', ['cpe', 'antena']))
+            ->with('item')->latest('id')->first();
+        $item = $movement?->item;
+
+        $device = NetworkDevice::create([
+            'type' => 'cpe',
+            'name' => 'CPE '.$client->code,
+            'manufacturer' => $item?->brand,
+            'model' => $item?->model ?: $item?->name,
+            'serial' => $movement?->serial,
+            'mac' => $client->mac_address ? MonitoringService::mac($client->mac_address) : null,
+            'ip' => $client->ip_address,
+            'lat' => $client->lat,
+            'lng' => $client->lng,
+            'location' => $client->address,
+            'client_id' => $client->id,
+            'repeater_id' => $repeater?->id,
+            'tower_id' => $repeater?->tower_id,
+            'parent_id' => $repeater?->ap_device_id,
+            'inventory_item_id' => $item?->id,
+            'responsible_id' => $order->technician_id,
+            'signal_dbm' => $order->signal_dbm,
+            'installed_at' => now()->toDateString(),
+            'status' => 'unknown',
+            'notes' => "Registrado al activar la instalación {$order->folio}",
+        ]);
+        $client->forceFill(['cpe_device_id' => $device->id])->saveQuietly();
+
+        return $device;
     }
 
     public function cancel(InstallationOrder $order, string $reason): void

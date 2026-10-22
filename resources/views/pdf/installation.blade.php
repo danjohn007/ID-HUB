@@ -20,7 +20,7 @@
     @if ($order->notes)<h2>Notas</h2><p>{{ $order->notes }}</p>@endif
     <table style="width: 100%; margin-top: 50px"><tr>
         <td class="center" style="width: 50%">
-            @if ($order->signature_path && is_file(storage_path('app/public/'.$order->signature_path)))<img src="{{ storage_path('app/public/'.$order->signature_path) }}" style="height: 50px"><br>@endif
+            @if ($sigImg = \App\Support\Evidence::dataUri($order->signature_path))<img src="{{ $sigImg }}" style="height: 50px"><br>@endif
             ______________________________<br>{{ $order->signed_by_name ?? 'Firma del cliente' }}</td>
         <td class="center">______________________________<br>{{ $order->technician?->name ?? 'Técnico' }}</td>
     </tr></table>

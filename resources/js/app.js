@@ -145,7 +145,17 @@ function sectorPolygon(lat, lng, azimuth, beamwidth, rangeKm) {
     return pts;
 }
 
+/* Marcador Leaflet a partir de un elemento de "markers" */
+function buildMarker(m) {
+    const marker = L.marker([+m.lat, +m.lng], { icon: markerIcon(m), zIndexOffset: m.type === 'repeater' || m.type === 'tower' ? 1000 : 0 });
+    if (m.popup) marker.bindPopup(m.popup);
+    if (m.tooltip) marker.bindTooltip(m.tooltip, { permanent: !!m.permanentTooltip, direction: 'top', offset: [0, -12] });
+    if (m.url && !m.popup) marker.on('click', () => (window.location.href = m.url));
+    return marker;
+}
+
 const layerNames = {
+    zones: 'Zonas',
     clients: 'Clientes', towers: 'Torres', repeaters: 'Repetidores', devices: 'Antenas / equipos', technicians: 'Técnicos',
     collectors: 'Cobradores', tickets: 'Tickets', installations: 'Instalaciones', prospects: 'Prospectos', coverage: 'Zonas de cobertura', demand: 'Concentración de demanda',
 };
@@ -175,6 +185,11 @@ document.addEventListener('alpine:init', () => {
             new ResizeObserver(() => this.map && this.map.invalidateSize()).observe(el);
             if (cfg.id) {
                 window.addEventListener('map-data-' + cfg.id, (e) => this.render({ ...cfg, ...(e.detail?.data || e.detail?.[0] || e.detail) }));
+                // Actualiza solo algunas capas (ej. técnicos/cobradores en vivo) sin redibujar el mapa
+                window.addEventListener('map-layer-' + cfg.id, (e) => {
+                    const d = e.detail?.[0] || e.detail || {};
+                    this.replaceLayers(d.layers || [], d.markers || []);
+                });
                 window.addEventListener('map-focus-' + cfg.id, (e) => {
                     const d = e.detail?.[0] || e.detail;
                     if (d?.lat) this.map.setView([d.lat, d.lng], d.zoom || 16);
@@ -193,6 +208,11 @@ document.addEventListener('alpine:init', () => {
                 return this.groups[name];
             };
 
+            (data.polygons || []).forEach((p) => {
+                if (!p.points || p.points.length < 3) return;
+                L.polygon(p.points, { color: p.color || palette.brand, weight: 2, fillOpacity: p.opacity ?? 0.07, dashArray: p.dash ? '6 4' : null })
+                    .bindPopup(p.popup || '').addTo(group(p.layer || 'zones'));
+            });
             (data.sectors || []).forEach((s) => {
                 L.polygon(sectorPolygon(+s.lat, +s.lng, +s.azimuth, +s.beamwidth, +s.range_km), { color: s.color || palette.brand, weight: 1, fillOpacity: 0.12 })
                     .bindPopup(s.popup || '').addTo(group('coverage'));
@@ -209,10 +229,7 @@ document.addEventListener('alpine:init', () => {
             }
             (data.markers || []).forEach((m) => {
                 if (m.lat == null || m.lng == null) return;
-                const marker = L.marker([+m.lat, +m.lng], { icon: markerIcon(m), zIndexOffset: m.type === 'repeater' || m.type === 'tower' ? 1000 : 0 });
-                if (m.popup) marker.bindPopup(m.popup);
-                if (m.tooltip) marker.bindTooltip(m.tooltip, { permanent: !!m.permanentTooltip, direction: 'top', offset: [0, -12] });
-                if (m.url && !m.popup) marker.on('click', () => (window.location.href = m.url));
+                const marker = buildMarker(m);
                 const layer = m.layer || m.type + 's';
                 marker.addTo(group(layer, (data.cluster ?? cfg.cluster) && (m.type === 'client' || m.type === 'prospect')));
                 bounds.push([+m.lat, +m.lng]);
@@ -227,6 +244,20 @@ document.addEventListener('alpine:init', () => {
             if ((data.fit ?? cfg.fit) && bounds.length) {
                 this.map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
             }
+        },
+        /** Reemplaza los marcadores de las capas indicadas (sin clúster), conservando el resto del mapa. */
+        replaceLayers(layers, markers) {
+            layers.forEach((k) => this.groups[k] && this.groups[k].clearLayers());
+            markers.forEach((m) => {
+                if (m.lat == null || m.lng == null) return;
+                const k = m.layer || m.type + 's';
+                if (!layers.includes(k)) return;
+                if (!this.groups[k]) {
+                    this.groups[k] = L.layerGroup().addTo(this.map);
+                    if (this.layersControl) this.layersControl.addOverlay(this.groups[k], layerNames[k] || k);
+                }
+                buildMarker(m).addTo(this.groups[k]);
+            });
         },
         enablePicker(cfg) {
             const latField = cfg.pickerLat || 'lat', lngField = cfg.pickerLng || 'lng';
@@ -245,6 +276,54 @@ document.addEventListener('alpine:init', () => {
         destroy() {
             this.map && this.map.remove();
         },
+    }));
+
+    /**
+     * Dibujo de un polígono (zona):  x-data="polygonEditor({ model: 'zone.polygon', value: [[lat,lng],...], center, color })"
+     * Clic agrega un vértice; los vértices se pueden arrastrar. undo() quita el último, clear() borra todo.
+     * El resultado se envía a Livewire (diferido) como [[lat, lng], ...] o null.
+     */
+    Alpine.data('polygonEditor', (cfg = {}) => ({
+        map: null, points: [], shape: null, handles: null,
+        init() {
+            this.points = (cfg.value || []).filter((p) => Array.isArray(p) && p.length === 2).map((p) => [+p[0], +p[1]]);
+            const el = this.$refs.map;
+            this.map = L.map(el, { scrollWheelZoom: true }).setView(cfg.center || [20.5888, -100.3899], cfg.zoom || 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(this.map);
+            this.handles = L.layerGroup().addTo(this.map);
+            this.map.on('click', (e) => {
+                this.points.push([+e.latlng.lat.toFixed(7), +e.latlng.lng.toFixed(7)]);
+                this.draw();
+                this.sync();
+            });
+            this.draw();
+            if (this.points.length >= 2) this.map.fitBounds(this.points, { padding: [20, 20], maxZoom: 17 });
+            setTimeout(() => this.map.invalidateSize(), 200);
+            new ResizeObserver(() => this.map && this.map.invalidateSize()).observe(el);
+        },
+        draw() {
+            if (this.shape) this.map.removeLayer(this.shape);
+            this.shape = null;
+            this.handles.clearLayers();
+            const color = cfg.color || palette.brand;
+            if (this.points.length >= 3) this.shape = L.polygon(this.points, { color, weight: 2, fillOpacity: 0.15 }).addTo(this.map);
+            else if (this.points.length === 2) this.shape = L.polyline(this.points, { color, weight: 2, dashArray: '4 4' }).addTo(this.map);
+            this.points.forEach((p, i) => {
+                L.marker(p, {
+                    draggable: true,
+                    icon: L.divIcon({ className: '', html: `<div style="width:12px;height:12px;border-radius:9999px;background:#fff;border:2px solid ${color}"></div>`, iconSize: [12, 12], iconAnchor: [6, 6] }),
+                }).on('dragend', (e) => {
+                    const ll = e.target.getLatLng();
+                    this.points[i] = [+ll.lat.toFixed(7), +ll.lng.toFixed(7)];
+                    this.draw();
+                    this.sync();
+                }).addTo(this.handles);
+            });
+        },
+        undo() { this.points.pop(); this.draw(); this.sync(); },
+        clear() { this.points = []; this.draw(); this.sync(); },
+        sync() { this.$wire.set(cfg.model || 'polygon', this.points.length ? JSON.parse(JSON.stringify(this.points)) : null, false); },
+        destroy() { this.map && this.map.remove(); },
     }));
 
     /** Gráfica ECharts.  x-data="chart(options, id)"  (re-render con evento 'chart-data-{id}') */

@@ -198,7 +198,7 @@
                 <x-ui.card title="Firma del cliente">
                     @if ($o->signature_path)
                         <div class="mb-3 flex items-center gap-4 rounded-lg bg-slate-50 p-3">
-                            <img src="{{ Storage::disk('public')->url($o->signature_path) }}" alt="Firma" class="h-16 rounded bg-white ring-1 ring-slate-200">
+                            <img src="{{ \App\Support\Evidence::url($o->signature_path) }}" alt="Firma" class="h-16 rounded bg-white ring-1 ring-slate-200">
                             <div class="text-sm"><div class="font-semibold text-slate-800">{{ $o->signed_by_name }}</div><div class="text-xs text-slate-500">Firma registrada</div></div>
                         </div>
                     @endif

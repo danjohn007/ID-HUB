@@ -23,6 +23,16 @@ class User extends Authenticatable
 
     protected $hidden = ['password', 'remember_token'];
 
+    protected static function booted(): void
+    {
+        // Cambio de contraseña o usuario desactivado: se cierran las sesiones de las apps móviles.
+        static::updated(function (User $user) {
+            if ($user->wasChanged('password') || ($user->wasChanged('active') && ! $user->active)) {
+                $user->tokens()->delete();
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [

@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Attachment;
 use App\Models\InstallationOrder;
 use App\Models\InventoryItem;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\Evidence;
 use App\Support\TenantContext;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -44,6 +46,7 @@ class FieldAppApiTest extends TestCase
     {
         parent::setUp();
         Storage::fake('public');
+        Storage::fake('local');
         $this->tech = User::where('email', 'tecnico@wispcontrol.com')->firstOrFail();
         app(TenantContext::class)->set($this->tech->tenant);
         $this->token = $this->postJson('/api/v1/auth/login', [
@@ -117,7 +120,7 @@ class FieldAppApiTest extends TestCase
             'signed_by' => 'María López',
             'signature' => UploadedFile::fake()->createWithContent('firma.png', $this->png()),
         ], ['Accept' => 'application/json'])->assertCreated()->assertJsonPath('data.signature.signed_by', 'María López');
-        Storage::disk('public')->assertExists($ticket->fresh()->signature_path);
+        Storage::disk('local')->assertExists($ticket->fresh()->signature_path);
 
         $this->api()->postJson("/api/v1/tickets/{$ticket->id}/signature", [
             'signed_by' => 'Juan Pérez', 'signature_data' => 'data:image/png;base64,'.base64_encode($this->png()),
@@ -159,6 +162,9 @@ class FieldAppApiTest extends TestCase
 
         $this->api()->postJson("$url/signature", ['signed_by' => 'Cliente Prueba', 'signature_data' => 'data:image/png;base64,'.base64_encode($this->png())])
             ->assertCreated();
+        // Firma en disco privado; los PDF la embeben en base64
+        Storage::disk('local')->assertExists($order->fresh()->signature_path);
+        $this->assertStringStartsWith('data:image/png;base64,', Evidence::dataUri($order->fresh()->signature_path));
 
         $res = $this->api()->getJson($url)->assertOk();
         $this->assertTrue(collect($res->json('data.checklist'))->every(fn ($c) => $c['done']));
@@ -173,6 +179,76 @@ class FieldAppApiTest extends TestCase
         $order->update(['technician_id' => null]);
 
         $this->api()->getJson("/api/v1/installations/{$order->id}")->assertForbidden();
+    }
+
+    public function test_evidence_is_private_and_served_by_signed_url(): void
+    {
+        $ticket = $this->myTicket();
+        $res = $this->api()->post("/api/v1/tickets/{$ticket->id}/attachments", [
+            'file' => UploadedFile::fake()->image('antes.jpg'), 'kind' => 'antes', 'lat' => 20.5, 'lng' => -100.4,
+        ], ['Accept' => 'application/json'])->assertCreated();
+
+        $attachment = Attachment::findOrFail($res->json('data.id'));
+        Storage::disk('local')->assertExists($attachment->path);
+        Storage::disk('public')->assertMissing($attachment->path);
+
+        $url = $res->json('data.url');
+        $this->assertStringContainsString('/api/v1/files/', $url);
+        $this->assertStringContainsString('signature=', $url);
+
+        $this->app['auth']->forgetGuards();
+        $this->withoutToken()->get($url)->assertOk();
+        // Sin firma (o alterada) no se puede descargar
+        $this->get(strtok($url, '?'))->assertForbidden();
+        $this->get(str_replace('signature=', 'signature=x', $url))->assertForbidden();
+
+        // Panel web: requiere sesión; sólo evidencias del WISP activo
+        $this->get(route('evidence.show', ['path' => $attachment->path]))->assertRedirect(route('login'));
+        $this->actingAs($this->tech)->get(route('evidence.show', ['path' => $attachment->path]))->assertOk();
+        Storage::disk('local')->put('evidences/999999/otra.jpg', 'x');
+        $this->get(route('evidence.show', ['path' => 'evidences/999999/otra.jpg']))->assertNotFound();
+        Storage::disk('local')->put('backups/db.sql.gz', 'x');
+        $this->get('/evidencias/backups/db.sql.gz')->assertNotFound();
+    }
+
+    public function test_legacy_public_evidence_keeps_its_public_url(): void
+    {
+        $ticket = $this->myTicket();
+        Storage::disk('public')->put('evidences/'.$ticket->tenant_id.'/tickets/old.jpg', 'x');
+        $a = Attachment::create(['attachable_type' => 'ticket', 'attachable_id' => $ticket->id, 'kind' => 'antes',
+            'path' => 'evidences/'.$ticket->tenant_id.'/tickets/old.jpg', 'mime' => 'image/jpeg']);
+
+        $this->assertSame(Storage::disk('public')->url($a->path), $a->url());
+        $this->assertSame(Storage::disk('public')->url($a->path), $a->signedUrl());
+    }
+
+    public function test_attachment_taken_at_from_app_is_validated(): void
+    {
+        $ticket = $this->myTicket();
+        $send = fn ($takenAt) => Attachment::findOrFail($this->api()->post("/api/v1/tickets/{$ticket->id}/attachments", [
+            'file' => UploadedFile::fake()->image('foto.jpg'), 'kind' => 'durante', 'taken_at' => $takenAt,
+        ], ['Accept' => 'application/json'])->assertCreated()->json('data.id'))->taken_at;
+
+        // Captura de hace 2 h (UTC desde el teléfono): se conserva
+        $this->assertEqualsWithDelta(now()->subHours(2)->timestamp, $send(now()->subHours(2)->utc()->toIso8601String())->timestamp, 2);
+        // En el futuro o de hace más de 24 h: se usa la hora del servidor
+        $this->assertEqualsWithDelta(now()->timestamp, $send(now()->addDay()->toIso8601String())->timestamp, 5);
+        $this->assertEqualsWithDelta(now()->timestamp, $send(now()->subDays(3)->toIso8601String())->timestamp, 5);
+    }
+
+    public function test_replayed_field_actions_with_idempotency_key_are_not_repeated(): void
+    {
+        $ticket = $this->myTicket();
+        $before = $ticket->comments()->count();
+
+        $first = $this->api()->postJson("/api/v1/tickets/{$ticket->id}/comments", ['body' => 'Revisé la antena'], ['Idempotency-Key' => 'k-comment-1'])->assertCreated();
+        $again = $this->api()->postJson("/api/v1/tickets/{$ticket->id}/comments", ['body' => 'Revisé la antena'], ['Idempotency-Key' => 'k-comment-1'])->assertCreated();
+        $this->assertSame($first->json('data.id'), $again->json('data.id'));
+        $this->assertSame('true', $again->headers->get('Idempotent-Replayed'));
+        $this->assertSame($before + 1, $ticket->comments()->count());
+
+        // La misma clave en otra operación se rechaza
+        $this->api()->patchJson("/api/v1/tickets/{$ticket->id}/status", ['status' => 'en_proceso', 'client_uuid' => 'k-comment-1'])->assertStatus(422);
     }
 
     public function test_collector_cannot_use_technician_endpoints(): void

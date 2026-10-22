@@ -9,8 +9,8 @@ use App\Models\Ticket;
 use App\Services\Field\FieldTracker;
 use App\Services\InventoryService;
 use App\Services\TicketService;
+use App\Support\Evidence;
 use App\Support\InputRules;
-use Illuminate\Support\Facades\Storage;
 use Livewire\WithFileUploads;
 
 /**
@@ -108,7 +108,7 @@ trait ManagesTicketWork
             'photoKind' => 'required|in:'.implode(',', array_keys(config('wisp.evidence_kinds'))),
         ], [], ['photo' => 'foto', 'photoKind' => 'tipo']);
 
-        $path = $this->photo->store('evidences/'.$this->ticket->tenant_id.'/tickets/'.$this->ticket->id, 'public');
+        $path = Evidence::store($this->photo, 'evidences/'.$this->ticket->tenant_id.'/tickets/'.$this->ticket->id);
         $valid = is_numeric($this->photoLat) && is_numeric($this->photoLng);
         $this->ticket->attachments()->create([
             'tenant_id' => $this->ticket->tenant_id, 'kind' => $this->photoKind, 'path' => $path,
@@ -129,7 +129,7 @@ trait ManagesTicketWork
         $this->ensureCanWork();
         $a = Attachment::query()->where('attachable_type', 'ticket')->where('attachable_id', $this->ticket->id)->findOrFail($id);
         abort_unless(auth()->user()->can('tickets.manage') || (int) $a->uploaded_by === (int) auth()->id(), 403);
-        Storage::disk('public')->delete($a->path);
+        Evidence::delete($a->path);
         $a->delete();
         $this->toast('Evidencia eliminada', 'warning');
     }
@@ -183,9 +183,9 @@ trait ManagesTicketWork
             return;
         }
         $path = 'signatures/'.$this->ticket->tenant_id.'/ticket-'.$this->ticket->id.'-'.now()->format('YmdHis').'.png';
-        Storage::disk('public')->put($path, $png);
+        Evidence::put($path, $png);
         if ($this->ticket->signature_path) {
-            Storage::disk('public')->delete($this->ticket->signature_path);
+            Evidence::delete($this->ticket->signature_path);
         }
         $this->ticket->forceFill(['signature_path' => $path, 'signed_by_name' => trim($this->signedBy), 'signed_at' => now()])->save();
         $this->ticket->addComment('Firma de conformidad capturada ('.trim($this->signedBy).')', 'system');

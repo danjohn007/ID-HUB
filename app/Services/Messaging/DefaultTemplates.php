@@ -13,7 +13,7 @@ class DefaultTemplates
         'pending' => 'Hola {nombre}, tu pago está pendiente. Saldo: {saldo}. Evita la suspensión pagando aquí: {link_pago}',
         'suspension_warning' => 'Hola {nombre}, tu servicio será suspendido por falta de pago. Saldo pendiente: {saldo}. Paga aquí: {link_pago}',
         'suspended' => 'Hola {nombre}, tu servicio ha sido suspendido por falta de pago. Saldo: {saldo}. Al pagar se reactiva automáticamente: {link_pago}',
-        'payment_received' => 'Hola {nombre}, hemos recibido tu pago de {monto} correctamente. Folio: {folio}. ¡Gracias!',
+        'payment_received' => 'Hola {nombre}, hemos recibido tu pago de {monto} correctamente. Folio: {folio}. Comprobante: {link_comprobante} ¡Gracias!',
         'reconnected' => 'Hola {nombre}, tu servicio ha sido reactivado. ¡Gracias por tu pago!',
         'ticket_created' => 'Hola {nombre}, recibimos tu reporte #{folio}. Te mantendremos informado.',
         'ticket_assigned' => 'Hola {nombre}, tu reporte #{folio} ha sido asignado al técnico {tecnico}.',

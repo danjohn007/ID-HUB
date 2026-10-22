@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Support\Facades\Storage;
+use App\Support\Evidence;
 
 /**
  * Orden de instalación para la app del técnico (sección 40): cliente o prospecto, plan,
@@ -49,7 +49,7 @@ class InstallationOrderResource extends ApiResource
                 'speed_up' => $this->speed_up !== null ? (float) $this->speed_up : null,
             ],
             'signature' => $this->signature_path ? [
-                'url' => Storage::disk('public')->url($this->signature_path),
+                'url' => \App\Support\Evidence::signedUrl($this->signature_path),
                 'signed_by' => $this->signed_by_name,
             ] : null,
             'notes' => $this->notes,

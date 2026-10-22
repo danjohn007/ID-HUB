@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Evidence;
 use Illuminate\Support\Facades\URL;
 
 class PaymentResource extends ApiResource
@@ -26,6 +27,7 @@ class PaymentResource extends ApiResource
             'cash_cut_id' => $this->cash_cut_id,
             'location' => self::coords($this->lat, $this->lng),
             'notes' => $this->notes,
+            'evidence_url' => Evidence::signedUrl($this->evidence_path),
             'receipt_url' => self::receiptUrl($this->resource),
         ];
     }

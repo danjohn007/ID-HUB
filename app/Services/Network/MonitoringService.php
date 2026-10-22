@@ -14,6 +14,7 @@ use App\Models\Ticket;
 use App\Services\AlertService;
 use App\Services\AutomationEngine;
 use App\Services\MikroTik\MikroTikException;
+use App\Services\MikroTik\MikroTikService;
 use App\Services\MikroTik\PushTransport;
 use App\Services\MikroTik\SimulatedTransport;
 use App\Support\TenantContext;
@@ -32,6 +33,10 @@ use Illuminate\Support\Facades\DB;
  *     (crea Outage, alerta crítica y dispara la automatización "repeater_down"; al recuperarse la cierra).
  *  4. Monitoreo de antenas: señal fuera de rango, CPE sin conexión, desconexiones masivas.
  *  5. Anomalías de sesión para revisión técnica (usuario/MAC no registrados, cambio de CPE, múltiples sesiones).
+ *  6. Ping desde el MikroTik (PingProbe) a APs, antenas, CPE, switches, UPS y la IP de administración de cada
+ *     repetidor: latencia / pérdida reales por equipo y repetidor, estado en línea de equipos que no son MikroTik
+ *     y detección de caídas de repetidores sin MikroTik propio.
+ *  7. Consumo mensual por cliente (contadores de cola simple o interfaz PPPoE) y límite de consumo del plan.
  *
  * Las anomalías basadas en datos históricos (IP duplicada, consumo, desconexiones frecuentes) se
  * evalúan en detectClientAnomalies(). Todo es idempotente: las muestras se agrupan en ventanas de 5 min
@@ -53,6 +58,15 @@ class MonitoringService
     protected array $seenKeys = [];
 
     protected array $summary = [];
+
+    /** Resultados de ping del ciclo: ['device' => [id => [...]], 'repeater' => [id => [...]]]. */
+    protected array $pings = ['device' => [], 'repeater' => []];
+
+    /** Nombres de los MikroTik del ciclo (para mensajes). */
+    protected array $routerNames = [];
+
+    /** Bytes por GB para el consumo mensual (GiB, como lo reporta RouterOS). */
+    public const GB = 1073741824;
 
     public function __construct(protected AlertService $alerts) {}
 
@@ -87,9 +101,18 @@ class MonitoringService
             app(MaintenanceService::class)->syncStatuses();
 
             $routers = NetworkDevice::mikrotik()->whereNotIn('status', ['retired', 'in_stock'])->get();
+            $this->routerNames = $routers->pluck('name', 'id')->all();
             $results = [];
             foreach ($routers as $router) {
                 $results[$router->id] = $this->pollRouter($router);
+            }
+
+            // Ping desde los MikroTik que respondieron (acotado por router y ciclo)
+            $this->pings = ['device' => [], 'repeater' => []];
+            try {
+                $this->pings = app(PingProbe::class)->run($routers, $results, max(1, (int) ($this->settings['ping_max_targets'] ?? PingProbe::MAX_TARGETS)));
+            } catch (\Throwable $e) {
+                $this->summary['errors'][] = 'Ping: '.mb_substr($e->getMessage(), 0, 160);
             }
 
             $clients = Client::query()->get(['id', 'code', 'first_name', 'last_name', 'pppoe_user', 'ip_address', 'mac_address', 'router_device_id',
@@ -110,8 +133,11 @@ class MonitoringService
             $down = $this->evaluateRepeaters($repeaters, $results, $clients, $connected);
             $this->updateClients($managed, $connected, $signals, $down, $results, $repeaterRouter);
             $this->syncCpeDevices();
+            $this->applyDevicePings();
             $this->antennaChecks($repeaters, $down);
             $this->resolveStaleSessionAnomalies($results, $clients, $repeaterRouter);
+            $this->accumulateUsage($routers, $results, $clients, $repeaterRouter);
+            $this->checkDataCaps();
 
             $this->summary['clients_online'] = Client::query()->where('online', true)->count();
 
@@ -130,6 +156,7 @@ class MonitoringService
             $this->at = static::bucket();
             $this->seenKeys = [];
             $this->summary = ['routers_ok' => 0, 'routers_failed' => 0, 'went_offline' => 0, 'came_online' => 0, 'alerts' => 0, 'samples' => 0, 'errors' => []];
+            $this->pings = ['device' => [], 'repeater' => []];
 
             $res = $this->pollRouter($d);
             if (! $res['ok']) {
@@ -152,7 +179,7 @@ class MonitoringService
     /** Consulta un MikroTik, guarda sus métricas y su muestra. */
     public function pollRouter(NetworkDevice $d): array
     {
-        $out = ['ok' => false, 'never' => false, 'error' => null, 'sessions' => [], 'registrations' => [],
+        $out = ['ok' => false, 'never' => false, 'error' => null, 'sessions' => [], 'registrations' => [], 'queues' => [], 'ifaces' => [],
             'cpu' => null, 'memory' => null, 'latency' => null, 'loss' => null, 'rx' => null, 'tx' => null, 'sim' => false];
         $mt = NetworkClient::mikrotik($d);
         $out['sim'] = $mt->transport() instanceof SimulatedTransport;
@@ -190,6 +217,11 @@ class MonitoringService
                 } catch (\Throwable) {
                 }
             }
+            $out['ifaces'] = $ifaces;
+            try {
+                $out['queues'] = $mt->simpleQueues(); // contadores de consumo por cliente
+            } catch (\Throwable) {
+            }
 
             $out['ok'] = true;
             $out['cpu'] = $res['cpu'];
@@ -203,7 +235,9 @@ class MonitoringService
                 $out['rx'] = (int) ($n * 2.2e6 * $peak * mt_rand(70, 120) / 100);
                 $out['tx'] = (int) ($n * 0.4e6 * $peak * mt_rand(70, 120) / 100);
             } else {
-                [$out['latency'], $out['loss']] = $this->pushPing($report) ?? [round($rtt, 2), 0];
+                // Latencia / pérdida de la salida a internet medidas por el propio MikroTik (ping al upstream);
+                // si el ping no se puede ejecutar queda el tiempo de respuesta de la API, sin dato de pérdida.
+                [$out['latency'], $out['loss']] = $this->pushPing($report) ?? $this->upstreamPing($d, $mt) ?? [round($rtt, 2), null];
                 [$out['rx'], $out['tx']] = $this->trafficFromCounters($d, $ifaces);
             }
 
@@ -249,26 +283,24 @@ class MonitoringService
         if (! is_array($pings) || ! $pings) {
             return null;
         }
-        $pings = array_is_list($pings) ? $pings : [$pings];
-        $times = [];
-        $lost = 0;
-        foreach ($pings as $p) {
-            $t = $p['time'] ?? null;
-            if ($t === null || ($p['status'] ?? '') === 'timeout') {
-                $lost++;
+        $r = MikroTikService::parsePing(array_is_list($pings) ? $pings : [$pings]);
 
-                continue;
-            }
-            // Formatos: "12ms345us", "00:00:00.012345", "12ms"
-            if (preg_match('/(\d+)ms(?:(\d+)us)?/', (string) $t, $m)) {
-                $times[] = (float) $m[1] + (isset($m[2]) ? (float) $m[2] / 1000 : 0);
-            } elseif (preg_match('/(\d+):(\d+):(\d+(?:\.\d+)?)/', (string) $t, $m)) {
-                $times[] = ((float) $m[3]) * 1000;
-            }
+        return $r['loss'] === null ? null : [$r['latency'], $r['loss']];
+    }
+
+    /** Ping del MikroTik a su salida a internet (network.ping_upstream, 8.8.8.8 por omisión). */
+    protected function upstreamPing(NetworkDevice $d, MikroTikService $mt): ?array
+    {
+        if ($d->api_mode === 'push') {
+            return null;
         }
-        $total = count($pings);
+        try {
+            $r = $mt->ping((string) ($this->settings['ping_upstream'] ?? '8.8.8.8'), PingProbe::COUNT);
+        } catch (\Throwable) {
+            return null;
+        }
 
-        return [$times ? round(array_sum($times) / count($times), 2) : null, $total ? round($lost / $total * 100, 2) : null];
+        return $r['loss'] === null ? null : [$r['latency'], $r['loss']];
     }
 
     /** bps a partir de contadores rx-byte/tx-byte de la interfaz con más tráfico (WAN). */
@@ -372,7 +404,7 @@ class MonitoringService
                     $owner = $cpeMacByClient->search($mac);
                     $client = $owner ? $clients->firstWhere('id', $owner) : null;
                 }
-                $dbm = (float) filter_var($r['signal-strength'] ?? '', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+                $dbm = (float) ($r['signal_dbm'] ?? MikroTikService::signalDbm($r));
                 if ($client) {
                     if ($dbm) {
                         $signals[$client->id] = $dbm;
@@ -481,7 +513,13 @@ class MonitoringService
     /** @return int[] ids de repetidores caídos en este ciclo */
     protected function evaluateRepeaters(Collection $repeaters, array $results, Collection $clients, array $connected): array
     {
-        $eligible = $clients->whereIn('service_status', self::LIVE)->countBy('repeater_id');
+        $live = $clients->whereIn('service_status', self::LIVE);
+        $eligible = $live->countBy('repeater_id');
+        // Clientes con servicio vigente cuyo MikroTik respondió: su estado de conexión es confiable aunque
+        // el repetidor no tenga MikroTik propio (ej. clientes enrutados por el MikroTik de la torre).
+        $okRouters = collect($results)->filter(fn ($r) => $r['ok'])->keys()->flip();
+        $repRouter = $repeaters->pluck('router_device_id', 'id');
+        $knownBy = $live->filter(fn ($c) => isset($okRouters[(int) ($c->router_device_id ?: ($repRouter[$c->repeater_id] ?? 0))]))->countBy('repeater_id');
         $connectedBy = [];
         $byId = $clients->keyBy('id');
         foreach ($connected as $clientId => $s) {
@@ -497,21 +535,32 @@ class MonitoringService
 
         foreach ($repeaters as $r) {
             $res = $r->router_device_id ? ($results[$r->router_device_id] ?? null) : null;
+            $hasRouter = $res && ! $res['never'];
+            $ping = $this->pings['repeater'][$r->id] ?? null;
             $elig = (int) ($eligible[$r->id] ?? 0);
+            $known = (int) ($knownBy[$r->id] ?? 0);
             $conn = (int) ($connectedBy[$r->id] ?? 0);
             $util = $r->utilization();
 
-            if (! $res || $res['never']) {
+            if ($ping) {
+                $r->forceFill(['latency_ms' => $ping['latency'], 'packet_loss' => $ping['loss'], 'last_ping_at' => now()])->saveQuietly();
+            }
+            // Sin MikroTik propio, sin ping a su IP de administración y sin clientes con estado conocido: no hay evidencia
+            if (! $hasRouter && ! $ping && $known < 3) {
                 $this->checkSaturation($r, $util);
 
                 continue;
             }
 
-            $isDown = ! $res['ok'] || ($elig >= 3 && $conn === 0);
+            // Caído si: su MikroTik no responde, todos sus clientes (≥ 3) sin sesión, o su IP de administración
+            // no responde al ping y no tiene clientes conectados.
+            $pingDown = $ping && $ping['loss'] >= 100 && $conn === 0;
+            $clientsDown = ($hasRouter ? $elig : $known) >= 3 && $conn === 0;
+            $isDown = ($hasRouter && ! $res['ok']) || $clientsDown || $pingDown;
             $inMaintenance = in_array($r->id, $maintenance, true);
 
-            // Métricas del repetidor (simuladas o derivadas de su MikroTik)
-            if ($res['sim']) {
+            // Métricas del repetidor (simuladas, del ping a su IP de administración o derivadas de su MikroTik)
+            if ($hasRouter && $res['sim']) {
                 $latency = round(mt_rand(200, 800) / 100 + $peak * mt_rand(200, 1800) / 100 + ($util >= 95 ? mt_rand(7000, 11000) / 100 : 0), 2);
                 $loss = round(($peak > 0.9 ? mt_rand(0, 250) : mt_rand(0, 40)) / 100 + ($util >= 95 ? mt_rand(300, 700) / 100 : 0), 2);
                 $rx = (int) ($conn * 2.2e6 * $peak * mt_rand(70, 120) / 100);
@@ -519,11 +568,11 @@ class MonitoringService
                 $cpu = mt_rand(5, 35) + $peak * 20;
                 $mem = mt_rand(30, 55);
             } else {
-                $latency = $res['latency'];
-                $loss = $res['loss'];
+                $latency = $ping && $ping['loss'] < 100 ? $ping['latency'] : ($hasRouter ? $res['latency'] : null);
+                $loss = $ping ? $ping['loss'] : ($hasRouter ? $res['loss'] : null);
                 $share = $conn / ($routerConnected[$r->router_device_id] ?? 1);
-                $rx = $res['rx'] !== null ? (int) ($res['rx'] * $share) : null;
-                $tx = $res['tx'] !== null ? (int) ($res['tx'] * $share) : null;
+                $rx = $hasRouter && $res['rx'] !== null ? (int) ($res['rx'] * $share) : null;
+                $tx = $hasRouter && $res['tx'] !== null ? (int) ($res['tx'] * $share) : null;
                 $cpu = null;
                 $mem = null;
             }
@@ -536,7 +585,12 @@ class MonitoringService
 
                     continue;
                 }
-                $cause = ! $res['ok'] ? "Sin comunicación con {$r->router?->name}" : 'Sin clientes conectados: posible falla del AP o del enlace';
+                $cause = match (true) {
+                    $hasRouter && ! $res['ok'] => "Sin comunicación con {$r->router?->name}",
+                    $pingDown => "Sin respuesta a ping de {$ping['ip']}".(($n = $this->routerNames[$ping['router_id']] ?? null) ? " desde {$n}" : '')
+                        .($clientsDown ? ' y sin clientes conectados' : ''),
+                    default => 'Sin clientes conectados: posible falla del AP o del enlace',
+                };
                 $this->openOutage($r, $elig, $cause);
                 if ($r->ap_device_id) {
                     NetworkDevice::whereKey($r->ap_device_id)->where('status', '!=', 'offline')->update(['status' => 'offline']);
@@ -657,6 +711,171 @@ class MonitoringService
         }
 
         return $bad;
+    }
+
+    // =====================================================================
+    // Ping a equipos (no MikroTik)
+    // =====================================================================
+
+    /**
+     * Estado de los equipos con resultado de ping en este ciclo: sustituye al estado copiado del cliente
+     * o del repetidor. Guarda latencia / pérdida, muestra de monitoreo y alertas de infraestructura.
+     */
+    protected function applyDevicePings(): void
+    {
+        $pings = $this->pings['device'] ?? [];
+        if (! $pings) {
+            return;
+        }
+        $maxLat = (float) ($this->settings['latency_max_ms'] ?? 80);
+        $maxLoss = (float) ($this->settings['packet_loss_max'] ?? 5);
+        $minSignal = (float) ($this->settings['signal_min_dbm'] ?? -75);
+
+        foreach (NetworkDevice::query()->whereIn('id', array_keys($pings))->get() as $d) {
+            $p = $pings[$d->id];
+            $up = $p['loss'] < 100;
+            $degraded = $up && (($p['latency'] !== null && $p['latency'] > $maxLat) || $p['loss'] > $maxLoss);
+            $weakSignal = $d->client_id && $d->signal_dbm !== null && (float) $d->signal_dbm < $minSignal;
+            $d->forceFill([
+                'status' => ! $up ? 'offline' : ($degraded || $weakSignal ? 'warning' : 'online'),
+                'latency_ms' => $p['latency'], 'packet_loss' => $p['loss'],
+            ] + ($up ? ['last_seen_at' => now()] : []))->saveQuietly();
+            $this->sample('device', $d->id, ['online' => $up, 'latency_ms' => $p['latency'], 'packet_loss' => $p['loss']]);
+
+            // CPE de clientes: su falla ya la cubre el monitoreo del cliente (CPE sin conexión)
+            if ($d->type === 'cpe' || $d->client_id) {
+                continue;
+            }
+            if ($up) {
+                $this->alerts->resolveFor('device_offline', $d);
+                $this->checkQuality($d, $p['latency'], $p['loss']);
+            } else {
+                $from = $this->routerNames[$p['router_id']] ?? null;
+                $this->raise('device_offline', in_array($d->type, ['ap', 'switch', 'router', 'ups'], true) ? 'critical' : 'warning',
+                    \App\Support\Catalog::label('device_types', $d->type)." {$d->name} sin respuesta",
+                    "No responde al ping a {$p['ip']}".($from ? " desde {$from}" : '').'. Revisar energía, cableado o enlace del equipo.',
+                    $d, ['ip' => $p['ip'], 'router_id' => $p['router_id']]);
+            }
+        }
+    }
+
+    // =====================================================================
+    // Consumo mensual y límite del plan
+    // =====================================================================
+
+    /**
+     * Acumula el consumo del mes por cliente a partir de los contadores del equipo: cola simple del cliente
+     * ("wc-{código}", la dinámica "<pppoe-usuario>", comentario = código o target = IP) o, si no hay cola,
+     * la interfaz dinámica PPPoE. Si el contador bajó (reinicio del equipo o reconexión) se suma lo leído.
+     * Al cambiar de mes se reinicia el acumulado de los clientes medidos.
+     */
+    protected function accumulateUsage(Collection $routers, array $results, Collection $clients, $repeaterRouter): void
+    {
+        $tid = tenant()->id;
+        $month = now()->format('Y-m');
+        DB::table('clients')->where('tenant_id', $tid)->whereNotNull('usage_month')->where('usage_month', '!=', $month)
+            ->update(['month_usage_gb' => 0, 'usage_month' => $month]);
+
+        $counters = [];
+        $byRouter = $clients->groupBy(fn ($c) => (int) ($c->router_device_id ?: ($repeaterRouter[$c->repeater_id] ?? 0)));
+        foreach ($routers as $router) {
+            $res = $results[$router->id] ?? null;
+            if (! $res || ! $res['ok'] || (! $res['queues'] && ! $res['ifaces'])) {
+                continue;
+            }
+            $queues = ['name' => [], 'comment' => [], 'target' => []];
+            foreach ($res['queues'] as $q) {
+                if (! isset($q['bytes']) || ($q['disabled'] ?? 'false') === 'true') {
+                    continue;
+                }
+                $bytes = array_sum(array_map('floatval', explode('/', (string) $q['bytes'])));
+                $queues['name'][mb_strtolower((string) ($q['name'] ?? ''))] = $bytes;
+                if (! empty($q['comment'])) {
+                    $queues['comment'][(string) $q['comment']] = $bytes;
+                }
+                foreach (explode(',', (string) ($q['target'] ?? '')) as $target) {
+                    if (($ip = trim(explode('/', $target)[0])) !== '') {
+                        $queues['target'][$ip] = $bytes;
+                    }
+                }
+            }
+            $pppoe = [];
+            foreach ($res['ifaces'] as $i) {
+                if (preg_match('/^<pppoe-(.+)>$/i', (string) ($i['name'] ?? ''), $m) && isset($i['rx-byte'])) {
+                    $pppoe[mb_strtolower($m[1])] = (float) $i['rx-byte'] + (float) ($i['tx-byte'] ?? 0);
+                }
+            }
+
+            foreach ($byRouter->get($router->id, collect()) as $c) {
+                $user = mb_strtolower((string) $c->pppoe_user);
+                $bytes = $queues['name']['wc-'.mb_strtolower($c->code)]
+                    ?? ($user !== '' ? ($queues['name']["<pppoe-{$user}>"] ?? null) : null)
+                    ?? $queues['comment'][$c->code]
+                    ?? ($c->ip_address ? ($queues['target'][$c->ip_address] ?? null) : null)
+                    ?? ($user !== '' ? ($pppoe[$user] ?? null) : null);
+                if ($bytes !== null) {
+                    $counters[$c->id] = (int) $bytes;
+                }
+            }
+        }
+        if (! $counters) {
+            return;
+        }
+
+        $current = DB::table('clients')->where('tenant_id', $tid)->whereIn('id', array_keys($counters))
+            ->get(['id', 'usage_counter', 'usage_month', 'month_usage_gb'])->keyBy('id');
+        $rows = [];
+        foreach ($counters as $id => $bytes) {
+            $c = $current->get($id);
+            if (! $c) {
+                continue;
+            }
+            $prev = $c->usage_counter !== null ? (int) $c->usage_counter : null;
+            $delta = $prev === null ? 0 : ($bytes >= $prev ? $bytes - $prev : $bytes); // contador reiniciado: se suma lo leído
+            if ($delta > 2 * 1099511627776) {
+                $delta = 0; // salto imposible en un ciclo (> 2 TB): se toma como nueva línea base
+            }
+            $rows[$id] = ['usage_counter' => $bytes, 'month_usage_gb' => round((float) $c->month_usage_gb + $delta / self::GB, 2)];
+        }
+        foreach (array_chunk($rows, 300, true) as $chunk) {
+            $counterCase = 'CASE id';
+            $usageCase = 'CASE id';
+            $bindings = [];
+            foreach ($chunk as $id => $v) {
+                $counterCase .= ' WHEN '.(int) $id.' THEN ?';
+                $bindings[] = $v['usage_counter'];
+            }
+            foreach ($chunk as $id => $v) {
+                $usageCase .= ' WHEN '.(int) $id.' THEN ?';
+                $bindings[] = $v['month_usage_gb'];
+            }
+            $ids = implode(',', array_map('intval', array_keys($chunk)));
+            DB::update("UPDATE clients SET usage_counter = {$counterCase} ELSE usage_counter END, month_usage_gb = {$usageCase} ELSE month_usage_gb END, usage_month = ?
+                WHERE tenant_id = ? AND id IN ({$ids})", array_merge($bindings, [$month, $tid]));
+        }
+        $this->summary['usage_measured'] = count($rows);
+    }
+
+    /**
+     * Clientes que superaron el límite de consumo (data_cap_gb) de su plan: alerta 'data_cap_exceeded'
+     * (dispara la automatización del mismo nombre). No se reduce la velocidad salvo que una regla lo haga.
+     */
+    protected function checkDataCaps(): void
+    {
+        $over = Client::query()->whereIn('service_status', self::LIVE)
+            ->whereHas('plan', fn ($q) => $q->whereNotNull('data_cap_gb')->where('data_cap_gb', '>', 0)->whereColumn('plans.data_cap_gb', '<', 'clients.month_usage_gb'))
+            ->with('plan:id,name,data_cap_gb')->get(['id', 'tenant_id', 'code', 'first_name', 'last_name', 'plan_id', 'month_usage_gb']);
+        $keys = [];
+        foreach ($over as $c) {
+            $cap = (int) $c->plan->data_cap_gb;
+            $used = (float) $c->month_usage_gb;
+            $this->raise('data_cap_exceeded', $used >= $cap * 1.5 ? 'critical' : 'warning', "Límite de consumo superado: {$c->full_name}",
+                "{$c->full_name} (#{$c->code}) lleva ".number_format($used, 1)." GB este mes; su plan {$c->plan->name} incluye {$cap} GB ("
+                .round($used / $cap * 100).'%).', $c, ['usage_gb' => $used, 'data_cap_gb' => $cap, 'plan_id' => $c->plan_id]);
+            $keys[] = 'data_cap_exceeded:'.$c->getMorphClass().':'.$c->id;
+        }
+        Alert::query()->open()->where('type', 'data_cap_exceeded')->whereNotIn('dedupe_key', $keys ?: ['-'])
+            ->update(['status' => 'resolved', 'resolved_at' => now()]);
     }
 
     // =====================================================================

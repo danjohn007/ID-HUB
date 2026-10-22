@@ -120,7 +120,7 @@ class SampleProspects
             'company' => $wisp,
             'location' => $place,
             'clients' => $clients,
-            'clients_count' => rand(0, 2) ? null : (DemoRequest::CLIENT_RANGES[$clients] ?? 0) + rand(-20, 40),
+            'clients_count' => rand(0, 2) ? null : max(0, (DemoRequest::CLIENT_RANGES[$clients] ?? 0) + rand(-20, 40)),
             'current_software' => Arr::random(DemoRequest::SOFTWARE),
             'uses_mikrotik' => rand(0, 9) > 1,
             'message' => $source === 'landing' ? (Arr::random(self::MESSAGES) ?: null) : null,

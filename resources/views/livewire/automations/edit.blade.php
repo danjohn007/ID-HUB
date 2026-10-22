@@ -137,7 +137,7 @@
                                 <x-ui.button variant="ghost" size="sm" icon="chevron-down" wire:click="moveAction({{ $i }}, 1)" :disabled="$i === count($form['actions']) - 1" title="Bajar" />
                                 <x-ui.button variant="ghost" size="sm" icon="trash" wire:click="removeAction({{ $i }})" title="Quitar" />
                             </div>
-                            @if (in_array($t, ['send_message', 'notify_staff', 'create_ticket', 'create_alert', 'set_status', 'suspend_service', 'reconnect_service']))
+                            @if (in_array($t, ['send_message', 'notify_staff', 'create_ticket', 'create_alert', 'set_status', 'suspend_service', 'reconnect_service', 'change_plan', 'address_list']))
                                 <div class="p-3" x-data="{{ $ins }}">
                                     @switch($t)
                                         @case('send_message')
@@ -191,6 +191,19 @@
                                                 <x-ui.toggle wire:model="{{ $p }}.require_zero_balance" label="Solo si el saldo está en cero" description="No reactiva si el cliente aún tiene adeudo" />
                                                 <x-ui.toggle wire:model="{{ $p }}.notify" label="Notificar al cliente" description="Envía el aviso de reconexión" />
                                             </div>
+                                            @break
+                                        @case('change_plan')
+                                            <div class="space-y-3">
+                                                <x-ui.select label="Plan destino" wire:model="{{ $p }}.plan_id" :options="RC::planOptions()" placeholder="Elige un plan..." class="max-w-md" />
+                                                <x-ui.toggle wire:model="{{ $p }}.keep_billing" label="Solo cambiar la velocidad" description="Aplica en el MikroTik la velocidad del plan elegido sin cambiar el plan que se factura (ej. reducir velocidad al superar el límite de consumo)" />
+                                            </div>
+                                            @break
+                                        @case('address_list')
+                                            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                                <x-ui.select label="Operación" wire:model="{{ $p }}.operation" :options="['add' => 'Agregar la IP del cliente', 'remove' => 'Quitar la IP del cliente']" />
+                                                <x-ui.input label="Address-list" wire:model="{{ $p }}.list" maxlength="60" filter="code" placeholder="ej. LIMITE_CONSUMO" hint="Nombre exacto de la lista en /ip firewall address-list" />
+                                            </div>
+                                            <p class="mt-2 text-xs text-slate-500">Se aplica en el MikroTik del cliente (o el de su repetidor). Úsala con reglas de firewall / mangle del equipo: aviso, redirección o cola especial.</p>
                                             @break
                                     @endswitch
                                     @if (in_array($t, ['notify_staff', 'create_ticket', 'create_alert']))

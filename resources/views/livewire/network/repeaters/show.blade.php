@@ -106,6 +106,8 @@
                         <x-ui.detail label="Equipo AP">
                             @if ($r->accessPoint)<a class="link" href="{{ route('network.devices.show', $r->accessPoint) }}" wire:navigate>{{ $r->accessPoint->name }}</a>@endif
                         </x-ui.detail>
+                        <x-ui.detail label="IP de administración">{{ $r->management_ip }}</x-ui.detail>
+                        <x-ui.detail label="Último ping">{{ $r->last_ping_at ? ($r->packet_loss >= 100 ? 'Sin respuesta' : number_format((float) $r->latency_ms, 1).' ms · pérdida '.(float) $r->packet_loss.'%').' · '.\Illuminate\Support\Carbon::parse($r->last_ping_at)->diffForHumans() : '' }}</x-ui.detail>
                         <x-ui.detail label="Radio de cobertura">{{ (float) $r->coverage_radius_km }} km</x-ui.detail>
                         <x-ui.detail label="Ancho de banda">{{ $r->bandwidth_mbps ? (float) $r->bandwidth_mbps.' Mbps' : '' }}</x-ui.detail>
                         <x-ui.detail label="Coordenadas" class="col-span-2">{{ $r->lat ? (float) $r->lat.', '.(float) $r->lng : '' }}</x-ui.detail>

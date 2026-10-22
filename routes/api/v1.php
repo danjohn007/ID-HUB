@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AttachmentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BillingController;
 use App\Http\Controllers\Api\V1\ClientAppController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Api\V1\TicketController;
 use App\Http\Middleware\ApiAbility;
 use App\Http\Middleware\ApiAuthenticate;
 use App\Http\Middleware\ApiForceJson;
+use App\Http\Middleware\ApiIdempotency;
 use App\Http\Middleware\ApiKeyAuthenticate;
 use Illuminate\Support\Facades\Route;
 
@@ -51,6 +53,8 @@ Route::prefix('v1')->name('api.v1.')->middleware([ApiForceJson::class, 'throttle
     Route::middleware('signed')->group(function () {
         Route::get('receipts/{payment}', [SignedDocumentController::class, 'receipt'])->whereNumber('payment')->name('receipt');
         Route::get('statements/{client}', [SignedDocumentController::class, 'statement'])->whereNumber('client')->name('statement');
+        // Evidencias privadas (fotos, firmas, evidencia de cobro): enlace temporal de 30 min
+        Route::get('files/{path}', [AttachmentController::class, 'file'])->where('path', '.*')->name('evidence');
     });
 
     // Staff o cliente
@@ -61,7 +65,8 @@ Route::prefix('v1')->name('api.v1.')->middleware([ApiForceJson::class, 'throttle
     });
 
     // ---------------- Apps de personal (técnico / cobrador / soporte) ----------------
-    Route::middleware(ApiAuthenticate::class.':staff,api|app_tecnico')->group(function () use ($can) {
+    // ApiIdempotency: reintentos de la bandeja sin conexión con Idempotency-Key / client_uuid no repiten la acción.
+    Route::middleware([ApiAuthenticate::class.':staff,api|app_tecnico', ApiIdempotency::class])->group(function () use ($can) {
         Route::post('push-tokens', [PushTokenController::class, 'store'])->name('push-tokens.store');
         Route::delete('push-tokens', [PushTokenController::class, 'destroy'])->name('push-tokens.destroy');
 
@@ -121,9 +126,12 @@ Route::prefix('v1')->name('api.v1.')->middleware([ApiForceJson::class, 'throttle
         Route::prefix('collection')->name('collection.')->middleware($can('collection.field'))->group(function () {
             Route::get('pending', [CollectionController::class, 'pending'])->name('pending');
             Route::get('clients/{id}/visits', [CollectionController::class, 'history'])->whereNumber('id')->name('history');
-            Route::post('visits', [CollectionController::class, 'visit'])->name('visits.store');
-            Route::post('payments', [CollectionController::class, 'payment'])->name('payments.store');
+            // Cobros y visitas guardan su propia clave de idempotencia (índice único por WISP)
+            Route::post('visits', [CollectionController::class, 'visit'])->withoutMiddleware(ApiIdempotency::class)->name('visits.store');
+            Route::post('payments', [CollectionController::class, 'payment'])->withoutMiddleware(ApiIdempotency::class)->name('payments.store');
             Route::get('cash-cut', [CollectionController::class, 'cashCut'])->name('cash-cut');
+            Route::post('cash-cut/close', [CollectionController::class, 'closeCashCut'])->name('cash-cut.close');
+            Route::get('cash-cuts', [CollectionController::class, 'cashCuts'])->name('cash-cuts');
         });
     });
 

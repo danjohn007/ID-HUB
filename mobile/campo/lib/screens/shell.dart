@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../core/push.dart';
 import '../core/session.dart';
 import '../motion.dart';
 import '../theme.dart';
@@ -10,6 +13,8 @@ import 'collection/cash_cut_screen.dart';
 import 'collection/collector_home.dart';
 import 'collection/pending_screen.dart';
 import 'more_screen.dart';
+import 'open.dart';
+import 'outbox_bar.dart';
 import 'route_screen.dart';
 import 'tech/home_screen.dart';
 import 'tickets/tickets_screen.dart';
@@ -34,7 +39,7 @@ class Shell extends StatefulWidget {
   State<Shell> createState() => ShellState();
 }
 
-class ShellState extends State<Shell> with SingleTickerProviderStateMixin {
+class ShellState extends State<Shell> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int _index = 0;
 
   /// Pestañas ya abiertas: las demás no se construyen (ni piden datos) hasta visitarlas.
@@ -43,10 +48,46 @@ class ShellState extends State<Shell> with SingleTickerProviderStateMixin {
   /// Fundido al cambiar de pestaña.
   late final _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 360), value: 1);
 
+  /// Reintento periódico de la bandeja de salida (acciones guardadas sin conexión).
+  Timer? _outboxTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    Push.attach(_openPush);
+    WidgetsBinding.instance.addObserver(this);
+    _outboxTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) context.read<Session>().outbox.flush();
+    });
+  }
+
   @override
   void dispose() {
+    Push.detach(_openPush);
+    WidgetsBinding.instance.removeObserver(this);
+    _outboxTimer?.cancel();
     _fade.dispose();
     super.dispose();
+  }
+
+  /// Al volver a la app se intenta enviar lo pendiente.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) context.read<Session>().outbox.flush(force: true);
+  }
+
+  /// Notificación tocada: abre el ticket, la instalación o la ruta que menciona.
+  void _openPush(Map<String, dynamic> data) {
+    if (!mounted) return;
+    final id = int.tryParse('${data['id'] ?? ''}');
+    switch (data['type']) {
+      case 'ticket' when id != null:
+        Open.ticket(context, id);
+      case 'installation_order' when id != null:
+        Open.installation(context, id);
+      case 'route':
+        go(routeTab);
+    }
   }
 
   /// Cambia de pestaña desde cualquier pantalla (p. ej. "Ver ruta" en Inicio).
@@ -94,12 +135,15 @@ class ShellState extends State<Shell> with SingleTickerProviderStateMixin {
         },
         child: IndexedStack(index: _index, children: [for (final (i, t) in tabs.indexed) _visited.contains(i) ? t.page : const SizedBox.shrink()]),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: go,
-        height: 66,
-        destinations: [for (final t in tabs) NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selectedIcon), label: t.label)],
-      ),
+      bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
+        OutboxBar(outbox: context.read<Session>().outbox),
+        NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: go,
+          height: 66,
+          destinations: [for (final t in tabs) NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selectedIcon), label: t.label)],
+        ),
+      ]),
     );
   }
 }

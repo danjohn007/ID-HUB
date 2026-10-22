@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Evidence;
+
 class CollectionVisitResource extends ApiResource
 {
     public function toArray($request): array
@@ -15,6 +17,7 @@ class CollectionVisitResource extends ApiResource
             'promise_amount' => $this->promise_amount !== null ? self::money($this->promise_amount) : null,
             'payment' => $this->whenLoaded('payment', fn () => $this->payment ? new PaymentResource($this->payment) : null),
             'notes' => $this->notes,
+            'evidence_url' => Evidence::signedUrl($this->evidence_path),
             'location' => self::coords($this->lat, $this->lng),
             'visited_at' => self::datetime($this->visited_at),
         ];

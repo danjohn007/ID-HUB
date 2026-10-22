@@ -11,6 +11,7 @@ use App\Services\Messaging\MessageService;
 use App\Support\Audit;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Cobranza: generación de cargos, registro y aplicación de pagos (FIFO a cargos
@@ -77,13 +78,21 @@ class BillingService
 
         $tenant = $client->tenant;
         $end = $start->copy()->addMonthsNoOverflow($plan->periodMonths())->subDay();
-        $price = $plan->priceBreakdown((float) $plan->price * $plan->periodMonths());
+        // El precio del plan es lo que se cobra por periodo (mensual, trimestral...), como en el catálogo de planes.
+        $price = $plan->priceBreakdown((float) $plan->price);
+        // Descuento pendiente (recompensa de referidos): se descuenta de esta mensualidad hasta agotarse.
+        $discount = min(round((float) $client->pending_discount, 2), $price['total']);
+        if ($discount > 0) {
+            $factor = ($price['total'] - $discount) / max(0.01, $price['total']);
+            $price = ['subtotal' => round($price['subtotal'] * $factor, 2), 'tax' => round($price['tax'] * $factor, 2), 'total' => round($price['total'] - $discount, 2)];
+            $client->forceFill(['pending_discount' => round((float) $client->pending_discount - $discount, 2)])->saveQuietly();
+        }
         $charge = Charge::create([
             'tenant_id' => $client->tenant_id,
             'client_id' => $client->id,
             'folio' => $this->chargeFolio($client->tenant_id),
             'type' => 'mensualidad',
-            'description' => "Servicio {$plan->name} ".$start->translatedFormat('M Y'),
+            'description' => "Servicio {$plan->name} ".$start->translatedFormat('M Y').($discount > 0 ? ' (descuento '.money($discount).')' : ''),
             'period_start' => $start->toDateString(),
             'period_end' => $end->toDateString(),
             'subtotal' => $price['subtotal'],
@@ -200,7 +209,11 @@ class BillingService
 
         if ($payment->status === 'completed' && $payment->kind === 'payment') {
             if ($notify) {
-                app(MessageService::class)->notify($client, 'payment_received', ['monto' => money($amount), 'folio' => $payment->folio]);
+                app(MessageService::class)->notify($client, 'payment_received', [
+                    'monto' => money($amount), 'folio' => $payment->folio,
+                    // Comprobante PDF por enlace firmado (sin iniciar sesión), vigente 60 días.
+                    'link_comprobante' => URL::temporarySignedRoute('api.v1.receipt', now()->addDays(60), ['payment' => $payment->id]),
+                ]);
             }
             app(AutomationEngine::class)->fire('payment_received', $client, ['amount' => $amount, 'folio' => $payment->folio, 'method' => $method]);
             app(ReferralService::class)->onFirstPayment($client);

@@ -30,6 +30,7 @@
             <x-ui.select label="Equipo AP" wire:model="rform.ap_device_id" :options="$apOptions" placeholder="—" />
             <x-ui.select label="Técnico responsable" wire:model="rform.technician_id" :options="$technicians" placeholder="—" class="md:col-span-2" />
             <x-ui.input label="Costo mensual" type="number" step="0.01" min="0" max="10000000" wire:model="rform.monthly_cost" prefix="$" />
+            <x-ui.input label="IP de administración" wire:model="rform.management_ip" filter="ip" maxlength="45" placeholder="10.0.0.2" hint="El MikroTik la pingea para medir latencia y detectar caídas" />
         </div>
         <x-ui.textarea label="Notas" wire:model="rform.notes" rows="2" maxlength="2000" />
     </form>

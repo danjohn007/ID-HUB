@@ -41,7 +41,12 @@ class Referrals extends Component
         $this->validate([
             'config.enabled' => 'boolean',
             'config.reward_type' => ['required', Rule::in(array_keys(config('wisp.reward_types')))],
-            'config.reward_value' => [Rule::requiredIf($this->config['reward_type'] !== 'mes_gratis'), 'nullable', 'numeric', 'min:0', 'max:100000'],
+            'config.reward_value' => [Rule::requiredIf($this->config['reward_type'] !== 'mes_gratis'), 'nullable', 'numeric', 'min:0', 'max:100000',
+                ...match ($this->config['reward_type']) {
+                    'descuento' => ['max:100'],
+                    'promocion' => [Rule::exists('promotions', 'id')->where('tenant_id', tenant()->id)],
+                    default => [],
+                }],
             'config.code_prefix' => ['required', 'string', 'max:12', 'regex:/^[A-Za-z0-9]+$/'],
         ], [], ['config.reward_type' => 'tipo de recompensa', 'config.reward_value' => 'valor', 'config.code_prefix' => 'prefijo']);
 

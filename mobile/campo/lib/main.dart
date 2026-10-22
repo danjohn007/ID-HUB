@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'config.dart';
+import 'core/push.dart';
 import 'core/session.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell.dart';
@@ -12,6 +13,7 @@ import 'theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_MX');
+  await Push.init();
   final session = Session();
   session.restore();
   runApp(ChangeNotifierProvider.value(value: session, child: const CampoApp()));
@@ -27,6 +29,7 @@ class CampoApp extends StatelessWidget {
     return MaterialApp(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: Push.messengerKey,
       theme: buildTheme(brand),
       locale: const Locale('es', 'MX'),
       supportedLocales: const [Locale('es', 'MX'), Locale('es')],

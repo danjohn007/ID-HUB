@@ -50,7 +50,7 @@
                             <td><x-ui.status catalog="referral_status" :value="$r->status" /></td>
                             <td class="text-xs">
                                 <div class="text-slate-700">{{ config('wisp.reward_types.'.$r->reward_type, '—') }}</div>
-                                <div class="text-slate-500">{{ $r->status === 'recompensado' ? money($r->reward_value).' · '.$r->rewarded_at?->format('d/m/Y') : ($r->reward_type === 'mes_gratis' ? money($r->referrer?->plan?->price ?? 0).' (1 mes)' : money($r->reward_value)) }}</div>
+                                <div class="text-slate-500">{{ $r->status === 'recompensado' ? money($r->reward_value).' · '.$r->rewarded_at?->format('d/m/Y') : (match ($r->reward_type) { 'mes_gratis' => money($r->referrer?->plan?->price ?? 0).' (1 mes)', 'descuento' => (float) $r->reward_value.'% de descuento', 'promocion' => 'Promoción', default => money($r->reward_value) }) }}</div>
                             </td>
                             <td class="text-xs whitespace-nowrap text-slate-600">{{ $r->created_at?->format('d/m/Y') }}</td>
                             <td class="text-right whitespace-nowrap">
@@ -73,8 +73,12 @@
                 <form wire:submit="saveConfig" class="space-y-3">
                     <x-ui.toggle wire:model="config.enabled" label="Programa activo" description="Muestra el enlace de referido y registra recompensas" />
                     <x-ui.select label="Tipo de recompensa" wire:model.live="config.reward_type" :options="config('wisp.reward_types')" required />
-                    @if ($config['reward_type'] !== 'mes_gratis')
-                        <x-ui.input label="Valor de la recompensa" type="number" step="0.01" min="0" max="100000" wire:model="config.reward_value" prefix="$" hint="Se aplica como saldo a favor / bonificación al cliente que refiere" />
+                    @if ($config['reward_type'] === 'descuento')
+                        <x-ui.input label="Descuento" type="number" step="0.01" min="0" max="100" wire:model="config.reward_value" suffix="%" hint="Porcentaje del plan que se descuenta en la siguiente mensualidad del cliente que refiere" />
+                    @elseif ($config['reward_type'] === 'promocion')
+                        <x-ui.select label="Promoción" wire:model="config.reward_value" :options="\App\Models\Promotion::query()->where('active', true)->orderBy('name')->pluck('name', 'id')" placeholder="Elige una promoción" hint="Su beneficio se descuenta de la siguiente mensualidad del cliente que refiere" />
+                    @elseif ($config['reward_type'] === 'saldo')
+                        <x-ui.input label="Saldo a favor" type="number" step="0.01" min="0" max="100000" wire:model="config.reward_value" prefix="$" hint="Se abona como saldo a favor al cliente que refiere" />
                     @else
                         <p class="rounded-lg bg-slate-50 p-2.5 text-xs text-slate-500">Se bonifica el importe de una mensualidad del plan del cliente que refiere.</p>
                     @endif

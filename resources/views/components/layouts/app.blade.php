@@ -127,6 +127,25 @@
         </header>
 
         <main class="mx-auto max-w-[1600px] p-4 lg:p-6">
+            @php
+                // Aviso de vigencia al administrador del WISP: prueba o suscripción por vencer / vencida.
+                $subTenant = auth()->user()?->can('settings.manage') ? tenant() : null;
+                $subEnds = $subTenant ? ($subTenant->status === 'trial' ? $subTenant->trial_ends_at : $subTenant->subscription_ends_at) : null;
+                $subDays = $subEnds ? (int) today()->diffInDays($subEnds, false) : null;
+            @endphp
+            @if ($subDays !== null && $subDays <= 7)
+                <div @class(['mb-4 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm', 'bg-warning-50 text-warning-800' => $subDays >= 0, 'bg-danger-50 text-danger-700' => $subDays < 0])>
+                    <x-heroicon-o-exclamation-triangle class="h-5 w-5 shrink-0" />
+                    <span>
+                        @if ($subDays >= 0)
+                            {{ $subTenant->status === 'trial' ? 'Tu periodo de prueba' : 'Tu suscripción a '.config('wisp.brand.name') }} vence {{ $subDays === 0 ? 'hoy' : 'en '.$subDays.' '.($subDays === 1 ? 'día' : 'días') }} ({{ $subEnds->format('d/m/Y') }}).
+                        @else
+                            Tu suscripción a {{ config('wisp.brand.name') }} venció el {{ $subEnds->format('d/m/Y') }}. Se suspenderá en {{ max(0, config('wisp.saas_grace_days') + $subDays) }} días si no se renueva.
+                        @endif
+                        Contacta a {{ config('wisp.brand.name') }} para renovarla.
+                    </span>
+                </div>
+            @endif
             {{ $slot }}
         </main>
     </div>

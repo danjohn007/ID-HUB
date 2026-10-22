@@ -76,6 +76,35 @@ class DemoRouterTransport extends SimulatedTransport
         return $r < ($recentlyDown ? 0.7 : 0.3);
     }
 
+    /**
+     * Ping simulado: no responden los equipos (o la IP de administración) de un repetidor caído,
+     * ni algunos equipos con falla persistente, para que el monitoreo por ping sea demostrable.
+     */
+    protected function pingUnreachable(string $address): bool
+    {
+        if ($address === '') {
+            return true;
+        }
+        $down = $this->downRepeaters();
+        $tid = $this->device->tenant_id;
+        if ($down && \App\Models\Repeater::withoutGlobalScopes()->where('tenant_id', $tid)->whereIn('id', $down)->where('management_ip', $address)->exists()) {
+            return true;
+        }
+        $device = \App\Models\NetworkDevice::withoutGlobalScopes()->where('tenant_id', $tid)->where('ip', $address)->first(['id', 'type', 'repeater_id', 'client_id']);
+        if (! $device) {
+            return false;
+        }
+        if ($device->repeater_id && in_array((int) $device->repeater_id, $down, true)) {
+            return true;
+        }
+        if ($device->client_id && ($c = \App\Models\Client::withoutGlobalScopes()->find($device->client_id, ['id', 'service_status', 'online', 'repeater_id', 'last_online_at']))) {
+            return ! $this->hasSession($c);
+        }
+
+        // UPS / fuente / otro equipo con falla persistente (para demostrar la alerta de equipo sin respuesta)
+        return in_array($device->type, ['ups', 'power', 'other'], true) && $device->id % 7 === 0;
+    }
+
     protected function unknownMac(int $n): string
     {
         $h = strtoupper(substr(md5($this->device->id.'-'.$n), 0, 12));

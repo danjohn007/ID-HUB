@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,7 +6,9 @@ import '../../core/format.dart';
 import '../../core/geo.dart';
 import '../../core/launch.dart';
 import '../../core/photos.dart';
+import '../../core/outbox.dart';
 import '../../core/session.dart';
+import '../../core/uuid.dart';
 import '../../models.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
@@ -40,6 +41,24 @@ class _CollectScreenState extends State<CollectScreen> {
       builder: (_) => _PaymentForm(client: c),
     );
     if (res == null || !mounted) return;
+    if (res['queued'] == true) {
+      // Sin señal: el cobro quedó en la bandeja de salida con su clave (no se duplicará al reenviarse).
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: const Icon(Icons.cloud_upload_outlined, color: AppColors.warning, size: 48),
+          title: const Text('Cobro pendiente de envío'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(Fmt.money(res['amount'] as num?), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            const Text('${Outbox.offlineMessage}. No lo registres de nuevo: el folio y el comprobante llegan al enviarse.',
+                textAlign: TextAlign.center, style: TextStyle(color: AppColors.slate)),
+          ]),
+          actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Entendido'))],
+        ),
+      );
+      return;
+    }
     final payment = Payment(res['data']);
     await showDialog(
       context: context,
@@ -159,9 +178,13 @@ class _PaymentFormState extends State<_PaymentForm> {
   late final _amount = TextEditingController(text: widget.client.balance > 0 ? widget.client.balance.toStringAsFixed(2) : '');
   final _reference = TextEditingController();
   final _notes = TextEditingController();
-  MultipartFile? _photo;
+  EvidencePhoto? _photo;
   bool _busy = false;
   String? _error;
+
+  /// Clave de idempotencia de este intento de cobro: se reutiliza en cada reintento del formulario
+  /// y en la bandeja de salida, así el servidor nunca registra el mismo cobro dos veces.
+  final String _key = newUuid();
 
   @override
   void dispose() {
@@ -177,7 +200,7 @@ class _PaymentFormState extends State<_PaymentForm> {
       setState(() => _error = 'Escribe el monto recibido.');
       return;
     }
-    final api = context.read<Session>().api;
+    final outbox = context.read<Session>().outbox;
     setState(() {
       _busy = true;
       _error = null;
@@ -191,13 +214,21 @@ class _PaymentFormState extends State<_PaymentForm> {
         'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
         'lat': gps?.lat,
         'lng': gps?.lng,
+        ..._evidenceFields(_photo),
       };
-      final res = _photo == null ? await api.post('/collection/payments', data: fields) : await api.upload('/collection/payments', fields: fields, files: {'evidence': _photo!});
-      if (mounted) Navigator.pop(context, res);
+      final res = await outbox.submit(
+        path: '/collection/payments',
+        data: fields,
+        photo: _photo,
+        fileField: 'evidence',
+        key: _key,
+        label: 'Cobro ${Fmt.money(amount)} · ${widget.client.name}',
+      );
+      if (mounted) Navigator.pop(context, res.queued ? {'queued': true, 'amount': amount} : res.response);
     } on ApiException catch (e) {
       setState(() {
         _busy = false;
-        _error = e.offline ? 'Sin conexión: el cobro NO se registró. Intenta de nuevo cuando tengas señal.' : e.detail;
+        _error = e.detail;
       });
     }
   }
@@ -222,14 +253,7 @@ class _PaymentFormState extends State<_PaymentForm> {
           TextField(controller: _reference, decoration: const InputDecoration(labelText: 'Referencia (opcional)', hintText: 'Folio de recibo en papel, etc.')),
           const SizedBox(height: 12),
           TextField(controller: _notes, maxLength: 190, decoration: const InputDecoration(labelText: 'Nota (opcional)')),
-          OutlinedButton.icon(
-            onPressed: () async {
-              final p = await Photos.pick(context);
-              if (p != null) setState(() => _photo = p);
-            },
-            icon: Icon(_photo == null ? Icons.add_a_photo_outlined : Icons.check_circle, color: _photo == null ? null : AppColors.success),
-            label: Text(_photo == null ? 'Foto de evidencia (opcional)' : 'Foto adjunta'),
-          ),
+          _EvidenceButton(photo: _photo, onChanged: (p) => setState(() => _photo = p)),
           if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600))),
           const SizedBox(height: 16),
           FilledButton(
@@ -264,9 +288,12 @@ class _VisitFormState extends State<_VisitForm> {
   DateTime? _promiseDate;
   final _promiseAmount = TextEditingController();
   final _notes = TextEditingController();
-  MultipartFile? _photo;
+  EvidencePhoto? _photo;
   bool _busy = false;
   String? _error;
+
+  /// Clave de idempotencia de esta visita (reintentos y bandeja de salida).
+  final String _key = newUuid();
 
   @override
   void dispose() {
@@ -280,7 +307,7 @@ class _VisitFormState extends State<_VisitForm> {
       setState(() => _error = 'Elige la fecha en que promete pagar.');
       return;
     }
-    final api = context.read<Session>().api;
+    final outbox = context.read<Session>().outbox;
     setState(() {
       _busy = true;
       _error = null;
@@ -288,6 +315,7 @@ class _VisitFormState extends State<_VisitForm> {
     final gps = await Geo.current();
     try {
       final fields = {
+        ..._evidenceFields(_photo),
         'client_id': widget.client.id,
         'result': _result,
         'promise_date': _result == 'promesa' && _promiseDate != null ? Fmt.apiDate(_promiseDate!) : null,
@@ -296,13 +324,13 @@ class _VisitFormState extends State<_VisitForm> {
         'lat': gps?.lat,
         'lng': gps?.lng,
       };
-      if (_photo == null) {
-        await api.post('/collection/visits', data: fields);
-      } else {
-        await api.upload('/collection/visits', fields: fields, files: {'evidence': _photo!});
-      }
+      final label = _results.firstWhere((r) => r.$1 == _result).$2;
+      final res = await outbox.submit(
+          path: '/collection/visits', data: fields, photo: _photo, fileField: 'evidence', key: _key, label: 'Visita: $label · ${widget.client.name}');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Visita registrada'), backgroundColor: AppColors.success));
+      ScaffoldMessenger.of(context).showSnackBar(res.queued
+          ? const SnackBar(content: Text(Outbox.offlineMessage), backgroundColor: AppColors.warning)
+          : const SnackBar(content: Text('Visita registrada'), backgroundColor: AppColors.success));
       Navigator.pop(context, true);
     } on ApiException catch (e) {
       setState(() {
@@ -344,14 +372,7 @@ class _VisitFormState extends State<_VisitForm> {
             const SizedBox(height: 10),
           ],
           TextField(controller: _notes, maxLength: 190, decoration: const InputDecoration(labelText: 'Notas (opcional)')),
-          OutlinedButton.icon(
-            onPressed: () async {
-              final p = await Photos.pick(context);
-              if (p != null) setState(() => _photo = p);
-            },
-            icon: Icon(_photo == null ? Icons.add_a_photo_outlined : Icons.check_circle, color: _photo == null ? null : AppColors.success),
-            label: Text(_photo == null ? 'Foto de evidencia (opcional)' : 'Foto adjunta'),
-          ),
+          _EvidenceButton(photo: _photo, onChanged: (p) => setState(() => _photo = p)),
           if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600))),
           const SizedBox(height: 16),
           FilledButton(
@@ -360,6 +381,32 @@ class _VisitFormState extends State<_VisitForm> {
           ),
         ]),
       ),
+    );
+  }
+}
+
+/// Hora y GPS del momento en que se tomó la foto de evidencia.
+Map<String, dynamic> _evidenceFields(EvidencePhoto? photo) => photo == null
+    ? const {}
+    : {'evidence_taken_at': photo.takenAtIso, 'evidence_lat': photo.gps?.lat, 'evidence_lng': photo.gps?.lng};
+
+/// Botón de foto de evidencia: solo cámara (la foto se toma en el momento, no desde la galería).
+class _EvidenceButton extends StatelessWidget {
+  const _EvidenceButton({required this.photo, required this.onChanged});
+
+  final EvidencePhoto? photo;
+  final ValueChanged<EvidencePhoto> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = photo;
+    return OutlinedButton.icon(
+      onPressed: () async {
+        final taken = await Photos.capture();
+        if (taken != null) onChanged(taken);
+      },
+      icon: Icon(p == null ? Icons.add_a_photo_outlined : Icons.check_circle, color: p == null ? null : AppColors.success),
+      label: Text(p == null ? 'Tomar foto de evidencia (opcional)' : 'Foto tomada ${Fmt.time(p.takenAt.toIso8601String())}${p.gps == null ? ' (sin GPS)' : ''}'),
     );
   }
 }

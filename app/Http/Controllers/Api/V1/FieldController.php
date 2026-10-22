@@ -62,7 +62,10 @@ class FieldController extends ApiController
     {
         $stop = $this->myStop($stopId);
         $gps = $this->gps($request);
-        app(FieldTracker::class)->arrive($stop, $this->apiUser(), $gps['lat'], $gps['lng']);
+        // Reintento (bandeja sin conexión): si ya llegó o terminó no se vuelve a registrar.
+        if (! in_array($stop->status, ['arrived', 'done'], true)) {
+            app(FieldTracker::class)->arrive($stop, $this->apiUser(), $gps['lat'], $gps['lng']);
+        }
 
         return $this->ok(['data' => new RouteStopResource($stop->fresh('stoppable'))], 'Llegada registrada.');
     }
@@ -71,7 +74,9 @@ class FieldController extends ApiController
     {
         $stop = $this->myStop($stopId);
         $gps = $this->gps($request);
-        app(FieldTracker::class)->depart($stop, $this->apiUser(), $gps['lat'], $gps['lng']);
+        if ($stop->status !== 'done') {
+            app(FieldTracker::class)->depart($stop, $this->apiUser(), $gps['lat'], $gps['lng']);
+        }
 
         return $this->ok(['data' => new RouteStopResource($stop->fresh('stoppable'))], 'Salida registrada.');
     }

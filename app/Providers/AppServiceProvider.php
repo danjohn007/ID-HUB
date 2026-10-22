@@ -38,6 +38,9 @@ class AppServiceProvider extends ServiceProvider
         Carbon::setLocale('es');
         setlocale(LC_TIME, 'es_MX.UTF-8', 'es_ES.UTF-8', 'es');
 
+        // Push a la app de campo cuando se asigna un ticket o una instalación.
+        \App\Services\Messaging\StaffPush::register();
+
         Relation::enforceMorphMap([
             'client' => Models\Client::class,
             'ticket' => Models\Ticket::class,
@@ -58,6 +61,12 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::before(function (User $user, string $ability) {
             if (! $user->active) {
+                return false;
+            }
+            // Módulos que dependen del plan SaaS del WISP (sección 48): sin la función contratada
+            // se ocultan del menú y sus pantallas responden 403.
+            $feature = \App\Models\SaasPlan::ABILITY_FEATURES[$ability] ?? null;
+            if ($feature && ($tenant = tenant()) && ! $tenant->hasFeature($feature)) {
                 return false;
             }
             if (array_key_exists($ability, config('permissions.abilities'))) {

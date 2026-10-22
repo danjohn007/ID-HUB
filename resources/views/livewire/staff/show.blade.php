@@ -18,9 +18,9 @@
             <x-ui.stat variant="soft" label="Resueltos" :value="$stats['resolved']" icon="check-badge" color="success" />
             <x-ui.stat variant="soft" label="Resolución prom." :value="\App\Livewire\Tickets\Index::duration($stats['avg_min'])" icon="clock" color="purple" />
             <x-ui.stat variant="soft" label="Dentro de SLA" :value="$stats['sla_pct'] !== null ? pct($stats['sla_pct']) : '—'" icon="shield-check" :color="$stats['sla_pct'] === null || $stats['sla_pct'] >= 90 ? 'success' : 'warning'" />
-            <x-ui.stat variant="soft" label="Instalaciones" :value="$stats['installs']" icon="wrench-screwdriver" color="teal" :sub="$stats['pending_installs'].' pendientes'" />
+            <x-ui.stat variant="soft" label="Instalaciones" :value="$stats['installs']" icon="wrench-screwdriver" color="teal" :sub="$stats['pending_installs'].' pendientes · pago '.money($stats['commission'], false)" />
         @else
-            <x-ui.stat variant="soft" label="Cobrado" :value="money($stats['collected'])" icon="banknotes" color="success" :sub="$stats['payments'].' pagos'" />
+            <x-ui.stat variant="soft" label="Cobrado" :value="money($stats['collected'])" icon="banknotes" color="success" :sub="$stats['payments'].' pagos · comisión '.money($stats['commission'], false)" />
             <x-ui.stat variant="soft" label="Visitas" :value="$stats['visits']" icon="map-pin" color="purple" />
             <x-ui.stat variant="soft" label="Efectividad" :value="$stats['effectiveness'] !== null ? pct($stats['effectiveness']) : '—'" icon="chart-bar" color="brand" sub="Visitas con pago" />
             <x-ui.stat variant="soft" label="Promesas" :value="$stats['promises']" icon="calendar-days" color="warning" />

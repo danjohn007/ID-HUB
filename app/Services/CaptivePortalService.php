@@ -32,7 +32,7 @@ class CaptivePortalService
     {
         $result = match ($method) {
             'usuario' => $this->byUser(trim((string) ($input['username'] ?? '')), (string) ($input['password'] ?? '')),
-            'codigo' => $this->byCode(trim((string) ($input['code'] ?? ''))),
+            'codigo' => $this->byCode(trim((string) ($input['code'] ?? '')), trim((string) ($input['phone4'] ?? ''))),
             'voucher' => $this->byVoucher($tenant, trim((string) ($input['voucher'] ?? '')), $mac),
             default => ['ok' => false, 'error' => 'Método de acceso no disponible.'],
         };
@@ -85,14 +85,17 @@ class CaptivePortalService
         return ['ok' => true, 'client' => $client, 'username' => $user, 'password' => $pass];
     }
 
-    protected function byCode(string $code): array
+    /** Código de cliente + últimos 4 dígitos de su teléfono (el código solo viene impreso en el recibo). */
+    protected function byCode(string $code, string $phone4): array
     {
-        if ($code === '') {
-            return ['ok' => false, 'error' => 'Escribe tu código de cliente.'];
+        if ($code === '' || ! preg_match('/^\d{4}$/', $phone4)) {
+            return ['ok' => false, 'error' => 'Escribe tu código de cliente y los últimos 4 dígitos de tu teléfono.'];
         }
         $client = Client::query()->where('code', strtoupper($code))->first();
-        if (! $client) {
-            return ['ok' => false, 'error' => 'No encontramos ese código de cliente.'];
+        $phones = $client ? array_filter([$client->phone, $client->whatsapp]) : [];
+        $match = collect($phones)->contains(fn ($p) => str_ends_with((string) preg_replace('/\D+/', '', (string) $p), $phone4));
+        if (! $client || ! $match) {
+            return ['ok' => false, 'error' => 'El código de cliente o el teléfono no coinciden.'];
         }
         if ($error = $this->serviceError($client)) {
             return ['ok' => false, 'error' => $error, 'client' => $client];

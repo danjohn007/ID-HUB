@@ -37,7 +37,8 @@ class ApiAuthenticate
 
         $expiration = config('sanctum.expiration');
         if (($token->expires_at && $token->expires_at->isPast())
-            || ($expiration && $token->created_at && $token->created_at->lte(now()->subMinutes($expiration)))) {
+            // Caducidad por inactividad: quien usa la app a diario no tiene que volver a iniciar sesión.
+            || ($expiration && ($token->last_used_at ?? $token->created_at)?->lte(now()->subMinutes($expiration)))) {
             return self::error('La sesión expiró. Inicia sesión nuevamente.', 401);
         }
 

@@ -103,7 +103,7 @@
                             <td><x-ui.status catalog="payment_status" :value="$p->status" size="xs" /></td>
                             <td class="text-right font-semibold">{{ money($p->amount) }}</td>
                             <td class="text-right whitespace-nowrap">
-                                @if ($p->evidence_path)<a href="{{ Storage::disk('public')->url($p->evidence_path) }}" target="_blank" class="inline-block p-1 text-slate-400 hover:text-brand-600" title="Evidencia"><x-heroicon-o-photo class="h-4 w-4" /></a>@endif
+                                @if ($p->evidence_path)<a href="{{ \App\Support\Evidence::url($p->evidence_path) }}" target="_blank" class="inline-block p-1 text-slate-400 hover:text-brand-600" title="Evidencia"><x-heroicon-o-photo class="h-4 w-4" /></a>@endif
                                 <a href="{{ route('documents.receipt', $p) }}" target="_blank" class="inline-block p-1 text-slate-400 hover:text-brand-600" title="Comprobante"><x-heroicon-o-printer class="h-4 w-4" /></a>
                             </td>
                         </tr>

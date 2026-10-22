@@ -26,6 +26,14 @@ class SaasPlan extends Model
         'automatizaciones' => 'Automatizaciones',
     ];
 
+    /** Permiso del panel → función del plan que lo habilita. */
+    public const ABILITY_FEATURES = [
+        'bi.view' => 'bi',
+        'map.view' => 'mapas',
+        'automations.manage' => 'automatizaciones',
+        'captive.manage' => 'portal_cautivo',
+    ];
+
     public function tenants(): HasMany
     {
         return $this->hasMany(Tenant::class);

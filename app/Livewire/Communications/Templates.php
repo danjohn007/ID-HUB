@@ -8,6 +8,8 @@ use App\Models\NotificationTemplate;
 use App\Services\Messaging\DefaultTemplates;
 use App\Services\Messaging\MessageCatalog;
 use App\Services\Messaging\MessageService;
+use App\Services\Messaging\MetaTemplates;
+use App\Services\Messaging\StaffPush;
 use App\Support\Audit;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -110,14 +112,21 @@ class Templates extends Component
                 : 'El nombre de la plantilla de Meta solo lleva minúsculas, números y guion bajo (p. ej. recordatorio_pago).'],
             ['form.body' => 'mensaje', 'form.subject' => 'asunto', 'form.provider_template' => 'plantilla aprobada'])['form'];
 
+        $before = $this->template();
+        $providerTemplate = $this->channel === 'whatsapp' ? (trim((string) $data['provider_template']) ?: null) : null;
         $tpl = NotificationTemplate::updateOrCreate(
             ['event' => $this->event, 'channel' => $this->channel],
             ['body' => $data['body'], 'subject' => $data['subject'] ?: null, 'active' => (bool) $data['active'],
-                'provider_template' => $this->channel === 'whatsapp' ? (trim((string) $data['provider_template']) ?: null) : null]
+                'provider_template' => $providerTemplate]
+                // Otra plantilla de Meta: su estado se desconoce hasta consultarlo.
+                + ($before && $before->provider_template !== $providerTemplate ? ['provider_status' => null, 'provider_note' => null] : [])
         );
         Audit::log('updated', 'actualizó la plantilla '.config("wisp.message_events.{$this->event}").' ('.config("wisp.channels.{$this->channel}").')', $tpl);
         $this->dirty = false;
-        $this->toast('Plantilla guardada');
+        $textChanged = $before && $before->body !== $tpl->body && $tpl->provider_status;
+        $this->toast($textChanged
+            ? 'Plantilla guardada. Cambiaste el texto: la plantilla aprobada en WhatsApp conserva el anterior; envíala de nuevo a revisión con otro nombre si cambiaron las variables.'
+            : 'Plantilla guardada', $textChanged ? 'warning' : 'success');
     }
 
     public function toggleActive(): void
@@ -143,7 +152,7 @@ class Templates extends Component
     public function sendTest(MessageService $messages): void
     {
         if ($this->channel === 'push') {
-            $this->toast('La prueba de push requiere la app del cliente instalada', 'warning');
+            $this->sendPushTest($messages);
 
             return;
         }
@@ -161,12 +170,29 @@ class Templates extends Component
         $this->toast($m->status === 'failed' ? 'Falló el envío: '.$m->error : 'Mensaje de prueba enviado a '.$to.($m->status === 'simulated' ? ' (modo simulado)' : ''), $m->status === 'failed' ? 'error' : 'success');
     }
 
+    /** La prueba de push llega a los dispositivos donde el usuario inició sesión en la app de campo. */
+    protected function sendPushTest(MessageService $messages): void
+    {
+        $client = $this->sampleId ? Client::with(['plan', 'zone'])->find($this->sampleId) : null;
+        $vars = $this->sampleVars($messages, $client);
+        $n = app(StaffPush::class)->toUser(auth()->user(), $messages->render((string) $this->form['subject'], $vars) ?: tenant()->name,
+            $messages->render($this->form['body'], $vars), ['type' => 'test']);
+        if (! $n) {
+            $this->toast('No tienes dispositivos registrados: inicia sesión con tu usuario en la app de campo y acepta las notificaciones', 'warning');
+
+            return;
+        }
+        $last = \App\Models\Message::query()->where('channel', 'push')->where('event', 'staff')->latest('id')->first();
+        $this->toast($last?->status === 'failed' ? 'Falló el envío: '.$last->error : 'Notificación de prueba enviada a '.$n.' '.($n === 1 ? 'dispositivo' : 'dispositivos').($last?->status === 'simulated' ? ' (modo simulado)' : ''), $last?->status === 'failed' ? 'error' : 'success');
+    }
+
     protected function sampleVars(MessageService $messages, ?Client $client): array
     {
         $vars = $client ? $messages->clientVars($client) : [];
 
         return array_merge($vars, [
             'link_pago' => MessageCatalog::sampleLink(),
+            'link_comprobante' => rtrim(config('app.url'), '/').'/api/v1/receipts/1024?signature=ejemplo',
             'folio' => $vars['folio'] ?? 'T-001258',
             'tecnico' => 'Juan Pérez',
             'descripcion' => 'Descripción del aviso',
@@ -192,21 +218,82 @@ class Templates extends Component
             'whatsappLanguage' => tenant()->setting('messaging.whatsapp_language', 'es_MX'),
             'providerText' => MessageService::providerText((string) $this->form['body']),
             'providerVars' => MessageService::templateVariables((string) $this->form['body']),
-            'providerWarning' => $this->providerWarning((string) $this->form['body']),
+            'providerWarning' => MetaTemplates::warning((string) $this->form['body']),
+            'metaStatus' => MetaTemplates::statusLabel($tpl?->provider_status),
+            'metaNote' => $tpl?->provider_note,
+            'metaReady' => filled(tenant()->setting('messaging.whatsapp_waba_id')),
         ]);
     }
 
-    /** Reglas de WhatsApp que hacen que rechacen la plantilla. */
-    protected function providerWarning(string $body): ?string
-    {
-        $text = trim($body);
-        if (preg_match('/^\{[a-z_]+\}/', $text) || preg_match('/\{[a-z_]+\}[\s.!?]*$/u', $text)) {
-            return 'WhatsApp no aprueba plantillas que empiezan o terminan con una variable: agrega texto antes o después (p. ej. "Gracias." al final).';
-        }
-        if (preg_match('/\}\s*\{/', $text)) {
-            return 'WhatsApp no aprueba dos variables juntas: sepáralas con texto.';
-        }
+    // ------------------------------------------------------------ Meta (WhatsApp Cloud API)
 
-        return null;
+    /** Envía la plantilla de WhatsApp de este evento a revisión de Meta (con el texto guardado). */
+    public function submitToMeta(MetaTemplates $meta): void
+    {
+        if ($this->dirty) {
+            $this->toast('Guarda la plantilla antes de enviarla a Meta', 'warning');
+
+            return;
+        }
+        $name = trim((string) ($this->form['provider_template'] ?? ''));
+        if ($name !== '' && ! MessageService::isMetaTemplate($name)) {
+            $this->addError('form.provider_template', 'El nombre de la plantilla de Meta solo lleva minúsculas, números y guion bajo (p. ej. recordatorio_pago).');
+
+            return;
+        }
+        try {
+            $tpl = $meta->submit(tenant(), $this->event, $name ?: null);
+        } catch (\Throwable $e) {
+            $this->toast('Meta: '.$e->getMessage(), 'error');
+
+            return;
+        }
+        Audit::log('updated', 'envió a Meta la plantilla de WhatsApp '.$tpl->provider_template, $tpl);
+        $this->loadForm();
+        [$label] = MetaTemplates::statusLabel($tpl->provider_status) ?? ['Enviada'];
+        $this->toast('Plantilla "'.$tpl->provider_template.'" en Meta: '.$label, $tpl->provider_status === 'REJECTED' ? 'error' : 'success');
+    }
+
+    /** Envía a revisión todas las plantillas de WhatsApp activas que aún no tienen plantilla en Meta. */
+    public function submitAllToMeta(MetaTemplates $meta): void
+    {
+        $existing = NotificationTemplate::query()->where('channel', 'whatsapp')->get()->keyBy('event');
+        $sent = 0;
+        $errors = [];
+        foreach (array_keys(config('wisp.message_events')) as $event) {
+            $tpl = $existing->get($event);
+            if ($tpl && (! $tpl->active || $tpl->provider_status)) {
+                continue;
+            }
+            try {
+                $meta->submit(tenant(), $event);
+                $sent++;
+            } catch (\Throwable $e) {
+                $errors[] = config("wisp.message_events.$event").': '.$e->getMessage();
+                if (str_contains($e->getMessage(), 'Configuración → Mensajería')) {
+                    break;
+                }
+            }
+        }
+        $this->loadForm();
+        if ($errors) {
+            $this->toast(($sent ? "$sent plantillas enviadas. " : '').'No se enviaron '.count($errors).': '.implode(' · ', array_slice($errors, 0, 3)), 'error');
+        } else {
+            $this->toast($sent ? "$sent plantillas enviadas a revisión de Meta. La aprobación suele tardar de minutos a 24 h." : 'Todas las plantillas ya están en Meta', $sent ? 'success' : 'info');
+        }
+    }
+
+    /** Consulta en Meta el estado de todas las plantillas de WhatsApp del WISP. */
+    public function syncMeta(MetaTemplates $meta): void
+    {
+        try {
+            $n = $meta->sync(tenant());
+        } catch (\Throwable $e) {
+            $this->toast('Meta: '.$e->getMessage(), 'error');
+
+            return;
+        }
+        $this->loadForm();
+        $this->toast($n ? "Estado de $n plantillas actualizado" : 'No hay plantillas de WhatsApp asignadas todavía', $n ? 'success' : 'info');
     }
 }

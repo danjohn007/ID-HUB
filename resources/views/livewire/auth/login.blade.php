@@ -122,6 +122,14 @@
                     <p class="relative mt-4 text-lg leading-snug font-bold text-white">Cobra a tiempo, corta y reconecta solo. <span class="text-brand-300">Haz crecer tu WISP.</span></p>
                 </div>
 
+                @if ($hostTenant)
+                    <div class="mb-6 flex items-center gap-3">
+                        @if ($hostTenant->logoUrl())
+                            <img src="{{ $hostTenant->logoUrl() }}" alt="{{ $hostTenant->name }}" class="h-12 w-12 rounded-xl object-contain ring-1 ring-slate-200">
+                        @endif
+                        <div class="text-lg font-bold text-navy-900">{{ $hostTenant->name }}</div>
+                    </div>
+                @endif
                 <p class="text-xs font-bold tracking-[0.2em] text-brand-600 uppercase">Bienvenido</p>
                 <h2 class="mt-2 text-4xl font-extrabold tracking-tight text-navy-900">Inicia sesión</h2>
                 <p class="mt-2 text-[15px] text-slate-500">Entra a tu panel de cobranza, red y operación de campo.</p>

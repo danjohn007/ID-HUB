@@ -180,6 +180,8 @@ class Edit extends Component
                 'create_ticket' => ["$p.category" => ['required', Rule::in(array_keys(config('wisp.ticket_categories')))], "$p.priority" => ['required', Rule::in(array_keys(config('wisp.ticket_priorities')))], "$p.subject" => 'required|string|max:190', "$p.description" => 'nullable|string|max:1000'],
                 'create_alert' => ["$p.severity" => ['required', Rule::in(array_keys(config('wisp.alert_severity')))], "$p.title" => 'required|string|max:190', "$p.message" => 'nullable|string|max:500', "$p.alert_type" => ['required', Rule::in(array_keys(RuleCatalog::alertTypes()))]],
                 'set_status' => ["$p.status" => ['required', Rule::in(array_keys(config('wisp.client_status')))]],
+                'change_plan' => ["$p.plan_id" => ['required', Rule::exists('plans', 'id')->where('tenant_id', tenant()->id)], "$p.keep_billing" => 'boolean'],
+                'address_list' => ["$p.list" => ['required', 'string', 'max:60', 'regex:/^[A-Za-z0-9_.-]+$/'], "$p.operation" => ['required', Rule::in(['add', 'remove'])]],
                 default => [],
             };
         }
@@ -197,6 +199,9 @@ class Edit extends Component
             'form.actions.*.params.message.required' => 'Escribe el mensaje.',
             'form.actions.*.params.subject.required' => 'Escribe el asunto del ticket.',
             'form.actions.*.params.title.required' => 'Escribe el título de la alerta.',
+            'form.actions.*.params.plan_id.required' => 'Elige el plan destino.',
+            'form.actions.*.params.list.required' => 'Escribe el nombre de la address-list.',
+            'form.actions.*.params.list.regex' => 'Solo letras, números, guion, guion bajo y punto (sin espacios).',
         ];
     }
 
@@ -210,10 +215,13 @@ class Edit extends Component
             'conditions' => array_values(array_map(fn ($c) => ['field' => $c['field'], 'operator' => $c['operator'], 'value' => (string) $c['value']], $this->form['conditions'])),
             'actions' => array_values(array_map(function ($a) {
                 $params = $a['params'] ?? [];
-                foreach (['notify', 'require_zero_balance'] as $bool) {
+                foreach (['notify', 'require_zero_balance', 'keep_billing'] as $bool) {
                     if (array_key_exists($bool, $params)) {
                         $params[$bool] = (bool) $params[$bool];
                     }
+                }
+                if (isset($params['plan_id'])) {
+                    $params['plan_id'] = (int) $params['plan_id'];
                 }
                 if (isset($params['channels'])) {
                     $params['channels'] = array_values($params['channels']);

@@ -10,9 +10,9 @@ use App\Models\InstallationOrder;
 use App\Models\InventoryMovement;
 use App\Services\Field\FieldTracker;
 use App\Services\InstallationService;
+use App\Support\Evidence;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /**
@@ -107,12 +107,12 @@ class InstallationController extends ApiController
         $attachment = $order->attachments()->create([
             'tenant_id' => $order->tenant_id,
             'kind' => $data['kind'] ?? 'instalacion',
-            'path' => $file->store('evidences/'.$order->tenant_id.'/installations', 'public'),
+            'path' => Evidence::store($file, 'evidences/'.$order->tenant_id.'/installations'),
             'original_name' => mb_substr($file->getClientOriginalName(), 0, 190),
             'mime' => $file->getMimeType(),
             'lat' => $data['lat'] ?? null,
             'lng' => $data['lng'] ?? null,
-            'taken_at' => $data['taken_at'] ?? now(),
+            'taken_at' => Evidence::takenAt($data['taken_at'] ?? null),
             'uploaded_by' => $this->apiUser()->id,
         ]);
         $list = $order->checklist ?? [];
@@ -130,7 +130,7 @@ class InstallationController extends ApiController
         if (! $this->allows('installations.manage') && (int) $a->uploaded_by !== (int) $this->apiUser()->id) {
             $this->deny('Sólo puedes borrar las fotografías que tú subiste.');
         }
-        Storage::disk('public')->delete($a->path);
+        Evidence::delete($a->path);
         $a->delete();
 
         return $this->ok([], 'Fotografía eliminada.');

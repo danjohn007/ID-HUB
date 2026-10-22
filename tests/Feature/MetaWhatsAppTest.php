@@ -29,6 +29,7 @@ class MetaWhatsAppTest extends TestCase
         $this->tenant->putSettings('messaging', [
             'whatsapp_provider' => 'meta', 'whatsapp_phone_id' => '1234567890', 'whatsapp_token' => 'EAAtoken',
             'whatsapp_language' => 'es_MX', 'whatsapp_app_secret' => 'app-secret', 'whatsapp_verify_token' => 'verifica-123',
+            'whatsapp_waba_id' => '555000111',
         ]);
         app(TenantContext::class)->set($this->tenant);
     }
@@ -131,7 +132,7 @@ class MetaWhatsAppTest extends TestCase
         Http::fake(['graph.facebook.com/*' => Http::response(['display_phone_number' => '+52 446 120 9731', 'verified_name' => 'WISP Prueba'])]);
 
         \Livewire\Livewire::test(\App\Livewire\Settings\Index::class, ['tab' => 'mensajeria'])
-            ->assertSee('Webhook (estado de entrega)')
+            ->assertSee('Webhook (entregas, respuestas y plantillas)')
             ->assertSee('/webhooks/whatsapp/'.$this->tenant->id)
             ->call('testMeta')
             ->call('saveMessaging')->assertHasNoErrors();
@@ -154,5 +155,90 @@ class MetaWhatsAppTest extends TestCase
             ->call('save')->assertHasNoErrors();
 
         $this->assertSame('recordatorio_pago', NotificationTemplate::where('event', 'reminder')->where('channel', 'whatsapp')->value('provider_template'));
+    }
+
+    protected function webhook(array $change): \Illuminate\Testing\TestResponse
+    {
+        $body = json_encode(['object' => 'whatsapp_business_account', 'entry' => [['id' => '555000111', 'changes' => [$change]]]]);
+
+        return $this->call('POST', '/webhooks/whatsapp/'.$this->tenant->id, [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_HUB_SIGNATURE_256' => 'sha256='.hash_hmac('sha256', $body, 'app-secret'),
+        ], $body);
+    }
+
+    public function test_incoming_message_is_logged_in_the_client_conversation(): void
+    {
+        $client = Client::create(['tenant_id' => $this->tenant->id, 'code' => '2037', 'first_name' => 'Jonathan', 'whatsapp' => '446 120 9731']);
+        $change = ['field' => 'messages', 'value' => [
+            'messaging_product' => 'whatsapp',
+            'contacts' => [['profile' => ['name' => 'Jona'], 'wa_id' => '5214461209731']],
+            'messages' => [['from' => '5214461209731', 'id' => 'wamid.IN1', 'timestamp' => (string) now()->timestamp, 'type' => 'text', 'text' => ['body' => 'Ya pagué, ¿me reconectan?']]],
+        ]];
+
+        $this->webhook($change)->assertOk();
+        $this->webhook($change)->assertOk(); // Meta reintenta: no se duplica
+
+        $m = Message::where('provider_id', 'wamid.IN1')->sole();
+        $this->assertSame('received', $m->status);
+        $this->assertSame('inbound', $m->event);
+        $this->assertSame($client->id, $m->client_id);
+        $this->assertSame('Jona', $m->subject);
+        $this->assertSame('Ya pagué, ¿me reconectan?', $m->body);
+
+        \Livewire\Livewire::test(\App\Livewire\Communications\Messages::class)
+            ->call('openChat', $client->id)
+            ->assertSee('Ya pagué, ¿me reconectan?')
+            ->assertSee('ventana de 24 h');
+    }
+
+    public function test_template_is_submitted_to_meta_for_review(): void
+    {
+        Http::fake(['graph.facebook.com/*' => Http::response(['id' => '9988', 'status' => 'PENDING', 'category' => 'UTILITY'])]);
+        NotificationTemplate::create(['event' => 'pending', 'channel' => 'whatsapp', 'active' => true, 'body' => 'Hola {nombre}, tu saldo es {saldo}. Paga en {link_pago} hoy.']);
+
+        \Livewire\Livewire::test(\App\Livewire\Communications\Templates::class, ['event' => 'pending', 'channel' => 'whatsapp'])
+            ->assertSee('Enviar a Meta')
+            ->call('submitToMeta');
+
+        $tpl = NotificationTemplate::where('event', 'pending')->where('channel', 'whatsapp')->sole();
+        $this->assertSame('pago_pendiente', $tpl->provider_template);
+        $this->assertSame('PENDING', $tpl->provider_status);
+        Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/555000111/message_templates')
+            && $r['name'] === 'pago_pendiente' && $r['language'] === 'es_MX' && $r['category'] === 'UTILITY'
+            && $r['components'][0]['text'] === 'Hola {{1}}, tu saldo es {{2}}. Paga en {{3}} hoy.'
+            && count($r['components'][0]['example']['body_text'][0]) === 3);
+    }
+
+    public function test_template_ending_with_a_variable_is_not_submitted(): void
+    {
+        Http::fake();
+        NotificationTemplate::create(['event' => 'promotion', 'channel' => 'whatsapp', 'active' => true, 'body' => '{descripcion}']);
+
+        $this->expectException(\RuntimeException::class);
+        app(\App\Services\Messaging\MetaTemplates::class)->submit($this->tenant, 'promotion');
+    }
+
+    public function test_template_status_is_synced_and_updated_by_webhook(): void
+    {
+        Http::fake(['graph.facebook.com/*' => Http::response(['data' => [
+            ['name' => 'pago_pendiente', 'status' => 'APPROVED', 'language' => 'es_MX', 'rejected_reason' => 'NONE'],
+            ['name' => 'bienvenida', 'status' => 'REJECTED', 'language' => 'es_MX', 'rejected_reason' => 'PROMOTIONAL'],
+        ]])]);
+        $pending = NotificationTemplate::create(['event' => 'pending', 'channel' => 'whatsapp', 'body' => 'x', 'provider_template' => 'pago_pendiente']);
+        $welcome = NotificationTemplate::create(['event' => 'welcome', 'channel' => 'whatsapp', 'body' => 'x', 'provider_template' => 'bienvenida']);
+        $missing = NotificationTemplate::create(['event' => 'due', 'channel' => 'whatsapp', 'body' => 'x', 'provider_template' => 'vencimiento_hoy']);
+
+        $this->assertSame(3, app(\App\Services\Messaging\MetaTemplates::class)->sync($this->tenant));
+        $this->assertSame('APPROVED', $pending->fresh()->provider_status);
+        $this->assertSame('REJECTED', $welcome->fresh()->provider_status);
+        $this->assertStringContainsString('promocional', $welcome->fresh()->provider_note);
+        $this->assertSame('NOT_FOUND', $missing->fresh()->provider_status);
+
+        $this->webhook(['field' => 'message_template_status_update', 'value' => [
+            'event' => 'APPROVED', 'message_template_name' => 'bienvenida', 'message_template_language' => 'es_MX', 'reason' => 'NONE',
+        ]])->assertOk();
+        $this->assertSame('APPROVED', $welcome->fresh()->provider_status);
+        $this->assertNull($welcome->fresh()->provider_note);
     }
 }

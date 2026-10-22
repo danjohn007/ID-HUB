@@ -21,7 +21,7 @@ class SlaMonitor
     public function check(): array
     {
         $stats = ['warned' => 0, 'breached' => 0, 'resolved' => 0];
-        $warn = SlaPolicy::query()->pluck('warn_percent', 'priority');
+        $warn = SlaPolicy::query()->whereNull('category')->pluck('warn_percent', 'priority');
 
         $tickets = Ticket::query()->open()->whereNotNull('sla_due_at')
             ->with('client:id,first_name,last_name', 'repeater:id,code')
@@ -79,7 +79,7 @@ class SlaMonitor
     {
         $count = 0;
         Ticket::query()->open()->each(function (Ticket $t) use (&$count) {
-            $due = $t->created_at->copy()->addMinutes(SlaPolicy::minutesFor($t->priority));
+            $due = $t->created_at->copy()->addMinutes(SlaPolicy::minutesFor($t->priority, $t->category));
             $t->forceFill([
                 'sla_due_at' => $due,
                 'sla_warned' => $t->sla_warned && $due->isPast(),

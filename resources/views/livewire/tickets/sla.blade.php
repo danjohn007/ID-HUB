@@ -38,6 +38,14 @@
                 </div>
             </x-ui.card>
 
+            <x-ui.card title="Tiempo objetivo por tipo de incidencia" subtitle="Opcional: si una categoría tiene un tiempo más corto que su prioridad, se usa el de la categoría">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach (config('wisp.ticket_categories') as $cat => $label)
+                        <x-ui.input :label="is_array($label) ? $label[0] : $label" type="number" step="0.25" min="0.25" max="720" wire:model="categories.{{ $cat }}" suffix="h" placeholder="Según prioridad" wire:key="c{{ $cat }}" />
+                    @endforeach
+                </div>
+            </x-ui.card>
+
             <x-ui.card title="¿Cómo funcionan las alertas?">
                 <ol class="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                     <li class="rounded-xl bg-brand-50/70 p-4">

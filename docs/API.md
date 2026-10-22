@@ -51,6 +51,14 @@ mensajes están en español.
 | 429 | `{"message":"Demasiadas solicitudes. Intenta de nuevo en 42 segundos."}` |
 | 500 | `{"message":"Error interno del servidor. Intenta más tarde."}` (con `debug` sólo si `APP_DEBUG=true`) |
 
+- **Sesiones de las apps**: el token caduca tras 60 días sin uso (`SANCTUM_EXPIRATION`, minutos) y se revoca al
+  cambiar la contraseña o desactivar al usuario. La app recibe 401 y debe pedir iniciar sesión de nuevo.
+- **Reintentos sin duplicar** (bandeja sin conexión): las escrituras del personal aceptan el encabezado
+  `Idempotency-Key` (o el campo `client_uuid`), máx. 64 caracteres alfanuméricos y guiones. Repetir la petición con
+  la misma clave devuelve la respuesta original sin repetir la acción (cobros y visitas responden `replayed: true`).
+- **Evidencias privadas**: fotos, firmas y evidencias de cobro ya no son públicas; las respuestas traen URLs firmadas
+  de `GET /files/{path}` válidas 30 minutos.
+
 ---
 
 ## 1. Autenticación
@@ -133,6 +141,12 @@ curl -X POST "$API/field/stops/2/depart" -H "$H" -d "lat=20.7546&lng=-100.4513"
 curl -X POST "$API/field/location" -H "$H" -d "lat=20.70&lng=-100.44"           # users.last_lat/last_lng
 curl -X POST "$API/push-tokens" -H "$H" -d "token=<fcm-token>&platform=android"
 ```
+**Notificaciones push**: se envían por Firebase Cloud Messaging (HTTP v1) a los tokens registrados en
+`POST /push-tokens` (personal) o `POST /client/push-token` (cliente); también se aceptan tokens de Expo
+(`ExponentPushToken[...]`). Cada push trae `notification.title/body` y en `data` (todo texto):
+`event` (evento de la plantilla, o `staff` para el personal), `type` (`ticket`, `installation_order`, `route`,
+`alert`, `test`) e `id` cuando aplica (en `route` además `route_type` y `date`). Los tokens que Firebase reporta como
+desinstalados se borran solos. Al cerrar sesión manda `push_token` a `/auth/logout` para dar de baja el dispositivo.
 `/field/today` devuelve `summary` (`services`, `clients`, `tickets`, `installations`, `done`), la ruta
 (`maps_url` de Google Maps con todas las paradas, cada parada con `navigation_url`, cliente y ticket/orden),
 los tickets abiertos asignados ordenados por prioridad y SLA, y las órdenes de instalación abiertas del técnico.
@@ -171,7 +185,11 @@ curl "$API/collection/pending?per_page=50" -H "$H"
 curl -X POST "$API/collection/visits" -H "$H" -d "client_id=62&result=promesa&promise_date=2026-10-12&promise_amount=200"
 curl -X POST "$API/collection/payments" -H "$H" -F client_id=255 -F amount=100 -F lat=20.71 -F lng=-100.41 -F evidence=@ticket.jpg
 curl "$API/collection/cash-cut" -H "$H"
+curl -X POST "$API/collection/cash-cut/close" -H "$H"                # el cobrador entrega su corte
+curl "$API/collection/cash-cuts" -H "$H"                             # historial de cortes del cobrador
 ```
+Las fotos de evidencia aceptan `taken_at` (hora de captura en el teléfono; se usa si no es futura ni de hace más de
+24 h) y `lat`/`lng` del momento de la foto.
 El cobro en efectivo registra el pago (`collector_id` = cobrador), una visita `pago` y lo agrega al corte de
 caja abierto (`CashCutService::attach`), que el supervisor concilia en el panel.
 
@@ -237,5 +255,4 @@ por `external_id` (repetir devuelve `"duplicate": true` y el pago original).
 - Cliente: `identifier=1002`, `password=cliente123`, `tenant=valle-verde`.
 
 ## Pendiente / limitaciones
-- Envío real de notificaciones push (FCM): la API registra los tokens; el envío lo hace el módulo de mensajería.
 - Sin versionado de respuestas por encabezado: cambios incompatibles irán en `/api/v2`.

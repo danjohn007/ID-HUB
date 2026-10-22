@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Client;
 use App\Models\Payment;
+use App\Models\Promotion;
 use App\Models\Referral;
 use Illuminate\Support\Str;
 
@@ -79,6 +80,16 @@ class ReferralService
         if (! $referrer || $referral->status === 'recompensado') {
             return;
         }
+        // Descuento (%) y promoción rebajan la siguiente mensualidad; mes gratis y saldo se abonan como pago.
+        if (in_array($referral->reward_type, ['descuento', 'promocion'], true)) {
+            $amount = $this->discountAmount($referral, $referrer);
+            if ($amount > 0) {
+                $referrer->increment('pending_discount', $amount);
+            }
+            $referral->update(['status' => 'recompensado', 'rewarded_at' => now(), 'reward_value' => $amount]);
+
+            return;
+        }
         $amount = match ($referral->reward_type) {
             'mes_gratis' => (float) ($referrer->plan?->price ?? 0),
             default => (float) $referral->reward_value,
@@ -91,6 +102,26 @@ class ReferralService
             ]);
         }
         $referral->update(['status' => 'recompensado', 'rewarded_at' => now(), 'reward_value' => $amount]);
+    }
+
+    /**
+     * Importe del descuento: "descuento" guarda el porcentaje sobre el precio del plan; "promocion"
+     * guarda el id de la promoción elegida en el programa de referidos.
+     */
+    protected function discountAmount(Referral $referral, Client $referrer): float
+    {
+        $price = (float) ($referrer->plan?->price ?? 0);
+        if ($referral->reward_type === 'descuento') {
+            return round($price * min(100, (float) $referral->reward_value) / 100, 2);
+        }
+        $promo = Promotion::query()->find((int) $referral->reward_value);
+
+        return round(match ($promo?->type) {
+            'descuento_pct' => $price * min(100, (float) $promo->value) / 100 * max(1, (int) $promo->months),
+            'descuento_monto' => (float) $promo->value * max(1, (int) $promo->months),
+            'mes_gratis' => $price * max(1, (int) $promo->months),
+            default => 0,
+        }, 2);
     }
 
     public function shareUrl(Client $client): string

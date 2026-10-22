@@ -3,7 +3,7 @@ description: "App de campo ID-Hub para técnicos y cobradores (secciones 23-27).
 publish_to: 'none'
 
 # versionName+versionCode (Android) / CFBundleShortVersionString+CFBundleVersion (iOS)
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.11.4
@@ -19,6 +19,8 @@ dependencies:
   provider: ^6.1.5+1
   flutter_secure_storage: ^11.2.0
   shared_preferences: ^2.5.6
+  # Fotos de la bandeja de salida (sin conexión) en los documentos de la app
+  path_provider: ^2.1.6
   geolocator: ^14.1.1
   image_picker: ^1.2.4
   url_launcher: ^6.3.3
@@ -26,6 +28,8 @@ dependencies:
   latlong2: ^0.10.1
   signature: ^6.4.0
   intl: ^0.20.2
+  firebase_core: ^5.0.0
+  firebase_messaging: ^17.0.0
 
 dev_dependencies:
   flutter_test:

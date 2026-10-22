@@ -84,7 +84,7 @@
                     <td class="text-xs">
                         <span class="font-medium text-slate-700">{{ $p->methodLabel() }}</span>
                         @if ($p->reference)<div class="max-w-[150px] truncate text-slate-400" title="{{ $p->reference }}">Ref. {{ $p->reference }}</div>@endif
-                        @if ($p->evidence_path)<a href="{{ Storage::disk('public')->url($p->evidence_path) }}" target="_blank" class="link inline-flex items-center gap-0.5"><x-heroicon-o-photo class="h-3.5 w-3.5" />Evidencia</a>@endif
+                        @if ($p->evidence_path)<a href="{{ \App\Support\Evidence::url($p->evidence_path) }}" target="_blank" class="link inline-flex items-center gap-0.5"><x-heroicon-o-photo class="h-3.5 w-3.5" />Evidencia</a>@endif
                     </td>
                     <td class="text-xs text-slate-600">{{ $p->collector?->name ?? $p->receivedBy?->name ?? ($p->gateway ? 'Pago en línea' : 'Sistema') }}</td>
                     <td class="text-right font-semibold {{ $p->kind === 'credit' ? 'text-teal-700' : 'text-slate-800' }}">{{ money($p->amount) }}</td>

@@ -108,7 +108,7 @@
                         <td class="text-xs text-slate-500">
                             <div class="max-w-[200px] truncate" title="{{ $v->notes }}">{{ $v->notes ?: '—' }}</div>
                             <div class="flex gap-2">
-                                @if ($v->evidence_path)<a href="{{ Storage::disk('public')->url($v->evidence_path) }}" target="_blank" class="link inline-flex items-center gap-0.5"><x-heroicon-o-photo class="h-3.5 w-3.5" />Foto</a>@endif
+                                @if ($v->evidence_path)<a href="{{ \App\Support\Evidence::url($v->evidence_path) }}" target="_blank" class="link inline-flex items-center gap-0.5"><x-heroicon-o-photo class="h-3.5 w-3.5" />Foto</a>@endif
                                 @if ($v->lat)<a href="https://www.google.com/maps?q={{ $v->lat }},{{ $v->lng }}" target="_blank" class="link inline-flex items-center gap-0.5"><x-heroicon-o-map-pin class="h-3.5 w-3.5" />GPS</a>@endif
                             </div>
                         </td>

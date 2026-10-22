@@ -14,6 +14,7 @@ class Message extends TenantModel
         'delivered' => ['Entregado', 'success'],
         'failed' => ['Fallido', 'danger'],
         'simulated' => ['Simulado', 'info'],
+        'received' => ['Recibido', 'brand'],
     ];
 
     public function client(): BelongsTo

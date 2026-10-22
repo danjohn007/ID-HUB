@@ -28,11 +28,11 @@ class _TicketScreenState extends State<TicketScreen> {
   Future<Ticket> _load() async => Ticket((await context.read<Session>().api.get('/tickets/${widget.id}'))['data']);
 
   Future<void> _field(String action, String success) async {
-    final api = context.read<Session>().api;
+    final outbox = context.read<Session>().outbox;
     setState(() => _busy = action);
     final gps = await Geo.current();
     if (!mounted) return;
-    final ok = await runAction(context, () => api.post('/field/tickets/${widget.id}/$action', data: gps?.toJson()),
+    final ok = await runQueued(context, () => outbox.submit(path: '/field/tickets/${widget.id}/$action', data: gps?.toJson(), label: '$success · ticket #${widget.id}'),
         success: gps == null ? '$success (sin GPS)' : success);
     if (mounted) setState(() => _busy = null);
     if (ok) _loader.currentState?.reload();

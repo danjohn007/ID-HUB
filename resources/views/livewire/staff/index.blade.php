@@ -82,11 +82,13 @@
                             <div class="flex items-center justify-between gap-3"><dt class="shrink-0 text-slate-500">Dentro de SLA</dt>
                                 <dd class="flex-1">@if ($s['sla_pct'] !== null)<x-ui.progress :value="$s['sla_pct']" :color="$s['sla_pct'] >= 90 ? 'success' : ($s['sla_pct'] >= 75 ? 'warning' : 'danger')" label height="h-1.5" />@else<span class="block text-right text-slate-400">—</span>@endif</dd></div>
                             <div class="flex justify-between"><dt class="text-slate-500">Instalaciones pendientes</dt><dd class="font-semibold text-slate-700">{{ $s['pending_installs'] }}</dd></div>
+                            <div class="flex justify-between"><dt class="text-slate-500">Pago por instalaciones</dt><dd class="font-semibold text-success-700">{{ money($s['commission']) }}</dd></div>
                         @else
                             <div class="flex justify-between"><dt class="text-slate-500">Pagos registrados</dt><dd class="font-semibold text-slate-700">{{ $s['payments'] }}</dd></div>
                             <div class="flex justify-between"><dt class="text-slate-500">Efectividad de visitas</dt><dd class="font-semibold text-slate-700">{{ $s['effectiveness'] !== null ? pct($s['effectiveness']) : '—' }}</dd></div>
                             <div class="flex justify-between"><dt class="text-slate-500">Promesas de pago</dt><dd class="font-semibold text-slate-700">{{ $s['promises'] }}</dd></div>
                             <div class="flex justify-between"><dt class="text-slate-500">Cartera pendiente</dt><dd class="font-semibold text-warning-700">{{ money($s['pending_amount']) }}</dd></div>
+                            <div class="flex justify-between"><dt class="text-slate-500">Comisión del periodo</dt><dd class="font-semibold text-success-700">{{ money($s['commission']) }}</dd></div>
                         @endif
                         <div class="flex items-center justify-between gap-3 pt-1"><dt class="shrink-0 text-slate-500">Ruta de hoy</dt>
                             <dd class="flex-1">@if ($s['has_route'])<x-ui.progress :value="$s['stops'] ? $s['stops_done'] / $s['stops'] * 100 : 0" color="brand" height="h-1.5" /><div class="text-right text-[11px] text-slate-500">{{ $s['stops_done'] }}/{{ $s['stops'] }} paradas</div>@else<span class="block text-right text-slate-400">Sin ruta</span>@endif</dd></div>

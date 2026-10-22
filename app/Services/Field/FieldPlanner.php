@@ -9,6 +9,7 @@ use App\Models\RouteStop;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\Zone;
+use App\Services\Messaging\StaffPush;
 use App\Services\TicketService;
 use App\Support\Catalog;
 use Carbon\Carbon;
@@ -195,7 +196,8 @@ class FieldPlanner
      */
     public function save(User $user, string $routeType, Carbon $date, array $orderedPoints, ?int $zoneId = null, ?array $start = null, ?float $distanceKm = null): FieldRoute
     {
-        return DB::transaction(function () use ($user, $routeType, $date, $orderedPoints, $zoneId, $start, $distanceKm) {
+        // Las asignaciones de cada parada no avisan una por una: al final va un solo push con la ruta.
+        $route = StaffPush::quietly(fn () => DB::transaction(function () use ($user, $routeType, $date, $orderedPoints, $zoneId, $start, $distanceKm) {
             $route = FieldRoute::query()->where('user_id', $user->id)->where('type', $routeType)->whereDate('date', $date->toDateString())->first()
                 ?? new FieldRoute(['user_id' => $user->id, 'type' => $routeType, 'date' => $date->toDateString(), 'status' => 'planned']);
             $route->fill([
@@ -223,7 +225,10 @@ class FieldPlanner
             }
 
             return $route->load('stops');
-        });
+        }));
+        app(StaffPush::class)->routePlanned($route);
+
+        return $route;
     }
 
     /** Asigna al usuario la actividad si no tenía responsable. */

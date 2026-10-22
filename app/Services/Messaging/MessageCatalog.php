@@ -14,6 +14,7 @@ class MessageCatalog
         'manual' => 'Mensaje manual',
         'staff' => 'Aviso a personal',
         'test' => 'Envío de prueba',
+        'inbound' => 'Mensaje del cliente',
     ];
 
     public const CHANNEL_ICONS = [
@@ -48,6 +49,16 @@ class MessageCatalog
     public static function statusColor(?string $status): string
     {
         return Message::STATUS[$status][1] ?? 'slate';
+    }
+
+    /** Destino legible: los tokens push son largos, se muestra a quién pertenece y su final. */
+    public static function destination(Message $m): string
+    {
+        if ($m->channel === 'push') {
+            return trim(($m->meta['user'] ?? 'Dispositivo').' · ···'.substr($m->to, -6));
+        }
+
+        return $m->status === 'received' && $m->subject ? $m->to.' · '.$m->subject : $m->to;
     }
 
     /** Ejemplo de enlace de pago para vistas previas (no genera enlaces reales). */

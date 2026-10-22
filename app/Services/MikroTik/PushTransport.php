@@ -37,7 +37,16 @@ class PushTransport implements Transport
         '/ip/dhcp-server/lease' => 'dhcp_leases',
         '/ip/address' => 'addresses',
         '/interface/wireless/registration-table' => 'registrations',
+        '/interface/wifi/registration-table' => 'wifi_registrations',
+        '/interface/wifiwave2/registration-table' => 'wifiwave2_registrations',
+        '/queue/simple' => 'queues',
     ];
+
+    /** Destinos (IPs) que el agente debe pingear en su siguiente ejecución. */
+    public static function targetsKey(int $deviceId): string
+    {
+        return "mikrotik:push:{$deviceId}:targets";
+    }
 
     public function print(string $path, array $where = []): array
     {
@@ -92,6 +101,9 @@ class PushTransport implements Transport
     {
         $lines = Cache::pull(static::queueKey($device->id), []);
         $script = "# ID-Hub ".now()->format('Y-m-d H:i:s')." - {$device->name}\n";
+        // IPs que el agente pingea en su siguiente reporte (equipos y repetidores asignados a este MikroTik)
+        $targets = array_values(array_filter((array) Cache::get(static::targetsKey($device->id), []), fn ($ip) => filter_var($ip, FILTER_VALIDATE_IP)));
+        $script .= ':global idhubPingTargets {'.implode(';', array_map(fn ($ip) => '"'.$ip.'"', $targets))."}\n";
         foreach ($lines as $line) {
             $script .= ":do { {$line} } on-error={}\n";
         }

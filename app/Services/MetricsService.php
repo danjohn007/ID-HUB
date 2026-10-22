@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Models\Alert;
 use App\Models\Client;
+use App\Models\InstallationOrder;
 use App\Models\NetworkDevice;
 use App\Models\Payment;
 use App\Models\Prospect;
 use App\Models\Repeater;
 use App\Models\Ticket;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -176,7 +178,7 @@ class MetricsService
     {
         return DB::table('clients')->join('plans', 'plans.id', '=', 'clients.plan_id')
             ->where('clients.tenant_id', $this->tid())->whereNull('clients.deleted_at')->whereIn('clients.service_status', self::LIVE)
-            ->selectRaw('plans.id, plans.name, plans.color, COUNT(*) clients, SUM(plans.price) mrr')
+            ->selectRaw('plans.id, plans.name, plans.color, COUNT(*) clients, SUM('.$this->monthlyPriceSql().') mrr')
             ->groupBy('plans.id', 'plans.name', 'plans.color')->orderBy('plans.price')->get()
             ->map(fn ($r) => (array) $r)->all();
     }
@@ -230,6 +232,31 @@ class MetricsService
             'online_pct' => $total ? round($online / $total * 100, 1) : 0,
             'clients_online' => (clone $live)->where('online', true)->count(),
             'clients_offline' => (clone $live)->where('online', false)->count(),
+        ];
+    }
+
+    /** Dashboard operativo (sección 31): estado de clientes, tickets, personal de campo y red. */
+    public function operational(): array
+    {
+        $counts = $this->statusCounts();
+        $net = $this->networkStats();
+        $tickets = $this->ticketStats();
+        $field = User::query()->where('tenant_id', $this->tid())->where('active', true)->whereIn('role', ['tecnico', 'cobrador']);
+
+        return [
+            'active' => (int) ($counts['activo'] ?? 0),
+            'suspended' => (int) ($counts['suspendido'] ?? 0),
+            'new' => $this->newClients(),
+            'disconnected' => $net['clients_offline'],
+            'tickets_open' => $tickets['open'],
+            'tickets_overdue' => $tickets['overdue'],
+            'tickets_critical' => $tickets['critical'],
+            // Activo: compartió ubicación desde la app de campo en las últimas 2 horas
+            'staff_active' => (clone $field)->where('last_location_at', '>=', now()->subHours(2))->count(),
+            'staff_total' => (clone $field)->count(),
+            'installs_pending' => InstallationOrder::query()->whereIn('status', ['aceptada', 'programada', 'en_proceso'])->count(),
+            'repeaters_online' => $net['repeaters_online'],
+            'repeaters_alert' => $net['repeaters_alert'],
         ];
     }
 

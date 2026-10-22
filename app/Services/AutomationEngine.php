@@ -7,11 +7,15 @@ use App\Models\AutomationRun;
 use App\Models\Client;
 use App\Models\Outage;
 use App\Models\Payment;
+use App\Models\Plan;
 use App\Models\Repeater;
+use App\Models\ServiceEvent;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Messaging\MessageService;
+use App\Services\Messaging\StaffPush;
+use App\Services\MikroTik\MikroTikService;
 use App\Support\TenantContext;
 use Illuminate\Database\Eloquent\Model;
 
@@ -81,6 +85,8 @@ class AutomationEngine
                 'plan_id' => $subject->plan_id,
                 'repeater_id' => $subject->repeater_id,
                 'online' => $subject->online,
+                'signal_dbm' => $subject->signal_dbm !== null ? (float) $subject->signal_dbm : null,
+                'month_usage_gb' => (float) $subject->month_usage_gb,
                 // Días de atraso del cargo más antiguo (el evento payment_overdue lo trae en el contexto)
                 'overdue_days' => $facts['overdue_days'] ?? app(BillingService::class)->overdueDays($subject),
             ];
@@ -105,7 +111,7 @@ class AutomationEngine
                 'signal_dbm' => $subject->signal_dbm !== null ? (float) $subject->signal_dbm : null,
             ];
         } elseif ($subject instanceof \App\Models\InventoryItem) {
-            $facts += ['stock' => (float) $subject->stock, 'min_stock' => (float) $subject->min_stock, 'category' => $subject->category];
+            $facts += ['stock' => (float) $subject->stock, 'min_stock' => (float) $subject->min_stock, 'max_stock' => $subject->max_stock !== null ? (float) $subject->max_stock : null, 'category' => $subject->category];
         }
 
         return $facts;
@@ -189,8 +195,18 @@ class AutomationEngine
                 if (! $client || $client->service_status !== 'suspendido') {
                     return 'Cliente no suspendido';
                 }
-                if (($params['require_zero_balance'] ?? true) && (float) $client->fresh()->balance > 0.009) {
+                if ($client->plan && ! $client->plan->auto_reconnect) {
+                    return 'El plan '.$client->plan->name.' se reconecta manualmente';
+                }
+                // "Exigir liquidar el saldo" de Configuración → Cobranza manda sobre el parámetro de la regla.
+                $requireZero = (bool) (Tenant::find($client->tenant_id)?->setting('billing.reconnect_requires_full_payment', $params['require_zero_balance'] ?? true));
+                if ($requireZero && (float) $client->fresh()->balance > 0.009) {
                     return 'Saldo pendiente: no se reconecta';
+                }
+                // Días de reconexión: tras N días suspendido la reconexión la decide el personal.
+                $maxDays = (int) Tenant::find($client->tenant_id)?->setting('billing.reconnect_max_days', 0);
+                if ($maxDays > 0 && $client->suspended_at && $client->suspended_at->lt(now()->subDays($maxDays))) {
+                    return "Suspendido hace más de {$maxDays} días: requiere reconexión manual";
                 }
                 app(ServiceControl::class)->reconnect($client, $reason, 'automation', $params['notify'] ?? false);
 
@@ -211,6 +227,10 @@ class AutomationEngine
                 $users = User::forTenant($subject->tenant_id)->active()->role($roles)->whereNotNull('phone')->get();
                 foreach ($users as $u) {
                     app(MessageService::class)->queue(Tenant::find($subject->tenant_id), 'whatsapp', app(MessageService::class)->phone($u->phone), $text, $rule->name, null, 'staff');
+                }
+                // También a la app de campo de quien la tenga instalada.
+                foreach (User::forTenant($subject->tenant_id)->active()->role($roles)->get() as $u) {
+                    app(StaffPush::class)->toUser($u, $rule->name, $text, ['type' => 'alert'], (int) $subject->tenant_id);
                 }
 
                 return 'Personal notificado: '.$users->count();
@@ -266,6 +286,53 @@ class AutomationEngine
                 $fee = app(BillingService::class)->addLateFee($client);
 
                 return $fee ? 'Recargo aplicado: '.money($fee->total) : 'Recargo ya aplicado este periodo';
+
+            case 'change_plan':
+                if (! $client) {
+                    return 'Sin cliente';
+                }
+                $plan = Plan::find($params['plan_id'] ?? null);
+                if (! $plan) {
+                    throw new \RuntimeException('El plan destino ya no existe');
+                }
+                if (! empty($params['keep_billing'])) {
+                    // Solo velocidad en el equipo (ej. reducir al superar el límite de consumo); el plan facturado no cambia
+                    [$applied, $result] = app(ServiceControl::class)->onRouter($client, fn (MikroTikService $mt) => $mt->applyPlan($client, $plan));
+                    ServiceEvent::create([
+                        'tenant_id' => $client->tenant_id, 'client_id' => $client->id, 'type' => 'speed_change',
+                        'reason' => mb_substr("Velocidad de {$plan->name} ({$plan->download_mbps}/{$plan->upload_mbps} Mbps) · {$reason}", 0, 190),
+                        'source' => 'automation', 'network_applied' => $applied, 'network_result' => mb_substr($result, 0, 190), 'data' => ['plan_id' => $plan->id],
+                    ]);
+                    if (! $applied) {
+                        throw new \RuntimeException($result);
+                    }
+
+                    return "Velocidad de {$plan->name} aplicada a {$client->code}: {$result}";
+                }
+                if ((int) $client->plan_id === (int) $plan->id) {
+                    return "El cliente ya tiene el plan {$plan->name}";
+                }
+                $event = app(ServiceControl::class)->changePlan($client, $plan, 'automation');
+
+                return "Plan de {$client->code} cambiado a {$plan->name}".($event->network_applied ? '' : ' ('.$event->network_result.')');
+
+            case 'address_list':
+                if (! $client) {
+                    return 'Sin cliente';
+                }
+                $list = trim((string) ($params['list'] ?? ''));
+                if ($list === '') {
+                    throw new \RuntimeException('Falta el nombre de la address-list');
+                }
+                $remove = ($params['operation'] ?? 'add') === 'remove';
+                [$applied, $result] = app(ServiceControl::class)->onRouter($client, fn (MikroTikService $mt) => $remove
+                    ? $mt->removeFromAddressList($client, $list)
+                    : $mt->addToAddressList($client, $list, mb_substr($client->code.' · '.$rule->name, 0, 120)));
+                if (! $applied) {
+                    throw new \RuntimeException($result);
+                }
+
+                return $result;
 
             case 'set_status':
                 if (! $client || empty($params['status'])) {

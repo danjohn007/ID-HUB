@@ -1,7 +1,7 @@
 {{-- Firma de conformidad del cliente. Variables: $t, $canWork --}}
 @if ($t->signature_path)
     <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-center">
-        <img src="{{ Storage::disk('public')->url($t->signature_path) }}?v={{ $t->signed_at?->timestamp }}" alt="Firma" class="mx-auto h-24 object-contain">
+        <img src="{{ \App\Support\Evidence::url($t->signature_path) }}?v={{ $t->signed_at?->timestamp }}" alt="Firma" class="mx-auto h-24 object-contain">
         <div class="mt-1 border-t border-slate-200 pt-1 text-xs text-slate-600">{{ $t->signed_by_name }}</div>
         <div class="text-[11px] text-slate-400">{{ $t->signed_at?->format('d/m/Y H:i') }}</div>
     </div>

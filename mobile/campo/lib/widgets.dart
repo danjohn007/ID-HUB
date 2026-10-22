@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'brand.dart';
 import 'core/api.dart';
 import 'core/format.dart';
+import 'core/outbox.dart';
 import 'models.dart';
 import 'motion.dart';
 import 'theme.dart';
@@ -285,6 +286,30 @@ Future<bool> runAction(BuildContext context, Future<dynamic> Function() action, 
   try {
     final res = await action();
     final msg = success ?? (res is Map ? res['message'] as String? : null);
+    HapticFeedback.lightImpact();
+    if (msg != null && msg.isNotEmpty) {
+      messenger.showSnackBar(_snack(msg, Icons.check_circle_rounded, AppColors.success));
+    }
+    return true;
+  } catch (e) {
+    HapticFeedback.heavyImpact();
+    messenger.showSnackBar(_snack(e is ApiException ? e.detail : '$e', Icons.error_outline_rounded, AppColors.danger));
+    return false;
+  }
+}
+
+/// Como [runAction] para acciones de campo que, sin señal, quedan en la bandeja de salida
+/// (Outbox.submit). Devuelve true si se envió o se guardó para enviarse después.
+Future<bool> runQueued(BuildContext context, Future<SendResult> Function() action, {String? success}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final res = await action();
+    if (res.queued) {
+      HapticFeedback.mediumImpact();
+      messenger.showSnackBar(_snack(Outbox.offlineMessage, Icons.cloud_upload_outlined, AppColors.warning));
+      return true;
+    }
+    final msg = success ?? res.message;
     HapticFeedback.lightImpact();
     if (msg != null && msg.isNotEmpty) {
       messenger.showSnackBar(_snack(msg, Icons.check_circle_rounded, AppColors.success));

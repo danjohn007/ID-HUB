@@ -83,10 +83,27 @@ class StripeDriver implements GatewayDriver
             'raw_status' => ($s['status'] ?? '').'/'.($s['payment_status'] ?? ''),
             'external_id' => (string) $s['id'],
             'amount' => round(((int) ($s['amount_total'] ?? 0)) / 100, 2),
-            'fee' => null,
+            'fee' => $status === 'approved' && is_string($s['payment_intent'] ?? null) ? $this->realFee($s['payment_intent']) : null,
             'token' => $s['client_reference_id'] ?? ($s['metadata']['link_token'] ?? null),
             'provider' => $s['metadata']['provider'] ?? null,
         ];
+    }
+
+    /**
+     * Comisión real que cobró Stripe (balance_transaction del cargo). Null si aún no está disponible
+     * (p. ej. OXXO recién pagado): entonces se usa el porcentaje configurado como estimado.
+     */
+    protected function realFee(string $paymentIntent): ?float
+    {
+        try {
+            $response = Http::withToken($this->secret())->timeout(15)
+                ->get(self::API.'/payment_intents/'.$paymentIntent, ['expand' => ['latest_charge.balance_transaction']]);
+            $fee = $response->json('latest_charge.balance_transaction.fee');
+
+            return $response->successful() && is_numeric($fee) ? round($fee / 100, 2) : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /** Verifica el encabezado Stripe-Signature (t=..., v1=...) con tolerancia de 5 minutos. */

@@ -335,7 +335,7 @@ class ClientAppController extends ApiController
             if (! $client->plan) {
                 return null;
             }
-            $amount = $client->plan->priceBreakdown((float) $client->plan->price * $client->plan->periodMonths())['total'];
+            $amount = $client->plan->priceBreakdown((float) $client->plan->price)['total'];
             $date = $client->next_due_date && $client->next_due_date->isFuture()
                 ? $client->next_due_date
                 : app(BillingService::class)->nextBillingDate($client);

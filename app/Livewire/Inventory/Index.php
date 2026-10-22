@@ -187,6 +187,7 @@ class Index extends Component
             return;
         }
         app(\App\Services\AlertService::class)->resolveFor('low_stock', $i);
+        app(\App\Services\AlertService::class)->resolveFor('over_stock', $i);
         $i->delete();
         $this->showItem = false;
         $this->toast('Artículo eliminado', 'warning');

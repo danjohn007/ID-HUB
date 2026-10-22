@@ -111,7 +111,7 @@
                 <x-ui.input label="Descarga" type="number" step="0.1" min="0.1" max="100000" wire:model="form.download_mbps" suffix="Mbps" required />
                 <x-ui.input label="Subida" type="number" step="0.1" min="0.1" max="100000" wire:model="form.upload_mbps" suffix="Mbps" required />
                 <x-ui.select label="Periodicidad" wire:model="form.periodicity" :options="config('wisp.periodicity')" required />
-                <x-ui.input label="Precio" type="number" step="0.01" min="0" max="1000000" wire:model="form.price" prefix="$" required />
+                <x-ui.input label="Precio" type="number" step="0.01" min="0" max="1000000" wire:model="form.price" prefix="$" hint="Lo que se cobra cada periodo" required />
                 <x-ui.input label="IVA" type="number" step="0.01" min="0" max="100" wire:model="form.tax_rate" suffix="%" required />
                 <div class="flex items-end pb-2"><x-ui.toggle wire:model="form.price_includes_tax" label="El precio incluye IVA" /></div>
             </div>

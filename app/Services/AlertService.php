@@ -38,14 +38,15 @@ class AlertService
         ]);
 
         // Las alertas también pueden disparar reglas de automatización
-        $event = match ($type) {
-            'repeater_saturated' => 'repeater_saturated',
-            'device_offline' => 'device_offline',
-            'low_stock' => 'low_stock',
+        $event = match (true) {
+            in_array($type, ['repeater_saturated', 'device_offline', 'low_stock', 'over_stock', 'mass_disconnect', 'abnormal_signal', 'data_cap_exceeded'], true) => $type,
+            str_starts_with($type, 'anomaly_') => 'anomaly_detected',
             default => null,
         };
         if ($event && $subject) {
-            app(AutomationEngine::class)->fire($event, $subject, ['alert' => $alert]);
+            // Los datos escalares de la alerta (consumo, señal, tipo de anomalía...) quedan disponibles para las condiciones
+            $context = ['alert' => $alert, 'alert_type' => $type] + array_filter($data, fn ($v) => is_scalar($v));
+            app(AutomationEngine::class)->fire($event, $subject, $context);
         }
 
         return $alert;

@@ -15,9 +15,9 @@ use App\Models\User;
 use App\Services\Field\FieldTracker;
 use App\Services\InventoryService;
 use App\Services\TicketService;
+use App\Support\Evidence;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /**
@@ -126,7 +126,7 @@ class TicketController extends ApiController
         return $this->ok(['data' => new TicketCommentResource($comment->load('user'))], 'Comentario agregado.', 201);
     }
 
-    /** Evidencia fotográfica (sección 24): archivo + tipo + GPS + fecha/hora. */
+    /** Evidencia fotográfica (sección 24): archivo + tipo + GPS + fecha/hora de la captura (disco privado). */
     public function addAttachment(Request $request, int $id): JsonResponse
     {
         $ticket = $this->workable($id);
@@ -138,7 +138,7 @@ class TicketController extends ApiController
             'taken_at' => 'nullable|date',
         ]);
         $file = $request->file('file');
-        $path = $file->store('attachments/'.tenant()->id.'/ticket/'.$ticket->id, 'public');
+        $path = Evidence::store($file, 'attachments/'.tenant()->id.'/ticket/'.$ticket->id);
 
         $attachment = Attachment::create([
             'attachable_type' => 'ticket',
@@ -149,7 +149,7 @@ class TicketController extends ApiController
             'mime' => $file->getMimeType(),
             'lat' => $data['lat'] ?? null,
             'lng' => $data['lng'] ?? null,
-            'taken_at' => $data['taken_at'] ?? now(),
+            'taken_at' => Evidence::takenAt($data['taken_at'] ?? null),
             'uploaded_by' => $this->apiUser()->id,
         ]);
         if (isset($data['lat'], $data['lng'])) {
@@ -193,9 +193,9 @@ class TicketController extends ApiController
         $ticket = $this->workable($id);
         $sig = $this->signatureFrom($request);
         $path = 'signatures/'.$ticket->tenant_id.'/ticket-'.$ticket->id.'-'.now()->format('YmdHis').'.png';
-        Storage::disk('public')->put($path, $sig['png']);
+        Evidence::put($path, $sig['png']);
         if ($ticket->signature_path) {
-            Storage::disk('public')->delete($ticket->signature_path);
+            Evidence::delete($ticket->signature_path);
         }
         $ticket->forceFill(['signature_path' => $path, 'signed_by_name' => $sig['signed_by'], 'signed_at' => now()])->save();
         $ticket->addComment('Firma de conformidad capturada ('.$sig['signed_by'].')', 'system');

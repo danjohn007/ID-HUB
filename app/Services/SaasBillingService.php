@@ -96,6 +96,42 @@ class SaasBillingService
         if ($invoice->status !== 'paid') {
             $invoice->update(['status' => 'paid', 'paid_at' => now()]);
         }
+        // La factura es del mes vencido: pagada, la suscripción queda vigente hasta el fin del mes siguiente.
+        $tenant = $invoice->tenant;
+        $until = $invoice->period_end->copy()->addMonthNoOverflow()->endOfMonth()->startOfDay();
+        if ($tenant && (! $tenant->subscription_ends_at || $tenant->subscription_ends_at->lt($until))) {
+            $tenant->update(['subscription_ends_at' => $until->toDateString()]
+                + ($tenant->status === 'suspended' && $tenant->suspended_reason === self::EXPIRED_REASON ? ['status' => 'active', 'suspended_reason' => null] : []));
+        }
+    }
+
+    public const EXPIRED_REASON = 'Suscripción vencida';
+
+    public const TRIAL_REASON = 'Terminó el periodo de prueba';
+
+    /**
+     * Suspende WISP en prueba vencida o con la suscripción vencida hace más de los días de gracia.
+     * Los WISP sin fechas capturadas no se tocan. Devuelve una línea por WISP suspendido.
+     */
+    public function enforceSubscriptions(bool $dryRun = false): array
+    {
+        $today = today();
+        $grace = (int) config('wisp.saas_grace_days', 10);
+        $out = [];
+        $expired = Tenant::query()
+            ->where(fn ($q) => $q->where('status', 'trial')->whereNotNull('trial_ends_at')->whereDate('trial_ends_at', '<', $today))
+            ->orWhere(fn ($q) => $q->where('status', 'active')->whereNotNull('subscription_ends_at')->whereDate('subscription_ends_at', '<', $today->copy()->subDays($grace)))
+            ->get();
+        foreach ($expired as $tenant) {
+            $reason = $tenant->status === 'trial' ? self::TRIAL_REASON : self::EXPIRED_REASON;
+            $out[] = "{$tenant->name}: {$reason}";
+            if (! $dryRun) {
+                $tenant->update(['status' => 'suspended', 'suspended_reason' => $reason]);
+                \App\Support\Audit::log('updated', "suspendió el WISP {$tenant->name}: {$reason}", $tenant);
+            }
+        }
+
+        return $out;
     }
 
     /** MRR de la plataforma: suma de la mensualidad de los planes de WISP activos. */

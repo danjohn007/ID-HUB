@@ -44,6 +44,9 @@ class ApiClient {
   late final Dio _dio;
   void Function()? onUnauthorized;
 
+  /// Se llama tras cada respuesta correcta del servidor (hay señal): reintenta la bandeja de salida.
+  void Function()? onOnline;
+
   void configure({required String server, String? token}) {
     _dio.options.baseUrl = normalizeServer(server) + AppConfig.apiPrefix;
     if (token == null) {
@@ -65,18 +68,19 @@ class ApiClient {
   Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? query}) =>
       _send(() => _dio.get(path, queryParameters: _clean(query)));
 
-  Future<Map<String, dynamic>> post(String path, {Map<String, dynamic>? data}) =>
-      _send(() => _dio.post(path, data: _clean(data)));
+  /// [headers]: p. ej. Idempotency-Key para que un reintento no duplique la acción.
+  Future<Map<String, dynamic>> post(String path, {Map<String, dynamic>? data, Map<String, String>? headers}) =>
+      _send(() => _dio.post(path, data: _clean(data), options: Options(headers: headers)));
 
-  Future<Map<String, dynamic>> patch(String path, {Map<String, dynamic>? data}) =>
-      _send(() => _dio.patch(path, data: _clean(data)));
+  Future<Map<String, dynamic>> patch(String path, {Map<String, dynamic>? data, Map<String, String>? headers}) =>
+      _send(() => _dio.patch(path, data: _clean(data), options: Options(headers: headers)));
 
   Future<Map<String, dynamic>> delete(String path) => _send(() => _dio.delete(path));
 
   /// Envío multipart (fotos, firma, evidencia de cobro).
-  Future<Map<String, dynamic>> upload(String path, {required Map<String, dynamic> fields, required Map<String, MultipartFile> files}) {
+  Future<Map<String, dynamic>> upload(String path, {required Map<String, dynamic> fields, required Map<String, MultipartFile> files, Map<String, String>? headers}) {
     final form = FormData.fromMap({..._clean(fields)!, ...files});
-    return _send(() => _dio.post(path, data: form));
+    return _send(() => _dio.post(path, data: form, options: Options(headers: headers)));
   }
 
   /// GET con respaldo local: si no hay conexión devuelve la última respuesta guardada.
@@ -106,6 +110,7 @@ class ApiClient {
   Future<Map<String, dynamic>> _send(Future<Response<dynamic>> Function() request) async {
     try {
       final res = await request();
+      onOnline?.call();
       final body = res.data;
       if (body is Map<String, dynamic>) return body;
       if (body is Map) return Map<String, dynamic>.from(body);

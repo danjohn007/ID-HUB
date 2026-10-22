@@ -2,4 +2,6 @@
 <resources>
     <!-- navy-950 de la identidad ID-Hub -->
     <color name="splash_navy">#071330</color>
+    <!-- Azul de marca para el ícono de las notificaciones push -->
+    <color name="notification_color">#1A7FF5</color>
 </resources>

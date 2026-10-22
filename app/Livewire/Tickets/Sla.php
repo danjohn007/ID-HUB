@@ -11,7 +11,8 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /**
- * Políticas de SLA por prioridad (sección 22): tiempo objetivo y % de aviso.
+ * Políticas de SLA (sección 22): tiempo objetivo y % de aviso por prioridad, y tiempo propio
+ * opcional por tipo de incidencia (aplica el más estricto de los dos).
  */
 #[Title('Políticas SLA')]
 class Sla extends Component
@@ -20,9 +21,16 @@ class Sla extends Component
 
     public array $policies = [];
 
+    /** Horas por categoría ('' = solo la de la prioridad). */
+    public array $categories = [];
+
     public function mount(): void
     {
-        $existing = SlaPolicy::query()->get()->keyBy('priority');
+        $existing = SlaPolicy::query()->whereNull('category')->get()->keyBy('priority');
+        $byCategory = SlaPolicy::query()->whereNotNull('category')->pluck('resolution_minutes', 'category');
+        foreach (array_keys(config('wisp.ticket_categories')) as $cat) {
+            $this->categories[$cat] = isset($byCategory[$cat]) ? (string) round($byCategory[$cat] / 60, 2) : '';
+        }
         foreach (config('wisp.ticket_priorities') as $key => $p) {
             $minutes = $existing[$key]->resolution_minutes ?? $p[2];
             $this->policies[$key] = [
@@ -40,13 +48,23 @@ class Sla extends Component
             $rules["policies.$key.hours"] = 'required|numeric|min:0.25|max:720';
             $rules["policies.$key.warn"] = 'required|integer|min:10|max:99';
         }
+        foreach (array_keys(config('wisp.ticket_categories')) as $cat) {
+            $rules["categories.$cat"] = 'nullable|numeric|min:0.25|max:720';
+        }
         $this->validate($rules, [], collect($rules)->mapWithKeys(fn ($r, $k) => [$k => str_ends_with($k, 'hours') ? 'horas' : '% de aviso'])->all());
 
         foreach ($this->policies as $priority => $p) {
-            SlaPolicy::updateOrCreate(['priority' => $priority], [
+            SlaPolicy::updateOrCreate(['priority' => $priority, 'category' => null], [
                 'resolution_minutes' => (int) round((float) $p['hours'] * 60),
                 'warn_percent' => (int) $p['warn'],
             ]);
+        }
+        foreach ($this->categories as $cat => $hours) {
+            $hours === '' || $hours === null
+                ? SlaPolicy::query()->where('category', $cat)->delete()
+                : SlaPolicy::updateOrCreate(['priority' => SlaPolicy::ANY_PRIORITY, 'category' => $cat], [
+                    'resolution_minutes' => (int) round((float) $hours * 60), 'warn_percent' => 75,
+                ]);
         }
         \App\Support\Audit::log('settings', 'actualizó las políticas de SLA');
         $this->toast('Políticas de SLA guardadas. Aplican a los tickets nuevos.');

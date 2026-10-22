@@ -22,7 +22,7 @@
 
                 <x-ui.card title="Dominio, moneda y zona horaria">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <x-ui.input label="Subdominio" wire:model="company.subdomain" filter="slug" suffix=".wispcontrol.com" placeholder="mi-wisp" />
+                        <x-ui.input label="Subdominio" wire:model="company.subdomain" filter="slug" :suffix="'.'.(config('wisp.tenant_root_domain') ?: 'id-hub.digital')" placeholder="mi-wisp" hint="Requiere el subdominio comodín (*) apuntando a este servidor" />
                         <x-ui.input label="Dominio propio (opcional)" wire:model="company.domain" filter="host" maxlength="150" placeholder="portal.miwisp.mx" hint="Apunta un registro CNAME a la plataforma" />
                         <x-ui.select label="Moneda" wire:model="company.currency" :options="config('wisp.currencies')" required />
                         <x-ui.select label="Zona horaria" wire:model="company.timezone" :options="config('wisp.timezones')" required hint="Se usa para programar cortes y recordatorios" />
@@ -111,6 +111,7 @@
                         <x-ui.input label="Día de corte" type="number" min="1" max="28" wire:model="billing.billing_day" :hint="$billing['mode'] === 'anniversary' ? 'Valor por defecto para clientes nuevos' : 'Día del mes en que se emiten los cargos'" required />
                         <x-ui.input label="Días para pagar" type="number" min="0" max="30" wire:model="billing.due_days" hint="Entre la emisión y la fecha límite" suffix="días" required />
                         <x-ui.input label="Recordatorio previo" type="number" min="0" max="15" wire:model="billing.reminder_days_before" hint="Días antes de la fecha límite" suffix="días" required />
+                        <x-ui.input label="Aviso de pago pendiente" type="number" min="0" max="30" wire:model="billing.pending_notice_days" hint="Días después de la fecha límite (0 = no enviar)" suffix="días" required />
                         <x-ui.input label="Prefijo de folios" wire:model="billing.folio_prefix" filter="upper" maxlength="10" hint="Recibos: REC-000123" required />
                     </div>
                 </x-ui.card>
@@ -122,7 +123,9 @@
                         <x-ui.select label="Tipo de bloqueo" wire:model="billing.block_type" :options="['partial' => 'Parcial (portal de aviso / velocidad mínima)', 'total' => 'Total (sin navegación)']" required />
                         <x-ui.input label="Recargo por pago tardío" type="number" step="0.01" min="0" max="100000" wire:model="billing.late_fee" prefix="$" required />
                         <x-ui.input label="Cargo por reconexión" type="number" step="0.01" min="0" max="100000" wire:model="billing.reconnection_fee" prefix="$" required />
+                        <x-ui.input label="Días de reconexión" type="number" min="0" max="365" wire:model="billing.reconnect_max_days" suffix="días" hint="Suspendido más de estos días ya no se reconecta solo (0 = sin límite)" required />
                     </div>
+                    <p class="mt-3 text-xs text-slate-500">Cada plan puede tener su propia tolerancia y desactivar la reconexión automática (Planes → editar).</p>
                 </x-ui.card>
             </div>
 
@@ -217,13 +220,16 @@
                 <div class="space-y-4">
                     <x-ui.select label="Proveedor" wire:model.live="messaging.whatsapp_provider" :options="['simulated' => 'Simulado (demo, no envía)', 'meta' => 'WhatsApp Cloud API (Meta)', 'twilio' => 'Twilio WhatsApp']" />
                     @if ($messaging['whatsapp_provider'] === 'meta')
-                        <x-ui.input label="Phone number ID" wire:model="messaging.whatsapp_phone_id" filter="digits" maxlength="80" />
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <x-ui.input label="Phone number ID" wire:model="messaging.whatsapp_phone_id" filter="digits" maxlength="80" />
+                            <x-ui.input label="WhatsApp Business Account ID" wire:model="messaging.whatsapp_waba_id" filter="digits" maxlength="80" hint="Para enviar plantillas a Meta desde Comunicación → Plantillas" />
+                        </div>
                         <x-ui.input label="Token de acceso (permanente)" type="password" autocomplete="off" maxlength="1000" wire:model="secrets.whatsapp_token" :placeholder="$maskedSecrets['whatsapp_token'] ? 'Guardado: '.$maskedSecrets['whatsapp_token'] : 'Sin configurar'" />
                         <x-ui.select label="Idioma de las plantillas" wire:model="messaging.whatsapp_language" :options="\App\Livewire\Settings\Index::WHATSAPP_LANGUAGES" />
                         <x-ui.input label="Secreto de la app (App secret)" type="password" autocomplete="off" maxlength="200" wire:model="secrets.whatsapp_app_secret" :placeholder="$maskedSecrets['whatsapp_app_secret'] ? 'Guardado: '.$maskedSecrets['whatsapp_app_secret'] : 'Sin configurar'" />
                         <div class="space-y-2 rounded-lg bg-slate-50 p-3 text-xs" x-data="{ copied: null, copy(k, v) { navigator.clipboard.writeText(v); this.copied = k; setTimeout(() => this.copied = null, 1500) } }">
-                            <div class="font-semibold text-slate-700">Webhook (estado de entrega)</div>
-                            <p class="text-slate-500">En Meta → tu app → WhatsApp → Configuración → Webhook, captura estos datos y suscríbete al campo <b>messages</b>.</p>
+                            <div class="font-semibold text-slate-700">Webhook (entregas, respuestas y plantillas)</div>
+                            <p class="text-slate-500">En Meta → tu app → WhatsApp → Configuración → Webhook, captura estos datos y suscríbete a los campos <b>messages</b> y <b>message_template_status_update</b>.</p>
                             <div class="flex items-center gap-2">
                                 <span class="w-28 shrink-0 text-slate-500">URL de devolución</span>
                                 <code class="min-w-0 flex-1 break-all text-slate-800">{{ $metaWebhook['url'] }}</code>
@@ -269,7 +275,15 @@
             <x-ui.card title="Correo y notificaciones push">
                 <div class="space-y-4">
                     <x-ui.toggle wire:model="messaging.email_enabled" label="Enviar correos electrónicos" description="Recordatorios, recibos y avisos al correo del cliente" />
-                    <x-ui.select label="Notificaciones push (app del cliente)" wire:model="messaging.push_provider" :options="['simulated' => 'Simulado (demo)', 'expo' => 'Expo Push (apps móviles)']" />
+                    <x-ui.select label="Notificaciones push (apps móviles)" wire:model="messaging.push_provider" :options="['simulated' => 'Simulado (demo, no envía)', 'fcm' => 'Firebase Cloud Messaging']" />
+                    <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 p-3 text-xs">
+                        @if ($firebaseProject)
+                            <span class="flex items-center gap-1.5 text-slate-600"><x-heroicon-m-check-circle class="h-4 w-4 text-success-600" />Firebase configurado en el servidor (proyecto <b>{{ $firebaseProject }}</b>). Llega a la app de campo y a la app del cliente.</span>
+                            <x-ui.button type="button" variant="secondary" size="sm" icon="signal" wire:click="testFirebase" wire:loading.attr="disabled" wire:target="testFirebase">Probar Firebase</x-ui.button>
+                        @else
+                            <span class="flex items-center gap-1.5 text-warning-800"><x-heroicon-m-exclamation-triangle class="h-4 w-4" />Firebase aún no está configurado en el servidor: mientras tanto los push no se entregan.</span>
+                        @endif
+                    </div>
                 </div>
             </x-ui.card>
 
@@ -393,7 +407,7 @@
             </x-ui.table>
         </x-ui.card>
 
-        <x-ui.modal wire:model="showZone" :title="$zoneId ? 'Editar zona' : 'Nueva zona'">
+        <x-ui.modal wire:model="showZone" :title="$zoneId ? 'Editar zona' : 'Nueva zona'" size="2xl">
             <form wire:submit="saveZone" id="zone-form" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <x-ui.input label="Nombre" wire:model="zone.name" filter="text" maxlength="120" required class="sm:col-span-2" />
                 <x-ui.input label="Comunidad" wire:model="zone.community" filter="text" maxlength="120" />
@@ -404,6 +418,24 @@
                 <x-ui.input label="Latitud del centro" wire:model="zone.lat" filter="signed" />
                 <x-ui.input label="Longitud del centro" wire:model="zone.lng" filter="signed" />
                 <x-ui.input label="Costo operativo mensual" type="number" step="0.01" min="0" max="10000000" wire:model="zone.monthly_cost" prefix="$" hint="Renta, enlace, energía, personal… (para BI)" class="sm:col-span-2" />
+                {{-- Polígono de la zona (se dibuja en el mapa inteligente, capa "Zonas") --}}
+                @php
+                    $zoneCenter = ! empty($zone['lat']) && ! empty($zone['lng']) ? [(float) $zone['lat'], (float) $zone['lng']] : (tenant()->setting('map.center') ?? [20.5888, -100.3899]);
+                @endphp
+                <div class="sm:col-span-2" wire:key="zone-poly-{{ $zoneMapVersion }}"
+                     x-data="polygonEditor(@js(['model' => 'zone.polygon', 'value' => $zone['polygon'] ?? [], 'center' => $zoneCenter, 'zoom' => 14, 'color' => $zone['color'] ?? '#1A7FF5']))">
+                    <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
+                        <label class="form-label mb-0">Polígono de la zona</label>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-slate-500"><span x-text="points.length"></span> vértices</span>
+                            <x-ui.button type="button" variant="ghost" size="sm" icon="arrow-uturn-left" x-on:click="undo()" x-bind:disabled="!points.length">Deshacer</x-ui.button>
+                            <x-ui.button type="button" variant="ghost" size="sm" icon="trash" x-on:click="clear()" x-bind:disabled="!points.length">Borrar</x-ui.button>
+                        </div>
+                    </div>
+                    <div wire:ignore class="relative h-[300px] overflow-hidden rounded-xl border border-slate-200"><div x-ref="map" class="h-full w-full"></div></div>
+                    <p class="mt-1 text-xs text-slate-500">Haz clic en el mapa para agregar vértices; arrastra un vértice para moverlo. Opcional: si no capturas el centro se calcula a partir del polígono.</p>
+                    @error('zone.polygon')<p class="mt-1 text-xs font-medium text-danger-600">{{ $message }}</p>@enderror
+                </div>
             </form>
             <x-slot:footer>
                 <x-ui.button variant="secondary" x-on:click="open = false">Cancelar</x-ui.button>

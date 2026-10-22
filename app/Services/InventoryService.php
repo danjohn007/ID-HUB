@@ -108,6 +108,21 @@ class InventoryService
         } else {
             $alerts->resolveFor('low_stock', $item);
         }
+
+        // Sobre-existencia: capital inmovilizado / posible error de captura
+        if ($item->active && $item->max_stock !== null && (float) $item->max_stock > 0 && (float) $item->stock > (float) $item->max_stock) {
+            $alerts->raise(
+                'over_stock',
+                'info',
+                'Inventario excedido: '.$item->name,
+                'Existencia '.$this->qty($item->stock).' '.$item->unit.' (máximo '.$this->qty($item->max_stock).'). SKU '.$item->sku.($item->location ? ' · '.$item->location : '')
+                    .'. Revisar compras pendientes o redistribuir el material.',
+                $item,
+                ['stock' => (float) $item->stock, 'max' => (float) $item->max_stock],
+            );
+        } else {
+            $alerts->resolveFor('over_stock', $item);
+        }
     }
 
     public function qty($value): string

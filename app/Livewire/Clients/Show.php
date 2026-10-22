@@ -15,6 +15,7 @@ use App\Services\ReferralService;
 use App\Services\RiskService;
 use App\Services\ServiceControl;
 use App\Services\TicketService;
+use App\Support\Evidence;
 use App\Support\InputRules;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -253,7 +254,7 @@ class Show extends Component
     public function uploadEvidence(): void
     {
         $this->validate(['evidence' => 'required|file|max:8192|mimes:jpg,jpeg,png,webp,pdf'], [], ['evidence' => 'archivo']);
-        $path = $this->evidence->store('evidences/'.tenant()->id, 'public');
+        $path = Evidence::store($this->evidence, 'evidences/'.tenant()->id);
         $this->client->attachments()->create([
             'tenant_id' => $this->client->tenant_id, 'kind' => $this->evidenceKind, 'path' => $path,
             'original_name' => $this->evidence->getClientOriginalName(), 'mime' => $this->evidence->getMimeType(),

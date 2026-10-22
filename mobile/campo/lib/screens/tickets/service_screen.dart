@@ -39,9 +39,11 @@ class _ServiceScreenState extends State<ServiceScreen> {
   Future<void> _sendComment() async {
     final body = _comment.text.trim();
     if (body.length < 2) return;
-    final api = context.read<Session>().api;
+    final outbox = context.read<Session>().outbox;
     setState(() => _sending = true);
-    final ok = await runAction(context, () => api.post('$_base/comments', data: {'body': body, 'internal': _internal ? 1 : 0}), success: 'Comentario agregado');
+    final ok = await runQueued(
+        context, () => outbox.submit(path: '$_base/comments', data: {'body': body, 'internal': _internal ? 1 : 0}, label: 'Comentario en ticket #${widget.ticketId}'),
+        success: 'Comentario agregado');
     if (!mounted) return;
     setState(() => _sending = false);
     if (ok) {
@@ -51,10 +53,16 @@ class _ServiceScreenState extends State<ServiceScreen> {
   }
 
   Future<void> _status(String status, {String? note}) async {
-    final api = context.read<Session>().api;
+    final outbox = context.read<Session>().outbox;
     final gps = await Geo.current();
     if (!mounted) return;
-    final ok = await runAction(context, () => api.patch('$_base/status', data: {'status': status, 'note': note, 'lat': gps?.lat, 'lng': gps?.lng}));
+    final ok = await runQueued(
+        context,
+        () => outbox.submit(
+            method: 'PATCH',
+            path: '$_base/status',
+            data: {'status': status, 'note': note, 'lat': gps?.lat, 'lng': gps?.lng},
+            label: 'Estado del ticket #${widget.ticketId}'));
     if (ok) _reload();
   }
 

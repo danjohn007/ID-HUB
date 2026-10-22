@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api.dart';
 import '../../core/format.dart';
 import '../../core/launch.dart';
 import '../../core/session.dart';
@@ -9,25 +10,91 @@ import '../../motion.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 
-/// Control de efectivo (sección 27): corte de caja abierto del cobrador y sus cobros.
-/// El supervisor concilia "cobros registrados vs efectivo entregado" en el panel.
-class CashCutScreen extends StatelessWidget {
+class _CutData {
+  _CutData(this.cut, this.payments, this.history);
+
+  final Map<String, dynamic>? cut;
+  final List<Payment> payments;
+  final List<Map<String, dynamic>> history;
+}
+
+/// Control de efectivo (sección 27): corte de caja abierto del cobrador, sus cobros,
+/// "Entregar corte" (cierra el corte con el importe esperado) e historial de cortes.
+/// El supervisor registra el efectivo recibido y concilia en el panel.
+class CashCutScreen extends StatefulWidget {
   const CashCutScreen({super.key});
+
+  @override
+  State<CashCutScreen> createState() => _CashCutScreenState();
+}
+
+class _CashCutScreenState extends State<CashCutScreen> {
+  final _loader = GlobalKey<LoaderState<_CutData>>();
+
+  Future<_CutData> _load() async {
+    final api = context.read<Session>().api;
+    final results = await Future.wait([api.get('/collection/cash-cut'), api.get('/collection/cash-cuts', query: {'per_page': 20})]);
+    final data = results[0];
+    return _CutData(
+      data['cash_cut'] is Map ? Map<String, dynamic>.from(data['cash_cut'] as Map) : null,
+      (data['payments'] as List? ?? []).map(Payment.new).toList(),
+      (results[1]['data'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
+    );
+  }
+
+  /// Confirmación con los totales y cierre del corte en el servidor (requiere señal).
+  Future<void> _deliver(Map<String, dynamic> cut) async {
+    final api = context.read<Session>().api;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.point_of_sale_rounded, color: AppColors.info, size: 40),
+        title: Text('¿Entregar el corte ${cut['folio']}?'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _TotalRow('Cobros en efectivo', '${cut['payments_count']}'),
+          _TotalRow('Abierto desde', Fmt.dateTime(cut['opened_at'] as String?)),
+          const Divider(height: 20),
+          _TotalRow('Efectivo a entregar', Fmt.money(cut['expected_amount'] as num?), strong: true),
+          const SizedBox(height: 12),
+          const Text('Se cerrará el corte con este importe. Los cobros nuevos irán a un corte nuevo. Entrega el efectivo a tu supervisor.',
+              style: TextStyle(color: AppColors.slate, fontSize: 13, height: 1.35)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Entregar corte')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final done = await runAction(context, () async {
+      try {
+        return await api.post('/collection/cash-cut/close');
+      } on ApiException catch (e) {
+        if (e.offline) throw ApiException('Sin conexión: el corte no se entregó. Intenta de nuevo cuando tengas señal.', offline: true);
+        rethrow;
+      }
+    });
+    if (done) _loader.currentState?.reload();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Loader<Map<String, dynamic>>(
-        load: () => context.read<Session>().api.get('/collection/cash-cut'),
+      body: Loader<_CutData>(
+        key: _loader,
+        load: _load,
         builder: (context, data, reload) {
-          final cut = data['cash_cut'] is Map ? Map<String, dynamic>.from(data['cash_cut'] as Map) : null;
-          final payments = (data['payments'] as List? ?? []).map(Payment.new).toList();
+          final cut = data.cut;
+          final payments = data.payments;
+          final history = data.history.where((h) => h['id'] != cut?['id']).toList();
           if (cut == null) {
-            return ListView(padding: EdgeInsets.zero, children: const [
-              PageHeader(eyebrow: 'Efectivo', title: 'Mi corte de caja'),
-              EmptyState(icon: Icons.point_of_sale_outlined, title: 'Sin corte abierto', message: 'Tu corte se abre solo con el primer cobro en efectivo.'),
+            return ListView(padding: EdgeInsets.zero, children: [
+              const PageHeader(eyebrow: 'Efectivo', title: 'Mi corte de caja'),
+              const EmptyState(icon: Icons.point_of_sale_outlined, title: 'Sin corte abierto', message: 'Tu corte se abre solo con el primer cobro en efectivo.'),
+              if (history.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), child: _History(history: history)),
             ]);
           }
+          final count = (cut['payments_count'] as num?) ?? 0;
           return ListView(padding: EdgeInsets.zero, children: [
             PageHeader(
               eyebrow: 'Efectivo · corte ${cut['folio']}',
@@ -37,7 +104,7 @@ class CashCutScreen extends StatelessWidget {
                 CountUpText(Fmt.money(cut['expected_amount'] as num?), style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w800, letterSpacing: -1)),
                 const SizedBox(height: 10),
                 Wrap(spacing: 8, runSpacing: 8, children: [
-                  _GlassTag(icon: Icons.receipt_long_rounded, text: '${cut['payments_count']} cobros'),
+                  _GlassTag(icon: Icons.receipt_long_rounded, text: '$count cobros'),
                   _GlassTag(icon: Icons.schedule_rounded, text: 'Abierto ${Fmt.dateTime(cut['opened_at'] as String?)}'),
                 ]),
               ]),
@@ -57,9 +124,17 @@ class CashCutScreen extends StatelessWidget {
                     child: const Row(children: [
                       IconBadge(Icons.handshake_outlined, color: AppColors.info, size: 38),
                       SizedBox(width: 12),
-                      Expanded(child: Text('Entrega este efectivo a tu supervisor. Él cierra y concilia el corte desde el panel.', style: TextStyle(fontSize: 13, height: 1.35))),
+                      Expanded(
+                          child: Text('Al terminar tu jornada toca "Entregar corte" y entrega el efectivo a tu supervisor. Él registra lo recibido y concilia en el panel.',
+                              style: TextStyle(fontSize: 13, height: 1.35))),
                     ]),
                   ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: count > 0 ? () => _deliver(cut) : null,
+                  icon: const Icon(Icons.outbox_rounded),
+                  label: const Text('Entregar corte'),
                 ),
                 const SizedBox(height: 16),
                 SectionCard(
@@ -94,11 +169,78 @@ class CashCutScreen extends StatelessWidget {
                           ],
                         ]),
                 ),
+                if (history.isNotEmpty) ...[const SizedBox(height: 16), _History(history: history)],
+                const SizedBox(height: 8),
               ]),
             ),
           ]);
         },
       ),
+    );
+  }
+}
+
+/// Historial de cortes: cerrado (por entregar), entregado o conciliado, con diferencias.
+class _History extends StatelessWidget {
+  const _History({required this.history});
+
+  final List<Map<String, dynamic>> history;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      index: 3,
+      title: 'Cortes anteriores',
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      child: Column(children: [
+        for (final (i, c) in history.indexed) ...[
+          if (i > 0) const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Flexible(child: Text('${c['folio']}', overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy))),
+                    const SizedBox(width: 8),
+                    StatusChip.of(Catalog(c['status']), dense: true),
+                  ]),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${c['payments_count']} cobros · ${Fmt.date(c['opened_at'] as String?)}${c['closed_at'] != null ? ' – ${Fmt.date(c['closed_at'] as String?)}' : ''}',
+                    style: const TextStyle(color: AppColors.slate, fontSize: 12.5),
+                  ),
+                  if (c['difference'] is num && (c['difference'] as num).abs() > 0.009)
+                    Text('Diferencia ${Fmt.money(c['difference'] as num)}', style: const TextStyle(color: AppColors.danger, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text(Fmt.money(c['expected_amount'] as num?), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                if (c['delivered_amount'] is num) Text('Entregado ${Fmt.money(c['delivered_amount'] as num)}', style: const TextStyle(color: AppColors.slate, fontSize: 12)),
+              ]),
+            ]),
+          ),
+        ],
+      ]),
+    );
+  }
+}
+
+class _TotalRow extends StatelessWidget {
+  const _TotalRow(this.label, this.value, {this.strong = false});
+
+  final String label;
+  final String value;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(children: [
+        Expanded(child: Text(label, style: const TextStyle(color: AppColors.slate))),
+        Text(value, style: TextStyle(fontWeight: strong ? FontWeight.w900 : FontWeight.w700, fontSize: strong ? 20 : 14)),
+      ]),
     );
   }
 }

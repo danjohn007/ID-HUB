@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\RouteStop;
 use App\Services\Billing\CashCutService;
 use App\Services\BillingService;
+use App\Support\Evidence;
 use App\Support\InputRules;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
@@ -121,7 +122,7 @@ class Collection extends Component
 
         $client = $this->myClient($this->clientId);
         $due = (float) $client->balance;
-        $evidence = $this->payEvidence ? $this->payEvidence->store('payments/'.tenant()->id.'/'.now()->format('Y/m'), 'public') : null;
+        $evidence = $this->payEvidence ? Evidence::store($this->payEvidence, 'payments/'.tenant()->id.'/'.now()->format('Y/m')) : null;
         $lat = is_numeric($this->payForm['lat']) ? $this->payForm['lat'] : null;
         $lng = is_numeric($this->payForm['lng']) ? $this->payForm['lng'] : null;
 
@@ -173,7 +174,7 @@ class Collection extends Component
             'promise_date' => $isPromise ? $this->visitForm['promise_date'] : null,
             'promise_amount' => $isPromise && $this->visitForm['promise_amount'] !== '' ? $this->visitForm['promise_amount'] : null,
             'notes' => $this->visitForm['notes'] ?: null,
-            'evidence_path' => $this->visitEvidence ? $this->visitEvidence->store('visits/'.tenant()->id.'/'.now()->format('Y/m'), 'public') : null,
+            'evidence_path' => $this->visitEvidence ? Evidence::store($this->visitEvidence, 'visits/'.tenant()->id.'/'.now()->format('Y/m')) : null,
             'lat' => is_numeric($this->visitForm['lat']) ? $this->visitForm['lat'] : null,
             'lng' => is_numeric($this->visitForm['lng']) ? $this->visitForm['lng'] : null,
             'visited_at' => now(),

@@ -1,6 +1,11 @@
 @php use App\Services\Messaging\MessageCatalog as MC; @endphp
 <div>
     <x-ui.page-header title="Plantillas de mensajes" subtitle="Textos de cobranza automática y avisos por WhatsApp, SMS, correo y notificación push">
+        @if ($whatsappProvider === 'meta' && $metaReady)
+            <x-ui.button variant="secondary" icon="arrow-path" wire:click="syncMeta" wire:loading.attr="disabled" wire:target="syncMeta" title="Consultar en Meta si ya se aprobaron">Estado en Meta</x-ui.button>
+            <x-ui.button variant="secondary" icon="cloud-arrow-up" wire:click="submitAllToMeta" wire:loading.attr="disabled" wire:target="submitAllToMeta"
+                         wire:confirm="Se enviarán a revisión de Meta las plantillas de WhatsApp activas que aún no estén en Meta, con su texto actual. ¿Continuar?">Enviar todas a Meta</x-ui.button>
+        @endif
         @if (Route::has('communications.messages'))
             <x-ui.button variant="secondary" icon="chat-bubble-left-right" :href="route('communications.messages')">Bitácora de mensajes</x-ui.button>
         @endif
@@ -86,7 +91,7 @@
                                 <div>
                                     <div class="text-sm font-semibold text-slate-800">Plantilla aprobada de WhatsApp ({{ $isMeta ? 'Meta' : 'Twilio' }})</div>
                                     @if ($isMeta)
-                                        <p class="mt-0.5 text-xs text-slate-500">WhatsApp solo entrega avisos iniciados por la empresa con una plantilla aprobada. Créala en Meta → WhatsApp Manager → Plantillas de mensajes (categoría <b>Utilidad</b>, idioma <b>{{ $whatsappLanguage }}</b>) con este texto, espera la aprobación y escribe aquí su nombre.</p>
+                                        <p class="mt-0.5 text-xs text-slate-500">WhatsApp solo entrega avisos iniciados por la empresa con una plantilla aprobada. Usa <b>Enviar a Meta</b> para mandarla a revisión con este texto (idioma <b>{{ $whatsappLanguage }}</b>), o créala tú en WhatsApp Manager → Plantillas de mensajes y escribe aquí su nombre.</p>
                                     @else
                                         <p class="mt-0.5 text-xs text-slate-500">WhatsApp solo entrega avisos iniciados por la empresa con una plantilla aprobada. Crea la plantilla en Twilio → Messaging → Content Template Builder con este texto, espera la aprobación y pega aquí su Content SID.</p>
                                     @endif
@@ -109,7 +114,22 @@
                                     <p class="rounded-lg bg-warning-50 px-3 py-2 text-xs text-warning-800">{{ $providerWarning }}</p>
                                 @endif
                                 @if ($isMeta)
-                                    <x-ui.input label="Nombre de la plantilla en Meta" wire:model.live.debounce.400ms="form.provider_template" placeholder="aviso_{{ $event }}" maxlength="80" />
+                                    <x-ui.input label="Nombre de la plantilla en Meta" wire:model.live.debounce.400ms="form.provider_template" placeholder="{{ \App\Services\Messaging\MetaTemplates::suggestedName($event) }}" maxlength="80" />
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        @if ($metaStatus)
+                                            <x-ui.badge :color="$metaStatus[1]" dot>Meta: {{ $metaStatus[0] }}</x-ui.badge>
+                                        @endif
+                                        @if ($metaReady)
+                                            <x-ui.button size="sm" variant="secondary" icon="cloud-arrow-up" wire:click="submitToMeta" wire:loading.attr="disabled" wire:target="submitToMeta" :disabled="(bool) $providerWarning">
+                                                {{ $metaStatus ? 'Consultar / reenviar a Meta' : 'Enviar a Meta' }}
+                                            </x-ui.button>
+                                        @else
+                                            <span class="text-xs text-slate-500">Captura el <b>WhatsApp Business Account ID</b> en Configuración → Mensajería para enviar plantillas a Meta desde aquí.</span>
+                                        @endif
+                                    </div>
+                                    @if ($metaNote)
+                                        <p class="rounded-lg bg-danger-50 px-3 py-2 text-xs text-danger-700">{{ $metaNote }}</p>
+                                    @endif
                                 @else
                                     <x-ui.input label="Content SID" wire:model.live.debounce.400ms="form.provider_template" placeholder="HX0123456789abcdef0123456789abcdef" maxlength="34" />
                                 @endif
@@ -166,7 +186,10 @@
                         <div class="rounded-xl border border-slate-200 p-3">
                             <div class="mb-2 text-xs font-semibold text-slate-700">Enviar prueba</div>
                             @if ($channel === 'push')
-                                <p class="text-xs text-slate-500">La prueba de notificaciones push requiere un dispositivo con la app del cliente.</p>
+                                <div class="flex items-center gap-2">
+                                    <p class="flex-1 text-xs text-slate-500">Llega a los teléfonos donde iniciaste sesión con tu usuario en la app de campo.</p>
+                                    <x-ui.button variant="secondary" icon="paper-airplane" wire:click="sendTest" title="Enviar prueba" />
+                                </div>
                             @else
                                 <div class="flex gap-2">
                                     <x-ui.input wire:model="testTo" :type="$channel === 'email' ? 'email' : 'tel'" :filter="$channel === 'email' ? 'email' : 'phone'" :placeholder="$channel === 'email' ? 'correo@ejemplo.com' : '55 1234 5678'" class="flex-1" />

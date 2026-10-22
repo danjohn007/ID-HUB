@@ -27,7 +27,7 @@ trait ManagesRepeaters
     protected function repeaterFields(): array
     {
         return ['code', 'name', 'tower_id', 'zone_id', 'location', 'lat', 'lng', 'capacity', 'alert_threshold', 'coverage_radius_km',
-            'bandwidth_mbps', 'router_device_id', 'ap_device_id', 'technician_id', 'monthly_cost', 'notes'];
+            'bandwidth_mbps', 'router_device_id', 'ap_device_id', 'management_ip', 'technician_id', 'monthly_cost', 'notes'];
     }
 
     public function newRepeater(): void
@@ -90,12 +90,14 @@ trait ManagesRepeaters
             'rform.bandwidth_mbps' => 'nullable|numeric|min:0|max:100000',
             'rform.router_device_id' => ['nullable', Rule::exists('network_devices', 'id')->where('tenant_id', $tid)->where('type', 'mikrotik')],
             'rform.ap_device_id' => ['nullable', Rule::exists('network_devices', 'id')->where('tenant_id', $tid)],
+            'rform.management_ip' => 'nullable|ip',
             'rform.technician_id' => ['nullable', Rule::exists('users', 'id')->where('tenant_id', $tid)],
             'rform.monthly_cost' => 'nullable|numeric|min:0|max:10000000',
             'rform.notes' => 'nullable|string|max:2000',
         ], [], [
             'rform.code' => 'ID', 'rform.name' => 'nombre', 'rform.capacity' => 'capacidad', 'rform.alert_threshold' => 'umbral de alerta',
             'rform.coverage_radius_km' => 'radio de cobertura', 'rform.lat' => 'latitud', 'rform.lng' => 'longitud', 'rform.location' => 'ubicación',
+            'rform.management_ip' => 'IP de administración',
         ])['rform'];
         $data = array_map(fn ($v) => $v === '' ? null : $v, $data);
         $data['monthly_cost'] ??= 0;

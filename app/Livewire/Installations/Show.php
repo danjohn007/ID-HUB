@@ -13,8 +13,8 @@ use App\Models\User;
 use App\Services\CoverageService;
 use App\Services\InstallationService;
 use App\Services\ProspectService;
+use App\Support\Evidence;
 use App\Support\InputRules;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -238,7 +238,7 @@ class Show extends Component
     {
         $this->ensureField();
         $this->validate(['photo' => 'required|image|max:10240'], [], ['photo' => 'fotografía']);
-        $path = $this->photo->store('evidences/'.$this->order->tenant_id.'/installations', 'public');
+        $path = Evidence::store($this->photo, 'evidences/'.$this->order->tenant_id.'/installations');
         $this->order->attachments()->create([
             'tenant_id' => $this->order->tenant_id, 'kind' => array_key_exists($this->photoKind, config('wisp.evidence_kinds')) ? $this->photoKind : 'instalacion',
             'path' => $path, 'original_name' => $this->photo->getClientOriginalName(), 'mime' => $this->photo->getMimeType(),
@@ -255,7 +255,7 @@ class Show extends Component
     {
         $this->ensureField();
         $a = $this->order->attachments()->findOrFail($id);
-        Storage::disk('public')->delete($a->path);
+        Evidence::delete($a->path);
         $a->delete();
         $this->toast('Fotografía eliminada', 'warning');
     }

@@ -12,6 +12,7 @@ use App\Support\Catalog;
 use App\Support\DemandAnalysis;
 use App\Support\MapData;
 use Illuminate\Support\Facades\Route;
+use Livewire\Attributes\Renderless;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -34,13 +35,14 @@ class Index extends Component
         'installations' => ['Instalaciones', 'clipboard-document-check', '#00A0A8'],
         'prospects' => ['Prospectos', 'user-plus', '#6048D0'],
         'coverage' => ['Zonas de cobertura', 'viewfinder-circle', '#1A7FF5'],
+        'zones' => ['Zonas (polígonos)', 'map', '#0B1B3A'],
         'demand' => ['Concentración de demanda', 'fire', '#F7881F'],
     ];
 
     #[Url(as: 'capas', except: '')]
     public string $layersParam = '';
 
-    public array $layers = ['clients', 'towers', 'repeaters', 'technicians', 'tickets', 'installations', 'coverage'];
+    public array $layers = ['clients', 'towers', 'repeaters', 'technicians', 'tickets', 'installations', 'coverage', 'zones'];
 
     #[Url(as: 'zona', except: '')]
     public string $filterZone = '';
@@ -73,9 +75,9 @@ class Index extends Component
     public function preset(string $name): void
     {
         $this->layers = match ($name) {
-            'red' => ['repeaters', 'towers', 'devices', 'coverage', 'tickets'],
+            'red' => ['repeaters', 'towers', 'devices', 'coverage', 'tickets', 'zones'],
             'campo' => ['technicians', 'collectors', 'tickets', 'installations'],
-            'expansion' => ['prospects', 'demand', 'coverage', 'repeaters', 'clients'],
+            'expansion' => ['prospects', 'demand', 'coverage', 'repeaters', 'clients', 'zones'],
             default => array_keys(self::LAYERS),
         };
         $this->updated('layers');
@@ -85,6 +87,39 @@ class Index extends Component
     {
         $this->reset('filterZone', 'filterStatus', 'filterRepeater');
         $this->updated('filter');
+    }
+
+    /**
+     * Posiciones de técnicos y cobradores en vivo (wire:poll cada 30 s): solo envía esas capas al mapa,
+     * sin volver a renderizar el componente ni redibujar el resto.
+     */
+    #[Renderless]
+    public function refreshStaff(): void
+    {
+        $layers = array_values(array_intersect(['technicians', 'collectors'], $this->layers));
+        if (! $layers) {
+            return;
+        }
+        $this->dispatch('map-layer-main-map', layers: $layers,
+            markers: array_values(array_filter(MapData::staff(), fn ($m) => in_array($m['layer'], $layers, true))));
+    }
+
+    /** Polígonos de las zonas (zones.polygon = [[lat, lng], ...]). */
+    protected function zonePolygons(): array
+    {
+        return Zone::query()->whereNotNull('polygon')->when($this->filterZone, fn ($q) => $q->whereKey($this->filterZone))
+            ->withCount(['clients' => fn ($q) => $q->whereNotIn('service_status', ['cancelado', 'prospecto'])])
+            ->get(['id', 'name', 'community', 'color', 'polygon'])
+            ->map(function ($z) {
+                $points = collect(is_array($z->polygon) ? $z->polygon : [])
+                    ->filter(fn ($p) => is_array($p) && count($p) === 2 && is_numeric($p[0]) && is_numeric($p[1]))
+                    ->map(fn ($p) => [(float) $p[0], (float) $p[1]])->values()->all();
+
+                return count($points) >= 3 ? [
+                    'points' => $points, 'color' => $z->color ?: '#1A7FF5', 'layer' => 'zones',
+                    'popup' => '<b>'.e($z->name).'</b>'.($z->community ? '<br>'.e($z->community) : '').'<br>'.number_format($z->clients_count).' clientes',
+                ] : null;
+            })->filter()->values()->all();
     }
 
     protected function devices(): array
@@ -135,6 +170,7 @@ class Index extends Component
         return [
             'markers' => $markers,
             'circles' => isset($on['coverage']) ? MapData::coverageCircles() : [],
+            'polygons' => isset($on['zones']) ? $this->zonePolygons() : [],
             'sectors' => isset($on['coverage']) ? MapData::sectors() : [],
             'heat' => isset($on['demand']) ? (new DemandAnalysis)->heat() : [],
             'cluster' => true,

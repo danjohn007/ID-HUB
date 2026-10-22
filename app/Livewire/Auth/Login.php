@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Auth;
 
+use App\Models\Tenant;
 use App\Support\Audit;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -46,6 +47,14 @@ class Login extends Component
             throw ValidationException::withMessages(['email' => 'Las credenciales no son válidas.']);
         }
 
+        // En el dominio de un WISP solo entra su personal (y el superadmin de la plataforma).
+        $hostTenant = Tenant::forHost(request()->getHost());
+        if ($hostTenant && ! Auth::user()->isSuperadmin() && Auth::user()->tenant_id !== $hostTenant->id) {
+            Auth::logout();
+            RateLimiter::hit($key, 60);
+            throw ValidationException::withMessages(['email' => 'Este usuario no pertenece a '.$hostTenant->name.'.']);
+        }
+
         RateLimiter::clear($key);
         session()->regenerate();
         session()->forget('acting_tenant_id');
@@ -59,6 +68,6 @@ class Login extends Component
 
     public function render()
     {
-        return view('livewire.auth.login');
+        return view('livewire.auth.login', ['hostTenant' => Tenant::forHost(request()->getHost())]);
     }
 }

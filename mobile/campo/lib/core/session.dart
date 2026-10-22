@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import 'api.dart';
+import 'outbox.dart';
+import 'push.dart';
 
 /// Usuario del personal autenticado (técnico, cobrador, supervisor...).
 class StaffUser {
@@ -48,11 +50,17 @@ enum AppMode { tecnico, cobrador }
 class Session extends ChangeNotifier {
   Session() {
     api = ApiClient(server: AppConfig.defaultServer, onUnauthorized: _expired);
+    outbox = Outbox(api);
+    // Cualquier respuesta correcta indica que volvió la señal: se envía lo pendiente.
+    api.onOnline = () => outbox.flush();
   }
 
   static const _storage = FlutterSecureStorage();
 
   late final ApiClient api;
+
+  /// Acciones guardadas sin conexión (se envían al recuperar señal).
+  late final Outbox outbox;
   String server = AppConfig.defaultServer;
   String? _token;
   StaffUser? user;
@@ -86,6 +94,7 @@ class Session extends ChangeNotifier {
       try {
         final me = await api.get('/me');
         _apply(me);
+        Push.register(api);
       } on ApiException catch (e) {
         if (e.offline) {
           // Sin señal: se usa el último perfil guardado para poder trabajar con la caché.
@@ -127,14 +136,17 @@ class Session extends ChangeNotifier {
     await _storage.write(key: 'token', value: token);
     api.configure(server: server, token: token);
     _apply({'user': res['user'], 'tenant': res['tenant'], 'abilities': abilities});
+    Push.register(api);
     expiredMessage = null;
     notifyListeners();
   }
 
   Future<void> logout() async {
     try {
-      await api.post('/auth/logout');
+      // Con push_token el servidor también da de baja este teléfono de las notificaciones.
+      await api.post('/auth/logout', data: {if (Push.token != null) 'push_token': Push.token});
     } catch (_) {}
+    await Push.unregister();
     await _clear();
     notifyListeners();
   }
@@ -143,6 +155,8 @@ class Session extends ChangeNotifier {
     user = StaffUser(Map<String, dynamic>.from(data['user'] as Map));
     tenant = data['tenant'] is Map ? TenantInfo(Map<String, dynamic>.from(data['tenant'] as Map)) : null;
     abilities = List<String>.from(data['abilities'] as List? ?? data['permissions'] as List? ?? const []);
+    outbox.userId = user!.id;
+    outbox.load().then((_) => outbox.flush(force: true));
     SharedPreferences.getInstance().then((p) => p.setString('profile', jsonEncode({'user': user!.json, 'tenant': tenant?.json, 'abilities': abilities})));
   }
 
@@ -157,6 +171,8 @@ class Session extends ChangeNotifier {
     user = null;
     tenant = null;
     abilities = const [];
+    // Lo pendiente se conserva y se envía cuando el mismo usuario vuelva a entrar.
+    outbox.userId = null;
     api.configure(server: server, token: null);
     try {
       await _storage.delete(key: 'token');

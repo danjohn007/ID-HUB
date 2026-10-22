@@ -79,11 +79,12 @@ class CaptivePortalController extends Controller
             'username' => ['nullable', 'string', 'max:80', InputRules::USERNAME],
             'password' => 'nullable|string|max:80',
             'code' => ['nullable', 'string', 'max:30', InputRules::CODE],
+            'phone4' => ['nullable', 'digits:4'],
             'voucher' => ['nullable', 'string', 'max:30', 'regex:/^[A-Za-z0-9\s\-]+$/'],
-        ], ['accept.accepted' => 'Debes aceptar los términos de uso.'], ['username' => 'usuario', 'password' => 'contraseña', 'code' => 'código de cliente', 'voucher' => 'código de ficha']);
+        ], ['accept.accepted' => 'Debes aceptar los términos de uso.'], ['username' => 'usuario', 'password' => 'contraseña', 'code' => 'código de cliente', 'phone4' => 'últimos 4 dígitos', 'voucher' => 'código de ficha']);
 
         $hotspot = $this->hotspot($request);
-        $result = $this->portal->authenticate($tenant, $request->input('method'), $request->only('username', 'password', 'code', 'voucher'), $hotspot['mac'] ?: null, $hotspot['ip'] ?: $request->ip());
+        $result = $this->portal->authenticate($tenant, $request->input('method'), $request->only('username', 'password', 'code', 'phone4', 'voucher'), $hotspot['mac'] ?: null, $hotspot['ip'] ?: $request->ip());
 
         if (! $result['ok']) {
             return $this->page($tenant, $request, ['loginError' => $result['error']]);

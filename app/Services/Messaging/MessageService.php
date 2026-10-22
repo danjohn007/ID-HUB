@@ -173,6 +173,7 @@ class MessageService
             'telefono_empresa' => $tenant->whatsapp ?: $tenant->phone,
             'zona' => $client->zone?->name ?? '',
             'link_pago' => '',
+            'link_comprobante' => '',
             'fecha' => now()->translatedFormat('d \d\e F'),
         ];
     }
@@ -204,6 +205,10 @@ class MessageService
 
     protected function sendWhatsApp(array $cfg, Message $m): array
     {
+        if (($cfg['whatsapp_provider'] ?? 'simulated') !== 'simulated' && ! Tenant::find($m->tenant_id)?->hasFeature('whatsapp')) {
+            throw new \RuntimeException('WhatsApp no está incluido en el plan de ID-Hub de tu empresa.');
+        }
+
         return match ($cfg['whatsapp_provider'] ?? 'simulated') {
             'meta' => $this->metaWhatsApp($cfg, $m),
             'twilio' => $this->twilio($cfg, 'whatsapp:'.$m->to, 'whatsapp:'.($cfg['twilio_whatsapp_from'] ?? ''), $this->twilioContent($m)),
@@ -224,7 +229,7 @@ class MessageService
             : ['Body' => $m->body];
     }
 
-    protected static function graphUrl(string $path): string
+    public static function graphUrl(string $path): string
     {
         return 'https://graph.facebook.com/'.config('services.whatsapp.graph_version', 'v23.0').'/'.ltrim($path, '/');
     }
@@ -337,16 +342,46 @@ class MessageService
         return [in_array(config('mail.default'), ['log', 'array'], true) ? 'simulated' : 'sent', null];
     }
 
-    /** Push vía Expo Push API (apps móviles Expo) o simulado. */
+    /**
+     * Push por Firebase Cloud Messaging (proyecto de la plataforma) o simulado. Los tokens de Expo
+     * (ExponentPushToken[...]) se mandan por Expo. $m->meta['data'] viaja a la app para abrir la
+     * pantalla correspondiente (type, id) junto con el evento.
+     */
     protected function sendPush(array $cfg, Message $m): array
     {
-        if (($cfg['push_provider'] ?? 'simulated') !== 'expo') {
+        if (($cfg['push_provider'] ?? 'simulated') === 'simulated') {
             return ['simulated', null];
         }
+        $title = $m->subject ?: (string) Tenant::find($m->tenant_id)?->name;
+        $data = ['event' => $m->event] + (array) ($m->meta['data'] ?? []);
+        if (self::isExpoToken($m->to)) {
+            return $this->expoPush($m, $title, $data);
+        }
+
+        try {
+            return ['sent', app(FcmClient::class)->send($m->to, $title, $m->body, $data)];
+        } catch (FcmException $e) {
+            if ($e->invalidToken) {
+                PushToken::withoutGlobalScopes()->where('token', $m->to)->delete();
+            }
+            throw $e;
+        }
+    }
+
+    public static function isExpoToken(string $token): bool
+    {
+        return str_starts_with($token, 'ExponentPushToken[') || str_starts_with($token, 'ExpoPushToken[');
+    }
+
+    protected function expoPush(Message $m, string $title, array $data): array
+    {
         $response = Http::timeout(15)->post('https://exp.host/--/api/v2/push/send', [
-            'to' => $m->to, 'title' => $m->subject, 'body' => $m->body, 'sound' => 'default',
+            'to' => $m->to, 'title' => $title, 'body' => $m->body, 'sound' => 'default', 'data' => (object) $data,
         ]);
         if ($response->failed() || $response->json('data.status') === 'error') {
+            if ($response->json('data.details.error') === 'DeviceNotRegistered') {
+                PushToken::withoutGlobalScopes()->where('token', $m->to)->delete();
+            }
             throw new \RuntimeException('Push: '.($response->json('data.message') ?? $response->status()));
         }
 

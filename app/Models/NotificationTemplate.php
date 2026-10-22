@@ -9,6 +9,6 @@ class NotificationTemplate extends TenantModel
     /** Variables disponibles en las plantillas. */
     public const VARIABLES = [
         '{nombre}', '{cliente}', '{codigo}', '{plan}', '{monto}', '{saldo}', '{fecha_limite}',
-        '{empresa}', '{telefono_empresa}', '{link_pago}', '{folio}', '{tecnico}', '{fecha}', '{zona}', '{descripcion}',
+        '{empresa}', '{telefono_empresa}', '{link_pago}', '{link_comprobante}', '{folio}', '{tecnico}', '{fecha}', '{zona}', '{descripcion}',
     ];
 }

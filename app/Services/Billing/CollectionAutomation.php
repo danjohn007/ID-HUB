@@ -5,6 +5,7 @@ namespace App\Services\Billing;
 use App\Models\Charge;
 use App\Models\Client;
 use App\Models\PaymentLink;
+use App\Models\Plan;
 use App\Models\Tenant;
 use App\Services\AutomationEngine;
 use App\Services\BillingService;
@@ -47,13 +48,14 @@ class CollectionAutomation
      * Recordatorios y avisos:
      *  - reminder: N días antes del vencimiento → evento payment_due_soon (una vez por cargo)
      *  - due: el día del vencimiento → mensaje "due" (una vez por cargo)
-     *  - suspension_warning: último día de tolerancia → mensaje (si hay corte automático)
+     *  - pending: N días después del vencimiento sin pagar → mensaje "pending" (billing.pending_notice_days)
+     *  - suspension_warning: último día de tolerancia (la del plan o la del WISP) → mensaje (si hay corte automático)
      *  - marca morosos (activo con cargos vencidos) recalculando su estado de cuenta
      */
     public function sendReminders(Tenant $tenant, bool $force = false, bool $dryRun = false): array
     {
         $now = $this->now($tenant);
-        $stats = ['reminders' => 0, 'due' => 0, 'warnings' => 0, 'morosos' => 0];
+        $stats = ['reminders' => 0, 'due' => 0, 'pending' => 0, 'warnings' => 0, 'morosos' => 0];
         if (! $force && $now->format('H:i') < (string) $tenant->setting('billing.reminder_hour', '09:00')) {
             return $stats + ['skipped' => 'Antes de la hora de envío ('.$tenant->setting('billing.reminder_hour', '09:00').')'];
         }
@@ -61,7 +63,7 @@ class CollectionAutomation
         return app(TenantContext::class)->run($tenant, function () use ($tenant, $now, $stats, $dryRun) {
             $today = $now->toDateString();
             $days = max(0, (int) $tenant->setting('billing.reminder_days_before', 3));
-            $grace = max(0, (int) $tenant->setting('billing.grace_days', 3));
+            [, $maxGrace] = $this->graceRange($tenant);
             $engine = app(AutomationEngine::class);
             $messages = app(MessageService::class);
 
@@ -86,18 +88,32 @@ class CollectionAutomation
                 fn (Client $c, $charges) => $messages->notify($c, 'due', ['monto' => money($charges->sum(fn ($ch) => $ch->balance()))]),
             );
 
-            // 3) Aviso de suspensión (último día de tolerancia)
-            if ($tenant->setting('billing.auto_suspend', true)) {
-                $stats['warnings'] = $this->perClient(
-                    $this->openCharges()->whereNull('charges.suspension_warning_sent_at')
-                        ->whereDate('charges.due_date', $now->copy()->subDays($grace)->toDateString())
-                        ->whereDate('charges.due_date', '<', $today),
-                    ['activo', 'moroso'], 'suspension_warning_sent_at', $dryRun,
-                    fn (Client $c) => $messages->notify($c, 'suspension_warning'),
+            // 3) Aviso de pago pendiente (N días después de la fecha límite; solo cargos recientes
+            //    para no avisar de golpe adeudos viejos)
+            $pendingDays = max(0, (int) $tenant->setting('billing.pending_notice_days', 1));
+            if ($pendingDays > 0) {
+                $stats['pending'] = $this->perClient(
+                    $this->openCharges()->whereNull('charges.pending_notice_sent_at')
+                        ->whereDate('charges.due_date', '<=', $now->copy()->subDays($pendingDays)->toDateString())
+                        ->whereDate('charges.due_date', '>=', $now->copy()->subDays($pendingDays + 7)->toDateString()),
+                    ['activo', 'moroso', 'en_revision'], 'pending_notice_sent_at', $dryRun,
+                    fn (Client $c) => $messages->notify($c, 'pending'),
                 );
             }
 
-            // 4) Activos con cargos vencidos → moroso
+            // 4) Aviso de suspensión (último día de tolerancia, con la tolerancia del plan del cliente)
+            if ($tenant->setting('billing.auto_suspend', true)) {
+                $stats['warnings'] = $this->perClient(
+                    $this->openCharges()->whereNull('charges.suspension_warning_sent_at')
+                        ->whereDate('charges.due_date', '>=', $now->copy()->subDays($maxGrace + 2)->toDateString())
+                        ->whereDate('charges.due_date', '<', $today),
+                    ['activo', 'moroso'], 'suspension_warning_sent_at', $dryRun,
+                    fn (Client $c) => $messages->notify($c, 'suspension_warning'),
+                    fn (Client $c, $charges) => $charges->min('due_date')->toDateString() <= $now->copy()->subDays($this->graceFor($c, $tenant))->toDateString(),
+                );
+            }
+
+            // 5) Activos con cargos vencidos → moroso
             $toFlag = Client::query()->where('service_status', 'activo')
                 ->whereExists(fn ($q) => $q->from('charges')->whereColumn('charges.client_id', 'clients.id')
                     ->whereIn('charges.status', ['pending', 'partial'])->where('charges.due_date', '<', $today))
@@ -134,7 +150,9 @@ class CollectionAutomation
 
         return app(TenantContext::class)->run($tenant, function () use ($tenant, $now, $stats, $dryRun) {
             $today = $now->toDateString();
-            $limit = $now->copy()->subDays(max(0, (int) $tenant->setting('billing.grace_days', 3)))->toDateString();
+            // Primero con la tolerancia más corta (plan o WISP); luego se revisa la de cada cliente.
+            [$minGrace] = $this->graceRange($tenant);
+            $limit = $now->copy()->subDays($minGrace)->toDateString();
             $engine = app(AutomationEngine::class);
 
             $clients = Client::query()->whereIn('service_status', ['activo', 'moroso'])
@@ -144,6 +162,10 @@ class CollectionAutomation
                 ->get();
 
             foreach ($clients as $client) {
+                $oldest = $client->charges()->whereIn('status', ['pending', 'partial'])->min('due_date');
+                if (! $oldest || Carbon::parse($oldest)->toDateString() >= $now->copy()->subDays($this->graceFor($client, $tenant))->toDateString()) {
+                    continue;
+                }
                 $stats['evaluated']++;
                 if ($dryRun) {
                     continue;
@@ -182,6 +204,21 @@ class CollectionAutomation
             ->mapWithKeys(fn ($k) => [$k => Cache::get("billing:last-run:{$tenant->id}:{$k}")])->all();
     }
 
+    /** Días de tolerancia del cliente: los de su plan o, si el plan no define, los del WISP. */
+    public function graceFor(Client $client, Tenant $tenant): int
+    {
+        return max(0, (int) ($client->plan?->grace_days ?? $tenant->setting('billing.grace_days', 3)));
+    }
+
+    /** Tolerancia mínima y máxima entre la del WISP y la de sus planes. */
+    protected function graceRange(Tenant $tenant): array
+    {
+        $values = Plan::query()->whereNotNull('grace_days')->pluck('grace_days')
+            ->push((int) $tenant->setting('billing.grace_days', 3))->map(fn ($v) => max(0, (int) $v));
+
+        return [$values->min(), $values->max()];
+    }
+
     protected function remember(Tenant $tenant, string $task, array $stats): void
     {
         Cache::put("billing:last-run:{$tenant->id}:{$task}", ['at' => now()->toIso8601String(), 'stats' => $stats], now()->addDays(40));
@@ -196,7 +233,7 @@ class CollectionAutomation
      * Agrupa cargos por cliente, ejecuta la acción una sola vez por cliente y marca
      * la columna de control en todos los cargos procesados.
      */
-    protected function perClient($chargeQuery, array $statuses, string $markColumn, bool $dryRun, callable $action): int
+    protected function perClient($chargeQuery, array $statuses, string $markColumn, bool $dryRun, callable $action, ?callable $when = null): int
     {
         $charges = $chargeQuery->join('clients', 'clients.id', '=', 'charges.client_id')
             ->whereNull('clients.deleted_at')->whereIn('clients.service_status', $statuses)->get();
@@ -207,7 +244,8 @@ class CollectionAutomation
         $count = 0;
         foreach ($charges->groupBy('client_id') as $clientId => $group) {
             $client = Client::find($clientId);
-            if (! $client) {
+            // $when: el cliente aún no cumple la condición (p. ej. su plan tiene más tolerancia).
+            if (! $client || ($when && ! $when($client, $group))) {
                 continue;
             }
             // Marcar primero (idempotencia aun si el envío falla)

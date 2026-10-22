@@ -264,6 +264,9 @@ class Messages extends Component
         }
 
         $chatClient = $this->showChat && $this->chatClientId ? Client::find($this->chatClientId) : null;
+        // WhatsApp permite texto libre durante 24 h desde el último mensaje del cliente.
+        $lastIncoming = $chatClient ? Message::query()->where('client_id', $chatClient->id)->where('status', 'received')->max('created_at') : null;
+        $chatWindow = $lastIncoming ? Carbon::parse($lastIncoming)->addDay() : null;
 
         return view('livewire.communications.messages', [
             'messagesList' => $this->applySort($this->query(), 'created_at', 'desc')->paginate($this->perPage),
@@ -279,6 +282,7 @@ class Messages extends Component
             'chatClient' => $chatClient,
             'chat' => $chatClient ? Message::query()->where('client_id', $chatClient->id)->latest()->limit(80)->get()->reverse()->values() : collect(),
             'events' => MessageCatalog::events(),
+            'chatWindow' => $chatWindow?->isFuture() ? $chatWindow : null,
         ]);
     }
 }

@@ -90,6 +90,9 @@ class Index extends Component
 
     public array $zone = [];
 
+    /** Cambia para re-crear el editor de polígono del modal de zona. */
+    public int $zoneMapVersion = 0;
+
     public function mount(): void
     {
         if (! array_key_exists($this->tab, self::TABS)) {
@@ -115,6 +118,9 @@ class Index extends Component
         $this->messaging = collect($t->settingsFor('messaging'))->except(self::MESSAGING_SECRETS)->all();
         $this->messaging['email_enabled'] = (bool) $this->messaging['email_enabled'];
         $this->messaging['default_channels'] = array_values((array) $this->messaging['default_channels']);
+        // "expo" era la opción anterior: ahora el push real va por Firebase (los tokens de Expo siguen funcionando).
+        $this->messaging['push_provider'] = $this->messaging['push_provider'] === 'simulated' ? 'simulated' : 'fcm';
+        unset($this->messaging['fcm_server_key']);
         $this->secrets = ['whatsapp_token' => '', 'whatsapp_app_secret' => '', 'twilio_token' => ''];
         $this->network = $t->settingsFor('network');
         $this->bi = $t->settingsFor('bi');
@@ -264,11 +270,14 @@ class Index extends Component
             'billing.auto_suspend' => 'boolean',
             'billing.auto_reconnect' => 'boolean',
             'billing.reconnect_requires_full_payment' => 'boolean',
+            'billing.reconnect_max_days' => 'required|integer|between:0,365',
+            'billing.pending_notice_days' => 'required|integer|between:0,30',
             'billing.folio_prefix' => ['required', 'string', 'max:10', 'regex:/^[A-Z0-9]+$/i'],
         ], [], [
             'billing.billing_day' => 'día de corte', 'billing.due_days' => 'días para pagar', 'billing.grace_days' => 'días de tolerancia',
             'billing.cut_hour' => 'hora de corte', 'billing.reminder_days_before' => 'días de recordatorio', 'billing.late_fee' => 'recargo',
             'billing.reconnection_fee' => 'cargo de reconexión', 'billing.folio_prefix' => 'prefijo de folio',
+            'billing.reconnect_max_days' => 'días de reconexión', 'billing.pending_notice_days' => 'aviso de pago pendiente',
         ])['billing'];
 
         $values = [
@@ -277,6 +286,7 @@ class Index extends Component
             'late_fee' => (float) $data['late_fee'], 'reconnection_fee' => (float) $data['reconnection_fee'], 'block_type' => $data['block_type'],
             'auto_suspend' => (bool) $data['auto_suspend'], 'auto_reconnect' => (bool) $data['auto_reconnect'],
             'reconnect_requires_full_payment' => (bool) $data['reconnect_requires_full_payment'], 'folio_prefix' => mb_strtoupper($data['folio_prefix']),
+            'reconnect_max_days' => (int) $data['reconnect_max_days'], 'pending_notice_days' => (int) $data['pending_notice_days'],
         ];
         $this->saveSection('billing', 'cobranza y cortes', $values);
 
@@ -355,20 +365,21 @@ class Index extends Component
         $data = $this->validate([
             'messaging.whatsapp_provider' => 'required|in:simulated,meta,twilio',
             'messaging.whatsapp_phone_id' => 'nullable|string|max:80|'.InputRules::DIGITS,
+            'messaging.whatsapp_waba_id' => 'nullable|string|max:80|'.InputRules::DIGITS,
             'messaging.whatsapp_language' => ['required', Rule::in(array_keys(self::WHATSAPP_LANGUAGES))],
             'messaging.sms_provider' => 'required|in:simulated,twilio',
             'messaging.twilio_sid' => 'nullable|string|max:80|'.InputRules::CODE,
             'messaging.twilio_from' => 'nullable|string|max:20|'.InputRules::PHONE,
             'messaging.twilio_whatsapp_from' => 'nullable|string|max:20|'.InputRules::PHONE,
             'messaging.email_enabled' => 'boolean',
-            'messaging.push_provider' => 'required|in:simulated,expo',
+            'messaging.push_provider' => 'required|in:simulated,fcm',
             'messaging.default_channels' => 'array|min:1',
             'messaging.default_channels.*' => ['string', Rule::in(array_keys(config('wisp.channels')))],
             'secrets.whatsapp_token' => 'nullable|string|max:1000',
             'secrets.whatsapp_app_secret' => 'nullable|string|max:200',
             'secrets.twilio_token' => 'nullable|string|max:200',
         ], ['messaging.default_channels.min' => 'Selecciona al menos un canal.'], [
-            'messaging.whatsapp_phone_id' => 'Phone number ID', 'messaging.twilio_sid' => 'Account SID',
+            'messaging.whatsapp_phone_id' => 'Phone number ID', 'messaging.whatsapp_waba_id' => 'WhatsApp Business Account ID', 'messaging.twilio_sid' => 'Account SID',
             'messaging.twilio_from' => 'número remitente SMS', 'messaging.twilio_whatsapp_from' => 'número de WhatsApp (Twilio)',
         ]);
         $m = $data['messaging'];
@@ -428,6 +439,19 @@ class Index extends Component
             return;
         }
         $this->toast('Conexión correcta: '.trim(($n['name'] ?? '').' '.($n['number'] ?? '')).(($n['quality'] ?? null) ? ' · calidad '.$n['quality'] : ''));
+    }
+
+    /** Prueba la cuenta de servicio de Firebase del servidor (notificaciones push). */
+    public function testFirebase(\App\Services\Messaging\FcmClient $fcm): void
+    {
+        try {
+            $info = $fcm->check();
+        } catch (\Throwable $e) {
+            $this->toast($e->getMessage(), 'error');
+
+            return;
+        }
+        $this->toast('Conexión correcta con Firebase (proyecto '.$info['project'].')');
     }
 
     /** Prueba Account SID + Auth token (el capturado o el guardado) sin guardar nada. */
@@ -517,7 +541,8 @@ class Index extends Component
         $this->resetErrorBag();
         $this->zoneId = null;
         $center = tenant()->setting('map.center');
-        $this->zone = ['name' => '', 'community' => '', 'color' => '#1A7FF5', 'lat' => is_array($center) ? (string) $center[0] : '', 'lng' => is_array($center) ? (string) $center[1] : '', 'monthly_cost' => '0'];
+        $this->zone = ['name' => '', 'community' => '', 'color' => '#1A7FF5', 'lat' => is_array($center) ? (string) $center[0] : '', 'lng' => is_array($center) ? (string) $center[1] : '', 'monthly_cost' => '0', 'polygon' => null];
+        $this->zoneMapVersion++;
         $this->showZone = true;
     }
 
@@ -526,7 +551,8 @@ class Index extends Component
         $this->resetErrorBag();
         $z = Zone::findOrFail($id);
         $this->zoneId = $z->id;
-        $this->zone = ['name' => $z->name, 'community' => $z->community, 'color' => $z->color, 'lat' => (string) $z->lat, 'lng' => (string) $z->lng, 'monthly_cost' => (string) $z->monthly_cost];
+        $this->zone = ['name' => $z->name, 'community' => $z->community, 'color' => $z->color, 'lat' => (string) $z->lat, 'lng' => (string) $z->lng, 'monthly_cost' => (string) $z->monthly_cost, 'polygon' => $z->polygon ?: null];
+        $this->zoneMapVersion++;
         $this->showZone = true;
     }
 
@@ -540,8 +566,18 @@ class Index extends Component
             'zone.lat' => 'nullable|numeric|between:-90,90',
             'zone.lng' => 'nullable|numeric|between:-180,180',
             'zone.monthly_cost' => 'required|numeric|min:0|max:10000000',
-        ], [], ['zone.name' => 'nombre', 'zone.community' => 'comunidad', 'zone.monthly_cost' => 'costo mensual', 'zone.lat' => 'latitud', 'zone.lng' => 'longitud'])['zone'];
+            'zone.polygon' => 'nullable|array|min:3|max:500',
+            'zone.polygon.*' => 'array|size:2',
+            'zone.polygon.*.0' => 'numeric|between:-90,90',
+            'zone.polygon.*.1' => 'numeric|between:-180,180',
+        ], ['zone.polygon.min' => 'El polígono necesita al menos 3 vértices.'], ['zone.name' => 'nombre', 'zone.community' => 'comunidad', 'zone.monthly_cost' => 'costo mensual', 'zone.lat' => 'latitud', 'zone.lng' => 'longitud', 'zone.polygon' => 'polígono'])['zone'];
         $d = $this->nullify($d);
+        // Polígono de la zona: [[lat, lng], ...]; si no hay centro capturado se usa el centroide de los vértices
+        $d['polygon'] = ! empty($d['polygon']) ? array_values(array_map(fn ($p) => [round((float) $p[0], 7), round((float) $p[1], 7)], $d['polygon'])) : null;
+        if ($d['polygon'] && ($d['lat'] === null || $d['lng'] === null)) {
+            $d['lat'] = round(array_sum(array_column($d['polygon'], 0)) / count($d['polygon']), 7);
+            $d['lng'] = round(array_sum(array_column($d['polygon'], 1)) / count($d['polygon']), 7);
+        }
 
         if ($this->zoneId) {
             $z = Zone::findOrFail($this->zoneId);
@@ -585,6 +621,7 @@ class Index extends Component
             $m = $tenant->settingsFor('messaging');
             $data['maskedSecrets'] = ['whatsapp_token' => $this->mask($m['whatsapp_token'] ?? null), 'whatsapp_app_secret' => $this->mask($m['whatsapp_app_secret'] ?? null), 'twilio_token' => $this->mask($m['twilio_token'] ?? null)];
             $data['metaWebhook'] = ['url' => \App\Services\Messaging\MessageService::metaWebhookUrl($tenant), 'verify_token' => $m['whatsapp_verify_token'] ?? null];
+            $data['firebaseProject'] = app(\App\Services\Messaging\FcmClient::class)->projectId();
         }
         if ($this->tab === 'cobranza') {
             $data['rules'] = AutomationRule::query()->whereIn('name', [self::RULE_SUSPEND, self::RULE_RECONNECT])->pluck('active', 'name');

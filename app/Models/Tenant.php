@@ -77,6 +77,26 @@ class Tenant extends Model
         return in_array($this->status, ['active', 'trial'], true);
     }
 
+    /**
+     * WISP al que apunta el dominio de la petición: su dominio propio (portal.miwisp.com) o su
+     * subdominio del dominio raíz de la plataforma (miwisp.<TENANT_ROOT_DOMAIN>). Solo WISP activos.
+     */
+    public static function forHost(?string $host): ?self
+    {
+        $host = strtolower(trim((string) $host));
+        if ($host === '' || filter_var($host, FILTER_VALIDATE_IP)) {
+            return null;
+        }
+        $root = strtolower(trim((string) config('wisp.tenant_root_domain'), '. '));
+        $sub = $root !== '' && str_ends_with($host, '.'.$root) ? substr($host, 0, -strlen($root) - 1) : null;
+
+        $tenant = static::query()->where('domain', $host)
+            ->when($sub && ! str_contains($sub, '.') && $sub !== 'www', fn ($q) => $q->orWhere('subdomain', $sub))
+            ->first();
+
+        return $tenant?->isActive() ? $tenant : null;
+    }
+
     public function logoUrl(): ?string
     {
         return $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null;

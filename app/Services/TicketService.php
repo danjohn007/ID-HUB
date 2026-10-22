@@ -20,7 +20,7 @@ class TicketService
             'status' => 'abierto',
             'source' => 'admin',
             'created_by' => auth()->id(),
-            'sla_due_at' => now()->addMinutes(SlaPolicy::minutesFor($priority)),
+            'sla_due_at' => now()->addMinutes(SlaPolicy::minutesFor($priority, $data['category'] ?? null)),
         ], $data, ['priority' => $priority]));
 
         $ticket->addComment('Ticket creado ('.config("wisp.ticket_categories.{$ticket->category}", $ticket->category).')', 'system');

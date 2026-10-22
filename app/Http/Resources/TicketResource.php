@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Evidence;
+
 class TicketResource extends ApiResource
 {
     public function toArray($request): array
@@ -29,7 +31,7 @@ class TicketResource extends ApiResource
             'attachments' => AttachmentResource::collection($this->whenLoaded('attachments')),
             'materials' => InventoryMovementResource::collection($this->whenLoaded('materials')),
             'signature' => $this->signature_path ? [
-                'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($this->signature_path),
+                'url' => \App\Support\Evidence::signedUrl($this->signature_path),
                 'signed_by' => $this->signed_by_name,
                 'signed_at' => self::datetime($this->signed_at),
             ] : null,

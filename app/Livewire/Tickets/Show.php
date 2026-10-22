@@ -82,9 +82,10 @@ class Show extends Component
             'edit.priority' => 'required|in:'.implode(',', array_keys(config('wisp.ticket_priorities'))),
         ], [], ['edit.subject' => 'asunto']);
         $priorityChanged = $this->edit['priority'] !== $this->ticket->priority;
+        $slaChanged = $priorityChanged || $this->edit['category'] !== $this->ticket->category;
         $this->ticket->fill($this->edit);
-        if ($priorityChanged && $this->ticket->isOpen()) {
-            $this->ticket->sla_due_at = $this->ticket->created_at->copy()->addMinutes(SlaPolicy::minutesFor($this->edit['priority']));
+        if ($slaChanged && $this->ticket->isOpen()) {
+            $this->ticket->sla_due_at = $this->ticket->created_at->copy()->addMinutes(SlaPolicy::minutesFor($this->edit['priority'], $this->edit['category']));
             $this->ticket->sla_warned = false;
             $this->ticket->sla_breached = $this->ticket->sla_due_at->isPast();
         }

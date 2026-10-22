@@ -50,7 +50,8 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Tokens de las apps: caducan tras N minutos SIN USO (ver ApiAuthenticate). 0 = nunca. Default: 60 días.
+    'expiration' => (int) env('SANCTUM_EXPIRATION', 60 * 24 * 60) ?: null,
 
     /*
     |--------------------------------------------------------------------------

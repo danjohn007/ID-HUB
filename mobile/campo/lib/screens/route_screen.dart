@@ -50,10 +50,14 @@ class _RouteScreenState extends State<RouteScreen> {
   }
 
   Future<void> _stopAction(RouteStop stop, String action) async {
-    final api = context.read<Session>().api;
+    final outbox = context.read<Session>().outbox;
     final gps = await Geo.current();
     if (!mounted) return;
-    final ok = await runAction(context, () => api.post('/field/stops/${stop.id}/$action', data: gps?.toJson()),
+    // Sin señal queda en la bandeja de salida y se envía después (con su clave de idempotencia).
+    final ok = await runQueued(
+        context,
+        () => outbox.submit(
+            path: '/field/stops/${stop.id}/$action', data: gps?.toJson(), label: '${action == 'arrive' ? 'Llegada a' : 'Salida de'} ${stop.title}'),
         success: action == 'arrive' ? 'Llegada registrada${gps == null ? ' (sin GPS)' : ''}' : 'Salida registrada');
     if (ok) _loader.currentState?.reload();
   }

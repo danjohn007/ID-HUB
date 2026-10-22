@@ -12,8 +12,12 @@
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         {{-- Mapa --}}
         <div class="relative h-[60vh] min-h-[420px] lg:h-[calc(100vh-11rem)]">
-            <x-ui.map id="main-map" :markers="$map['markers']" :circles="$map['circles']" :sectors="$map['sectors']" :heat="$map['heat']"
+            <x-ui.map id="main-map" :markers="$map['markers']" :circles="$map['circles']" :sectors="$map['sectors']" :heat="$map['heat']" :polygons="$map['polygons']"
                       :center="$center" :zoom="13" cluster class="shadow-sm" height="100%" />
+            {{-- Técnicos y cobradores en vivo: solo actualiza esas capas cada 30 s --}}
+            @if (array_intersect(['technicians', 'collectors'], $layers))
+                <div wire:poll.30s="refreshStaff" class="hidden"></div>
+            @endif
             <div class="pointer-events-none absolute bottom-3 left-3 z-[400] hidden rounded-lg bg-white/95 px-3 py-2 text-[11px] shadow ring-1 ring-slate-200 sm:block">
                 <div class="mb-1 font-semibold text-slate-700">Estados</div>
                 <div class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-success-600"></span>Operativo</div>
@@ -21,7 +25,7 @@
                 <div class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-danger-600"></span>Fallo</div>
                 <div class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-slate-400"></span>Sin comunicación</div>
             </div>
-            <div wire:loading.delay class="absolute top-3 left-1/2 z-[400] -translate-x-1/2 rounded-full bg-navy-900/90 px-3 py-1 text-xs font-semibold text-white shadow">Actualizando mapa...</div>
+            <div wire:loading.delay wire:target="layers,filterZone,filterStatus,filterRepeater,preset,clearFilters" class="absolute top-3 left-1/2 z-[400] -translate-x-1/2 rounded-full bg-navy-900/90 px-3 py-1 text-xs font-semibold text-white shadow">Actualizando mapa...</div>
         </div>
 
         {{-- Panel lateral --}}

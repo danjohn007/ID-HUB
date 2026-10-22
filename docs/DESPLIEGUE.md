@@ -102,10 +102,76 @@ Configura en cada pasarela la URL de notificación:
 
 ## WhatsApp
 
-- **Meta WhatsApp Cloud API**: token permanente y Phone Number ID. Los mensajes iniciados por la empresa fuera
-  de la ventana de 24 h requieren **plantillas aprobadas por Meta**.
-- **Twilio**: SID, token y número remitente.
-- Sin credenciales, el sistema funciona en modo **simulado** (registra los mensajes sin enviarlos).
+Cada WISP configura su propio número en **Configuración → Mensajería**. Sin credenciales, el sistema funciona
+en modo **simulado** (registra los mensajes sin enviarlos).
+
+### Meta (WhatsApp Cloud API)
+
+1. En [developers.facebook.com](https://developers.facebook.com) crea una app tipo **Empresa** y agrega el producto
+   **WhatsApp**. Vincula (o crea) la cuenta de WhatsApp Business y agrega el número real (no debe estar en uso en la
+   app de WhatsApp del teléfono).
+2. En business.facebook.com → Configuración del negocio → **Usuarios del sistema**: crea un usuario del sistema
+   (administrador), asígnale la app y la cuenta de WhatsApp, y genera un **token permanente** con los permisos
+   `whatsapp_business_messaging` y `whatsapp_business_management`.
+3. En el panel: proveedor **WhatsApp Cloud API (Meta)** y captura:
+   - **Phone number ID** y **WhatsApp Business Account ID** (WhatsApp → Configuración de la API).
+   - **Token de acceso** (el permanente del paso 2).
+   - **App secret** (app → Configuración → Básica → Clave secreta de la app).
+   Guarda y pulsa **Probar conexión**.
+4. **Webhook**: en la app → WhatsApp → Configuración → Webhook, pega la **URL de devolución** y el **token de
+   verificación** que muestra el panel, y suscríbete a los campos `messages` y `message_template_status_update`.
+   Con esto llegan los estados de entrega, las respuestas de los clientes (bitácora y conversación) y la
+   aprobación de plantillas. Requiere el panel publicado con **https**.
+5. **Plantillas**: en **Comunicación → Plantillas** pulsa **Enviar todas a Meta** (o *Enviar a Meta* en cada aviso).
+   Meta las revisa en minutos u horas; el estado se actualiza solo por el webhook o con **Estado en Meta**.
+   Solo las plantillas aprobadas llegan fuera de la ventana de 24 h desde el último mensaje del cliente.
+6. Agrega un método de pago en WhatsApp Manager (Meta cobra por conversación) y pasa la app a modo **En vivo**.
+
+### Twilio
+
+SID, token y número remitente (SMS y/o WhatsApp). Los avisos de WhatsApp usan el Content SID de cada plantilla
+aprobada en Twilio → Content Template Builder.
+
+## Notificaciones push (app de campo y app del cliente)
+
+Las push salen por **Firebase Cloud Messaging (API HTTP v1)** con un solo proyecto de Firebase para toda la
+plataforma. Avisos al técnico/cobrador: ticket o instalación asignada, ruta planeada por la oficina y alertas de
+automatizaciones. Avisos al cliente: los eventos de las plantillas por el canal *Push*.
+
+1. En [console.firebase.google.com](https://console.firebase.google.com) crea el proyecto (p. ej. `id-hub`).
+2. **Servidor**: Configuración del proyecto → Cuentas de servicio → **Generar nueva clave privada**. Sube el JSON al
+   servidor como `wispcontrol/storage/app/private/firebase.json` (no se versiona) o indica su ruta en `.env` con
+   `FIREBASE_CREDENTIALS=/ruta/firebase.json`. Verifica en **Configuración → Mensajería → Probar Firebase**.
+3. En cada WISP: **Configuración → Mensajería → Notificaciones push = Firebase Cloud Messaging**. Para avisos push
+   a clientes, marca también *Push* en los canales predeterminados (o en la plantilla).
+4. **App de campo** (`mobile/campo`), una sola vez en tu computadora:
+   ```bash
+   dart pub global activate flutterfire_cli
+   npm install -g firebase-tools && firebase login
+   cd mobile/campo && flutterfire configure --project=<id-del-proyecto> --platforms=android,ios
+   ```
+   Esto reemplaza `lib/firebase_options.dart` y agrega `android/app/google-services.json`. Compila de nuevo
+   (`flutter build apk --release`). Sin este paso la app funciona igual, solo sin push.
+5. **iOS** (requiere Mac y cuenta de Apple Developer): sube la llave APNs (.p8) en Firebase → Configuración →
+   Cloud Messaging, y en Xcode agrega las capacidades *Push Notifications* y *Background Modes → Remote notifications*.
+
+La prueba de push de **Comunicación → Plantillas** llega a los teléfonos donde tu usuario inició sesión en la app de campo.
+
+## Variables nuevas del `.env` (opcionales)
+
+| Variable | Para qué |
+|---|---|
+| `FIREBASE_CREDENTIALS` | Ruta del JSON de la cuenta de servicio de Firebase (por defecto `storage/app/private/firebase.json`). |
+| `TENANT_ROOT_DOMAIN` | Dominio raíz para subdominios de los WISP (`miwisp.<dominio>`); requiere un registro DNS comodín `*.<dominio>` y el subdominio comodín en cPanel apuntando a `wispcontrol/public`. Los WISP con dominio propio deben apuntarlo (CNAME/A) a este servidor y agregarlo como dominio adicional en cPanel. |
+| `SAAS_GRACE_DAYS` | Días que un WISP sigue operando con la suscripción vencida antes de suspenderse (10). |
+| `SANCTUM_EXPIRATION` | Minutos sin uso para que caduque la sesión de las apps (86400 = 60 días; 0 = nunca). |
+| `BACKUP_FTP_HOST`, `BACKUP_FTP_PORT`, `BACKUP_FTP_USERNAME`, `BACKUP_FTP_PASSWORD`, `BACKUP_FTP_PATH`, `BACKUP_FTP_SSL` | Copia externa de cada respaldo por FTP/FTPS (requiere la extensión `ftp` de PHP). |
+
+## Tareas programadas nuevas (las corre el mismo cron de cada minuto)
+
+- `saas:subscriptions` (diario 04:00): suspende WISP con prueba terminada o suscripción vencida + días de gracia.
+  Al marcar pagada una factura SaaS, la vigencia se extiende al fin del mes siguiente y se reactiva el WISP.
+- `platform:backup --files` (domingos 03:30): respaldo `.zip` de fotos, firmas y logos (se conservan 4).
 
 ## Actualizaciones
 

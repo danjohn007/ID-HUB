@@ -14,6 +14,22 @@ return [
     // Instalador web (/install). Desactivar después de instalar.
     'installer_enabled' => (bool) env('INSTALLER_ENABLED', false),
 
+    // Días que un WISP sigue operando con la suscripción vencida antes de suspenderse (saas:subscriptions).
+    'saas_grace_days' => (int) env('SAAS_GRACE_DAYS', 10),
+
+    // Dominio raíz para los subdominios de los WISP (mi-wisp.<dominio>). Vacío = no se usan subdominios.
+    'tenant_root_domain' => env('TENANT_ROOT_DOMAIN'),
+
+    // Copia externa de los respaldos por FTP/FTPS (opcional). Vacío = solo en este servidor.
+    'backup_ftp' => [
+        'host' => env('BACKUP_FTP_HOST'),
+        'port' => (int) env('BACKUP_FTP_PORT', 21),
+        'username' => env('BACKUP_FTP_USERNAME'),
+        'password' => env('BACKUP_FTP_PASSWORD'),
+        'path' => env('BACKUP_FTP_PATH', 'idhub-respaldos'),
+        'ssl' => (bool) env('BACKUP_FTP_SSL', true),
+    ],
+
     'brand' => [
         // Nombre comercial de la plataforma (independiente de APP_NAME para no depender del .env del servidor).
         'name' => env('BRAND_NAME', 'ID-Hub'),
@@ -292,6 +308,8 @@ return [
         'anomaly_flapping' => 'Desconexiones frecuentes',
         'high_latency' => 'Latencia elevada',
         'packet_loss' => 'Pérdida de paquetes',
+        'data_cap_exceeded' => 'Límite de consumo superado',
+        'over_stock' => 'Inventario excedido',
     ],
 
     'alert_severity' => [
@@ -350,6 +368,11 @@ return [
         'ticket_sla_risk' => 'Ticket próximo a vencer SLA',
         'low_stock' => 'Inventario bajo',
         'high_risk_client' => 'Cliente con riesgo alto de morosidad',
+        'mass_disconnect' => 'Muchos clientes desconectados en un repetidor',
+        'abnormal_signal' => 'Cliente con señal anormal',
+        'anomaly_detected' => 'Anomalía detectada (revisión técnica)',
+        'data_cap_exceeded' => 'Cliente superó el límite de consumo del plan',
+        'over_stock' => 'Inventario excedido',
     ],
 
     'automation_actions' => [
@@ -362,6 +385,8 @@ return [
         'create_alert' => 'Generar alerta',
         'add_late_fee' => 'Aplicar recargo',
         'set_status' => 'Cambiar estado del cliente',
+        'change_plan' => 'Cambiar plan / velocidad',
+        'address_list' => 'Address-list en MikroTik',
     ],
 
     'promotion_types' => [
@@ -424,6 +449,8 @@ return [
             'auto_suspend' => true,
             'auto_reconnect' => true,
             'reconnect_requires_full_payment' => true,
+            'reconnect_max_days' => 0,      // días de reconexión: suspendido más de N días ya no se reconecta solo (0 = sin límite)
+            'pending_notice_days' => 1,     // aviso de pago pendiente N días después de la fecha límite (0 = no se envía)
             'folio_prefix' => 'REC',
             'reminder_hour' => '09:00',     // hora (zona del WISP) a partir de la cual se envían recordatorios/avisos
             'payment_link_days' => 10,      // vigencia de enlaces "Pagar ahora"
@@ -432,6 +459,7 @@ return [
             'whatsapp_provider' => 'simulated', // simulated | meta | twilio
             'whatsapp_token' => null,
             'whatsapp_phone_id' => null,
+            'whatsapp_waba_id' => null,         // WhatsApp Business Account ID: para crear y consultar plantillas en Meta
             'whatsapp_language' => 'es_MX',     // idioma con el que se aprobaron las plantillas en Meta
             'whatsapp_app_secret' => null,      // secreto de la app de Meta: valida la firma del webhook
             'whatsapp_verify_token' => null,    // se genera al guardar; se captura en Meta al dar de alta el webhook
@@ -441,8 +469,7 @@ return [
             'twilio_from' => null,
             'twilio_whatsapp_from' => null,
             'email_enabled' => true,
-            'push_provider' => 'simulated',     // simulated | fcm
-            'fcm_server_key' => null,
+            'push_provider' => 'simulated',     // simulated | fcm (Firebase del servidor: FIREBASE_CREDENTIALS)
             'default_channels' => ['whatsapp'],
         ],
         'network' => [

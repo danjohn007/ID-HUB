@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/format.dart';
-import '../../core/geo.dart';
 import '../../core/photos.dart';
 import '../../core/session.dart';
 import '../../models.dart';
@@ -20,18 +19,21 @@ class WorkActions {
   final String base;
   final VoidCallback onChanged;
 
+  /// Foto de evidencia: solo cámara; hora y GPS del momento de la captura. Sin señal queda en la bandeja.
   Future<void> addPhoto(String kind) async {
-    final api = context.read<Session>().api;
-    final file = await Photos.pick(context);
-    if (file == null || !context.mounted) return;
-    final gps = await Geo.current();
-    if (!context.mounted) return;
-    final ok = await runAction(context, () => api.upload('$base/attachments', fields: {
-          'kind': kind,
-          'lat': gps?.lat,
-          'lng': gps?.lng,
-          'taken_at': DateTime.now().toIso8601String(),
-        }, files: {'file': file}), success: 'Foto guardada${gps == null ? ' (sin GPS)' : ' con ubicación'}');
+    final outbox = context.read<Session>().outbox;
+    final photo = await Photos.capture();
+    if (photo == null || !context.mounted) return;
+    final gps = photo.gps;
+    final ok = await runQueued(
+        context,
+        () => outbox.submit(
+              path: '$base/attachments',
+              data: {'kind': kind, 'lat': gps?.lat, 'lng': gps?.lng, 'taken_at': photo.takenAtIso},
+              photo: photo,
+              label: 'Foto ${EvidenceSection.labels[kind]?.toLowerCase() ?? kind}',
+            ),
+        success: 'Foto guardada${gps == null ? ' (sin GPS)' : ' con ubicación'}');
     if (ok) onChanged();
   }
 

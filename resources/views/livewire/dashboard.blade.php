@@ -17,8 +17,36 @@
                 <x-ui.stat label="Churn" :value="pct($kpi['churn'])" icon="arrow-path" color="warning" :trend="($kpi['churn'] - $kpi['churn_prev'] >= 0 ? '+' : '').round($kpi['churn'] - $kpi['churn_prev'], 1).' pts'" :trend-up="$kpi['churn'] <= $kpi['churn_prev'] ? false : true" />
                 <x-ui.stat label="Tickets abiertos" :value="$kpi['tickets_open']" icon="ticket" color="teal" :sub="$kpi['tickets_critical'].' críticos'" :href="Route::has('tickets.index') ? route('tickets.index') : null" />
                 <x-ui.stat label="Repetidores" :value="$kpi['repeaters']" icon="signal" color="navy" :sub="($kpi['repeaters'] - $kpi['repeaters_alert']).' activos / '.$kpi['repeaters_alert'].' alertas'" :href="Route::has('network.repeaters.index') ? route('network.repeaters.index') : null" />
-                <x-ui.stat label="Red online" :value="pct($kpi['online_pct'], 0)" icon="wifi" color="success" :sub="'Cobranza del mes '.money($kpi['collected'], false)" />
+                <x-ui.stat label="Equipos online" :value="pct($kpi['online_pct'], 0)" icon="wifi" color="success" :sub="$ops['disconnected'].' clientes desconectados'" :href="Route::has('network.index') ? route('network.index') : null" />
+                <x-ui.stat label="Ticket promedio" :value="money($kpi['avg_ticket'], false)" icon="receipt-percent" color="purple" sub="Pago promedio del mes" />
+                <x-ui.stat label="Cobranza del mes" :value="money($kpi['collected'], false)" icon="banknotes" color="success" :href="Route::has('billing.payments') ? route('billing.payments') : null" />
+                <x-ui.stat label="Tickets críticos" :value="$kpi['tickets_critical']" icon="fire" color="danger" :sub="$ops['tickets_overdue'].' vencidos (SLA)'" :href="Route::has('tickets.index') ? route('tickets.index') : null" />
+                <x-ui.stat label="Prospectos" :value="number_format($kpi['prospects'])" icon="user-plus" color="teal" sub="En seguimiento" :href="Route::has('prospects.index') ? route('prospects.index') : null" />
             </div>
+
+            {{-- Dashboard operativo (sección 31) --}}
+            <x-ui.card title="Operación" subtitle="Clientes, tickets, personal de campo y red en este momento">
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                    @foreach ([
+                        ['Activos', $ops['active'], 'text-success-700', 'clients.index'],
+                        ['Suspendidos', $ops['suspended'], 'text-danger-600', 'clients.index'],
+                        ['Nuevos (mes)', $ops['new'], 'text-brand-700', 'clients.index'],
+                        ['Desconectados', $ops['disconnected'], 'text-warning-700', 'network.index'],
+                        ['Tickets abiertos', $ops['tickets_open'], 'text-navy-900', 'tickets.index'],
+                        ['Tickets vencidos', $ops['tickets_overdue'], 'text-danger-600', 'tickets.index'],
+                        ['Tickets críticos', $ops['tickets_critical'], 'text-danger-600', 'tickets.index'],
+                        ['Técnicos activos', $ops['staff_active'].' / '.$ops['staff_total'], 'text-navy-900', 'staff.index'],
+                        ['Instalaciones pendientes', $ops['installs_pending'], 'text-brand-700', 'installations.index'],
+                        ['Repetidores activos', $ops['repeaters_online'], 'text-success-700', 'network.repeaters.index'],
+                        ['Repetidores con alerta', $ops['repeaters_alert'], 'text-warning-700', 'network.repeaters.index'],
+                    ] as [$label, $value, $color, $route])
+                        <a @if (Route::has($route)) href="{{ route($route) }}" wire:navigate @endif class="rounded-lg bg-slate-50 px-3 py-2 transition hover:bg-slate-100">
+                            <div class="text-lg font-bold {{ $color }}">{{ $value }}</div>
+                            <div class="text-[11px] text-slate-500">{{ $label }}</div>
+                        </a>
+                    @endforeach
+                </div>
+            </x-ui.card>
 
             {{-- Mapa + estado de repetidores --}}
             <div class="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">

@@ -61,6 +61,7 @@ class SimulatedTransport implements Transport
                 'mac-address' => $c->mac_address, 'signal-strength' => (string) ($c->signal_dbm ?? -65).'dBm',
                 'tx-rate' => mt_rand(54, 300).'Mbps', 'rx-rate' => mt_rand(54, 300).'Mbps', 'uptime' => mt_rand(1, 20).'d',
             ])->values()->all(),
+            '/queue/simple' => $this->queueRows(),
             '/ip/dhcp-server/lease' => $this->clients()->filter(fn ($c) => $c->ip_address)->map(fn ($c) => [
                 'address' => $c->ip_address, 'mac-address' => $c->mac_address, 'host-name' => 'cpe-'.$c->code, 'status' => $c->online ? 'bound' : 'waiting',
             ])->values()->all(),
@@ -108,9 +109,68 @@ class SimulatedTransport implements Transport
 
     public function command(string $path, array $attributes = []): array
     {
+        if ($path === '/ping') {
+            return $this->pingRows((string) ($attributes['address'] ?? ''), (int) ($attributes['count'] ?? 3));
+        }
         $this->log('command', $path, $attributes);
 
         return [];
+    }
+
+    /**
+     * Colas simples "wc-{código}" con contadores de bytes (subida/bajada) que crecen durante el mes
+     * a un ritmo estable por cliente (20 a 80 GB/mes), para que el consumo mensual sea verosímil.
+     */
+    protected function queueRows(): array
+    {
+        $monthStart = now()->startOfMonth()->getTimestamp();
+        $fraction = max(0, time() - $monthStart) / (now()->daysInMonth * 86400);
+
+        return $this->clients()->filter(fn ($c) => $c->ip_address)->loadMissing('plan:id,upload_mbps,download_mbps')->map(function ($c) use ($fraction) {
+            $gb = 20 + crc32('q'.$c->id) % 61;
+            $down = (int) ($gb * 0.85 * 1073741824 * $fraction);
+            $up = (int) ($gb * 0.15 * 1073741824 * $fraction);
+
+            return [
+                '.id' => '*'.dechex($c->id), 'name' => 'wc-'.$c->code, 'target' => $c->ip_address.'/32',
+                'max-limit' => ((int) round((float) ($c->plan?->upload_mbps ?? 5) * 1000)).'k/'.((int) round((float) ($c->plan?->download_mbps ?? 20) * 1000)).'k',
+                'bytes' => $up.'/'.$down, 'comment' => $c->code, 'disabled' => 'false',
+            ];
+        })->values()->all();
+    }
+
+    /** Respuesta simulada de /ping con el formato de la API (acumulados en cada fila). */
+    protected function pingRows(string $address, int $count): array
+    {
+        mt_srand(crc32($this->device->id.'-ping-'.$address.'-'.intdiv(time(), 300)));
+        $lost = $this->pingUnreachable($address) ? $count : (mt_rand(1, 100) <= 6 ? 1 : 0);
+        $base = mt_rand(100, 600) / 100;
+        $rows = [];
+        $times = [];
+        for ($i = 0; $i < $count; $i++) {
+            $ok = $i >= $lost;
+            $row = ['host' => $address, 'seq' => (string) $i];
+            if ($ok) {
+                $times[] = round($base + mt_rand(0, 400) / 100, 2);
+                $row += ['size' => '56', 'ttl' => '64', 'time' => end($times).'ms'];
+            } else {
+                $row['status'] = 'timeout';
+            }
+            $row += ['sent' => (string) ($i + 1), 'received' => (string) count($times), 'packet-loss' => (string) (int) round(($i + 1 - count($times)) / ($i + 1) * 100)];
+            if ($times) {
+                $row['avg-rtt'] = round(array_sum($times) / count($times), 2).'ms';
+            }
+            $rows[] = $row;
+        }
+        mt_srand();
+
+        return $rows;
+    }
+
+    /** ¿El destino no responde en la simulación? (lo redefine el simulador de demo). */
+    protected function pingUnreachable(string $address): bool
+    {
+        return false;
     }
 
     public function close(): void {}

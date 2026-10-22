@@ -25,6 +25,10 @@ class LandingController extends Controller
         if (Auth::check()) {
             return redirect()->route(Auth::user()->homeRoute());
         }
+        // En el dominio de un WISP no se muestra la página comercial de la plataforma.
+        if (\App\Models\Tenant::forHost(request()->getHost())) {
+            return redirect()->route('login');
+        }
 
         return view('public.landing', [
             'plans' => $this->plans(),
