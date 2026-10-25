@@ -1,3 +1,6 @@
+import 'dart:io' as io;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -222,13 +225,14 @@ class OfflineBanner extends StatelessWidget {
       child: Row(children: [
         const Icon(Icons.wifi_off_rounded, color: AppColors.warning, size: 20),
         const SizedBox(width: 10),
-        Expanded(child: Text('Sin señal: mostrando la información guardada$when. Las acciones necesitan conexión.', style: const TextStyle(fontSize: 12.5))),
+        Expanded(child: Text('Sin señal: mostrando la información guardada$when. Lo que hagas se guarda y se envía al recuperar señal.', style: const TextStyle(fontSize: 12.5))),
       ]),
     );
   }
 }
 
 /// Carga asíncrona con "jalar para actualizar", error con reintento y estado vacío.
+/// Recarga sola cuando la bandeja de salida termina de enviar acciones (Outbox.synced).
 class Loader<T> extends StatefulWidget {
   const Loader({super.key, required this.load, required this.builder});
 
@@ -247,7 +251,18 @@ class LoaderState<T> extends State<Loader<T>> {
   @override
   void initState() {
     super.initState();
+    Outbox.synced.addListener(_onSynced);
     reload();
+  }
+
+  @override
+  void dispose() {
+    Outbox.synced.removeListener(_onSynced);
+    super.dispose();
+  }
+
+  void _onSynced() {
+    if (mounted && _data != null) reload();
   }
 
   Future<void> reload() async {
@@ -333,19 +348,46 @@ SnackBar _snack(String text, IconData icon, Color color) => SnackBar(
 
 /// Imagen remota (evidencias). En web usa <img> para no depender de CORS.
 class NetImage extends StatelessWidget {
-  const NetImage(this.url, {super.key, this.fit = BoxFit.cover});
+  const NetImage(this.url, {super.key, this.fit = BoxFit.cover, this.localPath});
 
   final String url;
   final BoxFit fit;
 
+  /// Foto o firma guardada en el teléfono que aún no se sube (bandeja de salida).
+  final String? localPath;
+
+  static Widget _waiting(BuildContext context, Object error, StackTrace? stack) =>
+      Container(color: const Color(0xFFF1F5F9), child: const Icon(Icons.cloud_upload_outlined, color: AppColors.warning));
+
   @override
   Widget build(BuildContext context) {
+    if (localPath != null) {
+      return kIsWeb ? _waiting(context, '', null) : Image.file(io.File(localPath!), fit: fit, errorBuilder: _waiting);
+    }
+    if (url.isEmpty) return _waiting(context, '', null);
     return Image.network(
       url,
       fit: fit,
       webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
       errorBuilder: (_, _, _) => Container(color: const Color(0xFFE2E8F0), child: const Icon(Icons.broken_image_outlined, color: AppColors.slate)),
       loadingBuilder: (_, child, progress) => progress == null ? child : Container(color: const Color(0xFFF1F5F9)),
+    );
+  }
+}
+
+/// Marca de "por subir": hecho sin señal, aún en la bandeja de salida.
+class PendingMark extends StatelessWidget {
+  const PendingMark({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Guardado sin señal: se sube al recuperarla',
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: AppColors.warning.withValues(alpha: .4))),
+        child: const Icon(Icons.cloud_upload_outlined, size: 14, color: AppColors.warning),
+      ),
     );
   }
 }

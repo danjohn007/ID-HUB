@@ -6,6 +6,7 @@ use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Messaging\MessageService;
+use App\Support\FieldClock;
 
 /**
  * Ciclo de vida de tickets: creación con SLA, asignación, cambios de estado e historial.
@@ -54,19 +55,20 @@ class TicketService
     public function changeStatus(Ticket $ticket, string $status, ?string $note = null, bool $notify = true): Ticket
     {
         $old = $ticket->status;
+        $at = FieldClock::now(); // hora real de la acción (app de campo sin señal)
         $changes = ['status' => $status];
         if ($status === 'en_proceso' && ! $ticket->arrived_at) {
-            $changes['arrived_at'] = now();
+            $changes['arrived_at'] = $at;
         }
         if ($status === 'resuelto') {
-            $changes['resolved_at'] = now();
-            $changes['departed_at'] = $ticket->departed_at ?? now();
+            $changes['resolved_at'] = $at;
+            $changes['departed_at'] = $ticket->departed_at ?? $at;
             $changes['resolution'] = $note ?: $ticket->resolution;
-            $changes['sla_breached'] = $ticket->sla_due_at && now()->greaterThan($ticket->sla_due_at);
+            $changes['sla_breached'] = $ticket->sla_due_at && $at->greaterThan($ticket->sla_due_at);
         }
         if ($status === 'cerrado') {
-            $changes['closed_at'] = now();
-            $changes['resolved_at'] = $ticket->resolved_at ?? now();
+            $changes['closed_at'] = $at;
+            $changes['resolved_at'] = $ticket->resolved_at ?? $at;
         }
         $ticket->update($changes);
 
@@ -79,7 +81,7 @@ class TicketService
 
         // Si se resuelve un ticket de caída, cerrar el outage asociado
         if (in_array($status, ['resuelto', 'cerrado'], true) && $ticket->outage && ! $ticket->outage->ended_at) {
-            $ticket->outage->update(['ended_at' => now()]);
+            $ticket->outage->update(['ended_at' => $at]);
         }
 
         return $ticket;

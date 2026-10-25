@@ -11,6 +11,7 @@ use App\Models\Repeater;
 use App\Services\Network\MonitoringService;
 use App\Support\Audit;
 use App\Support\Evidence;
+use App\Support\FieldClock;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -70,7 +71,7 @@ class InstallationService
 
     public function start(InstallationOrder $order): void
     {
-        $order->update(['status' => 'en_proceso', 'started_at' => $order->started_at ?? now()]);
+        $order->update(['status' => 'en_proceso', 'started_at' => $order->started_at ?? FieldClock::now()]);
     }
 
     public function toggleChecklist(InstallationOrder $order, string $key, bool $value): void
@@ -95,13 +96,14 @@ class InstallationService
         $order->update(['signature_path' => $path, 'signed_by_name' => $signedBy, 'checklist' => $list]);
         $order->attachments()->updateOrCreate(['kind' => 'firma'], [
             'tenant_id' => $order->tenant_id, 'path' => $path, 'original_name' => 'firma.png', 'mime' => 'image/png',
-            'taken_at' => now(), 'uploaded_by' => auth()->id(),
+            'taken_at' => FieldClock::now(), 'uploaded_by' => auth()->id(),
         ]);
     }
 
     public function complete(InstallationOrder $order): void
     {
-        $order->update(['status' => 'instalada', 'completed_at' => now(), 'started_at' => $order->started_at ?? now()]);
+        $at = FieldClock::now();
+        $order->update(['status' => 'instalada', 'completed_at' => $at, 'started_at' => $order->started_at ?? $at]);
     }
 
     /**

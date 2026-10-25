@@ -16,6 +16,7 @@ use App\Services\Field\FieldTracker;
 use App\Services\InventoryService;
 use App\Services\TicketService;
 use App\Support\Evidence;
+use App\Support\FieldClock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -197,7 +198,7 @@ class TicketController extends ApiController
         if ($ticket->signature_path) {
             Evidence::delete($ticket->signature_path);
         }
-        $ticket->forceFill(['signature_path' => $path, 'signed_by_name' => $sig['signed_by'], 'signed_at' => now()])->save();
+        $ticket->forceFill(['signature_path' => $path, 'signed_by_name' => $sig['signed_by'], 'signed_at' => FieldClock::now()])->save();
         $ticket->addComment('Firma de conformidad capturada ('.$sig['signed_by'].')', 'system');
 
         return $this->ok(['data' => new TicketResource($ticket->fresh(['client', 'technician']))], 'Firma guardada.', 201);

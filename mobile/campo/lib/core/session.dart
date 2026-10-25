@@ -7,6 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import 'api.dart';
+import 'cache_store.dart';
+import 'day_download.dart';
+import 'local_patch.dart';
 import 'outbox.dart';
 import 'push.dart';
 
@@ -51,8 +54,11 @@ class Session extends ChangeNotifier {
   Session() {
     api = ApiClient(server: AppConfig.defaultServer, onUnauthorized: _expired);
     outbox = Outbox(api);
+    download = DayDownload(this);
     // Cualquier respuesta correcta indica que volvió la señal: se envía lo pendiente.
     api.onOnline = () => outbox.flush();
+    // Lo que sigue en la bandeja se muestra sobre los datos que lleguen del servidor.
+    api.pendingOverlay = (key, data) => LocalPatch.overlay(key, data, outbox.pending);
   }
 
   static const _storage = FlutterSecureStorage();
@@ -61,6 +67,7 @@ class Session extends ChangeNotifier {
 
   /// Acciones guardadas sin conexión (se envían al recuperar señal).
   late final Outbox outbox;
+  late final DayDownload download;
   String server = AppConfig.defaultServer;
   String? _token;
   StaffUser? user;
@@ -156,7 +163,9 @@ class Session extends ChangeNotifier {
     tenant = data['tenant'] is Map ? TenantInfo(Map<String, dynamic>.from(data['tenant'] as Map)) : null;
     abilities = List<String>.from(data['abilities'] as List? ?? data['permissions'] as List? ?? const []);
     outbox.userId = user!.id;
-    outbox.load().then((_) => outbox.flush(force: true));
+    // Primero se envía lo pendiente y luego se descarga el día (ya con esas acciones en el servidor).
+    outbox.load().then((_) => outbox.flush(force: true)).then((_) => download.loadLast()).then((_) => download.run(auto: true));
+    CacheStore.prune(const Duration(days: 14));
     SharedPreferences.getInstance().then((p) => p.setString('profile', jsonEncode({'user': user!.json, 'tenant': tenant?.json, 'abilities': abilities})));
   }
 
@@ -180,6 +189,7 @@ class Session extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('profile');
     await ApiClient.clearCache();
+    await download.reset();
   }
 
   String _deviceName() {

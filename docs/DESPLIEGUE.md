@@ -152,8 +152,43 @@ automatizaciones. Avisos al cliente: los eventos de las plantillas por el canal 
    ```
    Esto reemplaza `lib/firebase_options.dart` y agrega `android/app/google-services.json`. Compila de nuevo
    (`flutter build apk --release`). Sin este paso la app funciona igual, solo sin push.
-5. **iOS** (requiere Mac y cuenta de Apple Developer): sube la llave APNs (.p8) en Firebase → Configuración →
-   Cloud Messaging, y en Xcode agrega las capacidades *Push Notifications* y *Background Modes → Remote notifications*.
+5. **iOS**: en [developer.apple.com](https://developer.apple.com/account/resources/authkeys/list) → *Keys* → **+**
+   crea una llave con *Apple Push Notifications service (APNs)*, descarga el `.p8` y súbelo en Firebase →
+   Configuración del proyecto → Cloud Messaging → *Configuración de la app de Apple*. Las capacidades *Push
+   Notifications* y *Remote notifications* ya vienen en el proyecto (`ios/Runner/Runner.entitlements`, `Info.plist`).
+
+## App de campo en iPhone (TestFlight)
+
+Se compila y se sube sin Mac con el workflow de GitHub `.github/workflows/ios.yml`. Configuración única:
+
+1. Cuenta del **Apple Developer Program** (99 USD al año) en [developer.apple.com](https://developer.apple.com/programs/).
+2. developer.apple.com → *Certificates, IDs & Profiles* → *Identifiers* → **+** → *App IDs* → *App*: Bundle ID explícito
+   `mx.impactosdigitales.wispcontrolcampo` y marca **Push Notifications**.
+3. [App Store Connect](https://appstoreconnect.apple.com) → *Apps* → **+** → *Nueva app*: iOS, nombre `ID-Hub Campo`,
+   idioma Español (México), el Bundle ID anterior y un SKU (p. ej. `idhub-campo`).
+4. App Store Connect → *Usuarios y acceso* → *Integraciones* → *API de App Store Connect* → **Generar llave** con
+   acceso **Admin**. Descarga el `.p8` (sólo se puede una vez) y anota el *Key ID* y el *Issuer ID*.
+5. Llave privada del certificado de distribución (una sola vez, en Git Bash; guárdala, siempre se reutiliza):
+   ```bash
+   ssh-keygen -t rsa -b 2048 -m PEM -f idhub_cert_key -q -N ""
+   ```
+6. GitHub → el repositorio → *Settings* → *Secrets and variables* → *Actions* → **New repository secret**:
+
+   | Secreto | Valor |
+   |---|---|
+   | `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID del paso 4 |
+   | `APP_STORE_CONNECT_KEY_IDENTIFIER` | Key ID del paso 4 |
+   | `APP_STORE_CONNECT_PRIVATE_KEY` | Contenido completo del `.p8` del paso 4 |
+   | `CERTIFICATE_PRIVATE_KEY` | Contenido completo de `idhub_cert_key` del paso 5 |
+
+7. *Actions* → **iOS app de campo (TestFlight)** → *Run workflow* (≈ 20 min). El número de build es el número de
+   ejecución, así que cada envío es mayor que el anterior; la versión sale de `version` en `pubspec.yaml`.
+8. App Store Connect → la app → *TestFlight*: el build aparece cuando Apple termina de procesarlo (10–30 min).
+   Agrega a los técnicos/cobradores como *Probadores internos* (usuarios de tu equipo en App Store Connect) o en un
+   grupo *externo* por correo (el primer build externo pasa una revisión breve de Apple). Ellos instalan la app
+   **TestFlight** desde la App Store y desde ahí "ID-Hub Campo".
+
+Sin los pasos 4 y 5 de *Notificaciones push* la app funciona igual en iPhone, sólo sin push.
 
 La prueba de push de **Comunicación → Plantillas** llega a los teléfonos donde tu usuario inició sesión en la app de campo.
 

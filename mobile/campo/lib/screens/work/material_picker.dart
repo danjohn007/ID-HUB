@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/cache_store.dart';
 import '../../core/format.dart';
 import '../../core/session.dart';
 import '../../models.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 
-/// Selector de material del inventario: artículo, cantidad y número de serie (si aplica).
-/// Devuelve {item_id, quantity, serial} listo para POST .../materials.
-Future<Map<String, dynamic>?> showMaterialPicker(BuildContext context) {
-  return showModalBottomSheet<Map<String, dynamic>>(
+/// Material elegido: artículo, cantidad y número de serie (si aplica).
+class MaterialPick {
+  const MaterialPick(this.item, this.quantity, this.serial);
+
+  final InventoryItem item;
+  final double quantity;
+  final String? serial;
+}
+
+/// Selector de material del inventario. Sin señal usa el inventario guardado en el teléfono
+/// (con lo ya usado sin señal descontado).
+Future<MaterialPick?> showMaterialPicker(BuildContext context) {
+  return showModalBottomSheet<MaterialPick>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -38,8 +48,8 @@ class _PickerState extends State<_Picker> {
   }
 
   Future<List<InventoryItem>> _load() async {
-    final res = await context.read<Session>().api.get('/inventory', query: {'in_stock': 1});
-    return (res['data'] as List).map(InventoryItem.new).toList();
+    final res = await context.read<Session>().api.getCached('/inventory', cacheKey: CacheKeys.inventory);
+    return (res.data['data'] as List).map(InventoryItem.new).where((i) => i.stock > 0).toList();
   }
 
   @override
@@ -105,11 +115,7 @@ class _PickerState extends State<_Picker> {
         ],
         const Spacer(),
         FilledButton(
-          onPressed: () => Navigator.pop(context, {
-            'item_id': it.id,
-            'quantity': _qty,
-            'serial': _serial.text.trim().isEmpty ? null : _serial.text.trim(),
-          }),
+          onPressed: () => Navigator.pop(context, MaterialPick(it, _qty, _serial.text.trim().isEmpty ? null : _serial.text.trim())),
           child: const Text('Registrar material'),
         ),
       ]),

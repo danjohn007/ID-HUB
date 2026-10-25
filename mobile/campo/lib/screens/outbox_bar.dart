@@ -70,7 +70,8 @@ Future<void> showOutboxSheet(BuildContext context, Outbox outbox) {
               ),
               const Padding(
                 padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Text('Se guardaron sin conexión y se envían solos al recuperar señal.', style: TextStyle(color: AppColors.slate, fontSize: 13)),
+                child: Text('Se guardaron sin conexión y se envían solos, en orden, al recuperar señal. Quedan con la hora en que los hiciste.',
+                    style: TextStyle(color: AppColors.slate, fontSize: 13)),
               ),
               if (items.isEmpty)
                 const Padding(padding: EdgeInsets.all(20), child: Text('Todo enviado.', style: TextStyle(color: AppColors.slate))),
@@ -78,9 +79,14 @@ Future<void> showOutboxSheet(BuildContext context, Outbox outbox) {
                 child: ListView(shrinkWrap: true, children: [
                   for (final item in items)
                     ListTile(
-                      leading: Icon(item.failed ? Icons.error_outline_rounded : Icons.schedule_rounded, color: item.failed ? AppColors.danger : AppColors.warning),
+                      leading: Icon(item.failed ? Icons.error_outline_rounded : (outbox.waiting(item) ? Icons.pause_circle_outline_rounded : Icons.schedule_rounded),
+                          color: item.failed ? AppColors.danger : AppColors.warning),
                       title: Text(item.label, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      subtitle: Text(item.failed ? 'No se pudo enviar: ${item.error}' : 'Guardado ${Fmt.dateTime(item.createdAt.toIso8601String())}'),
+                      subtitle: Text(item.failed
+                          ? 'No se pudo enviar: ${item.error}'
+                          : outbox.waiting(item)
+                              ? 'En espera: reintenta o descarta la acción con error de este mismo trabajo.'
+                              : 'Guardado ${Fmt.dateTime(item.createdAt.toIso8601String())}'),
                       trailing: item.failed
                           ? Row(mainAxisSize: MainAxisSize.min, children: [
                               IconButton(tooltip: 'Reintentar', icon: const Icon(Icons.refresh_rounded), onPressed: () => outbox.retry(item)),

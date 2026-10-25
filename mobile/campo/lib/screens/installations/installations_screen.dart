@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api.dart';
+import '../../core/cache_store.dart';
 import '../../core/format.dart';
 import '../../core/session.dart';
 import '../../models.dart';
@@ -36,26 +38,29 @@ class _List extends StatefulWidget {
 }
 
 class _ListState extends State<_List> {
-  final _loader = GlobalKey<LoaderState<List<Installation>>>();
+  final _loader = GlobalKey<LoaderState<Cached<List<Installation>>>>();
 
-  Future<List<Installation>> _load() async {
-    final res = await context.read<Session>().api.get('/installations', query: {'status': widget.status, 'per_page': 50});
-    return (res['data'] as List).map(Installation.new).toList();
+  Future<Cached<List<Installation>>> _load() async {
+    final res = await context.read<Session>().api.getCached('/installations', query: {'status': widget.status, 'per_page': 50}, cacheKey: CacheKeys.installations(widget.status));
+    return Cached((res.data['data'] as List).map(Installation.new).toList(), fromCache: res.fromCache, savedAt: res.savedAt);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Loader<List<Installation>>(
+    return Loader<Cached<List<Installation>>>(
       key: _loader,
       load: _load,
-      builder: (context, list, reload) {
-        if (list.isEmpty) return ListView(children: const [EmptyState(icon: Icons.router_outlined, title: 'Sin instalaciones')]);
+      builder: (context, cached, reload) {
+        final list = cached.data;
+        final banner = cached.fromCache ? OfflineBanner(savedAt: cached.savedAt) : null;
+        if (list.isEmpty) return ListView(padding: const EdgeInsets.all(16), children: [?banner, const EmptyState(icon: Icons.router_outlined, title: 'Sin instalaciones')]);
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          itemCount: list.length,
+          itemCount: list.length + (banner == null ? 0 : 1),
           separatorBuilder: (_, _) => const SizedBox(height: 10),
           itemBuilder: (context, i) {
-            final o = list[i];
+            if (banner != null && i == 0) return banner;
+            final o = list[i - (banner == null ? 0 : 1)];
             final total = o.checklist.length;
             final progress = total == 0 ? 0.0 : o.checklistDone / total;
             return AccentCard(

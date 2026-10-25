@@ -1,0 +1,77 @@
+# Compila la app de campo (mobile/campo) para iPhone en una Mac de GitHub y la sube a TestFlight.
+# Se ejecuta a mano: pestaña "Actions" → "iOS app de campo (TestFlight)" → "Run workflow"
+# (las Mac de GitHub consumen más minutos que Linux, por eso no corre en cada push).
+# Requiere la cuenta de Apple Developer y los secretos descritos en docs/DESPLIEGUE.md → "App de campo en iPhone".
+name: iOS app de campo (TestFlight)
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'Servidor de la API (vacío = el de lib/config.dart)'
+        required: false
+        default: ''
+
+jobs:
+  testflight:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile/campo
+    env:
+      BUNDLE_ID: mx.impactosdigitales.wispcontrolcampo
+      # Llave de la API de App Store Connect (rol Admin) y llave privada del certificado de distribución.
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+      CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
+    steps:
+      - name: Revisar secretos de Apple
+        run: |
+          for v in APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_KEY_IDENTIFIER APP_STORE_CONNECT_PRIVATE_KEY CERTIFICATE_PRIVATE_KEY; do
+            if [ -z "${!v}" ]; then echo "::error::Falta el secreto $v (ver docs/DESPLIEGUE.md → App de campo en iPhone)"; exit 1; fi
+          done
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Herramientas de firma de Codemagic: crean / reutilizan el certificado y el perfil de App Store
+      # con la llave de la API, sin Mac ni Xcode a mano.
+      - run: pip install codemagic-cli-tools
+
+      - name: Certificado y perfil de distribución
+        run: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - run: flutter pub get
+
+      - name: Compilar IPA
+        env:
+          API_URL: ${{ github.event.inputs.api_url || vars.API_URL }}
+        run: |
+          args="--release --build-number=${{ github.run_number }} --export-options-plist=$HOME/export_options.plist"
+          if [ -n "$API_URL" ]; then
+            flutter build ipa $args --dart-define=API_URL="$API_URL"
+          else
+            flutter build ipa $args
+          fi
+
+      - name: Subir a TestFlight
+        run: app-store-connect publish --path build/ios/ipa/*.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: idhub-campo-ipa
+          path: mobile/campo/build/ios/ipa/*.ipa
+          retention-days: 30

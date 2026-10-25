@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api.dart';
+import '../../core/cache_store.dart';
 import '../../core/format.dart';
 import '../../core/session.dart';
 import '../../models.dart';
@@ -32,7 +33,7 @@ class _PendingScreenState extends State<PendingScreen> {
   }
 
   Future<Cached<Map<String, dynamic>>> _load() =>
-      context.read<Session>().api.getCached('/collection/pending', query: {'per_page': 100, 'search': _search.isEmpty ? null : _search}, cacheKey: 'pending-$_search');
+      context.read<Session>().api.getCached('/collection/pending', query: {'per_page': 100, 'search': _search.isEmpty ? null : _search}, cacheKey: CacheKeys.pending(_search));
 
   void _onSearch(String v) {
     _debounce?.cancel();

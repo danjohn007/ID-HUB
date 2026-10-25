@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../brand.dart';
 import '../config.dart';
+import '../core/format.dart';
 import '../core/geo.dart';
 import '../core/session.dart';
 import '../motion.dart';
@@ -44,7 +45,18 @@ class MoreScreen extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(Geo.lastError ?? 'Sin GPS'), backgroundColor: AppColors.warning));
       return;
     }
-    await runAction(context, () => session.api.post('/field/location', data: gps.toJson()), success: 'Ubicación compartida con la oficina');
+    await runQueued(context, () => session.outbox.submit(path: '/field/location', data: gps.toJson(), label: 'Ubicación compartida'), success: 'Ubicación compartida con la oficina');
+  }
+
+  /// Descarga manual del día (también corre sola al entrar y al volver a la app).
+  Future<void> _download(BuildContext context) async {
+    final download = context.read<Session>().download;
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await download.run();
+    messenger.showSnackBar(SnackBar(
+      content: Text(ok ? 'Listo: tu día quedó guardado en el teléfono para trabajar sin señal.' : download.error ?? 'No se pudo descargar.'),
+      backgroundColor: ok ? AppColors.success : AppColors.warning,
+    ));
   }
 
   @override
@@ -111,7 +123,28 @@ class MoreScreen extends StatelessWidget {
               _Item(icon: Icons.my_location_rounded, color: AppColors.info, label: 'Compartir mi ubicación', onTap: () => _share(context)),
             ]),
             const SizedBox(height: 16),
-            _Group(index: 2, title: 'App', children: [
+            _Group(index: 2, title: 'Sin señal', children: [
+              ListenableBuilder(
+                listenable: session.download,
+                builder: (context, _) {
+                  final d = session.download;
+                  return _Item(
+                    icon: Icons.download_for_offline_rounded,
+                    color: AppColors.teal,
+                    label: 'Descargar mi día',
+                    subtitle: d.running
+                        ? 'Descargando ${d.done} de ${d.total}…'
+                        : d.lastAt == null
+                            ? 'Guarda tu ruta, tickets y clientes para trabajar sin señal'
+                            : 'Última descarga: ${Fmt.dateTime(d.lastAt!.toIso8601String())}',
+                    trailing: d.running ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : null,
+                    onTap: d.running ? null : () => _download(context),
+                  );
+                },
+              ),
+            ]),
+            const SizedBox(height: 16),
+            _Group(index: 3, title: 'App', children: [
               _Item(
                 icon: Icons.dns_rounded,
                 color: AppColors.slate,
@@ -122,7 +155,7 @@ class MoreScreen extends StatelessWidget {
             ]),
             const SizedBox(height: 16),
             FadeSlideIn(
-              index: 3,
+              index: 4,
               child: OutlinedButton.icon(
                 onPressed: () => _logout(context),
                 style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, side: BorderSide(color: AppColors.danger.withValues(alpha: .35))),
@@ -171,13 +204,14 @@ class _Group extends StatelessWidget {
 }
 
 class _Item extends StatelessWidget {
-  const _Item({required this.icon, required this.label, required this.color, this.onTap, this.trailing});
+  const _Item({required this.icon, required this.label, required this.color, this.onTap, this.trailing, this.subtitle});
 
   final IconData icon;
   final String label;
   final Color color;
   final VoidCallback? onTap;
   final Widget? trailing;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +219,7 @@ class _Item extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       leading: IconBadge(icon, color: color, size: 40),
       title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy)),
+      subtitle: subtitle == null ? null : Text(subtitle!, style: const TextStyle(fontSize: 12.5, color: AppColors.slate)),
       trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right_rounded, color: AppColors.slate) : null),
       onTap: onTap,
     );

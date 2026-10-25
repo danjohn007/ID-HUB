@@ -85,6 +85,24 @@ class CollectionApiTest extends TestCase
         $this->assertSame(1, CollectionVisit::query()->where('idempotency_key', 'visit-0001')->count());
     }
 
+    public function test_payment_and_visit_sent_later_keep_the_time_they_happened(): void
+    {
+        $at = now()->subHours(5)->startOfMinute();
+
+        $pay = $this->api()->postJson('/api/v1/collection/payments', [
+            'client_id' => $this->client->id, 'amount' => 80, 'client_uuid' => 'pay-late-1', 'occurred_at' => $at->copy()->utc()->toIso8601String(),
+        ])->assertCreated();
+        $payment = Payment::findOrFail($pay->json('data.id'));
+        $this->assertTrue($payment->paid_at->equalTo($at));
+        $this->assertTrue(CollectionVisit::query()->where('payment_id', $payment->id)->firstOrFail()->visited_at->equalTo($at));
+        $this->assertNotNull($payment->cash_cut_id);
+
+        $visit = $this->api()->postJson('/api/v1/collection/visits', [
+            'client_id' => $this->client->id, 'result' => 'no_localizado', 'client_uuid' => 'visit-late-1', 'occurred_at' => $at->toIso8601String(),
+        ])->assertCreated();
+        $this->assertTrue(CollectionVisit::findOrFail($visit->json('data.id'))->visited_at->equalTo($at));
+    }
+
     public function test_payment_evidence_is_private_with_capture_time(): void
     {
         $takenAt = now()->subMinutes(30);

@@ -70,10 +70,12 @@ class ShellState extends State<Shell> with SingleTickerProviderStateMixin, Widge
     super.dispose();
   }
 
-  /// Al volver a la app se intenta enviar lo pendiente.
+  /// Al volver a la app se envía lo pendiente y, si pasó más de media hora, se vuelve a descargar el día.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && mounted) context.read<Session>().outbox.flush(force: true);
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    final session = context.read<Session>();
+    session.outbox.flush(force: true).then((_) => session.download.run(auto: true));
   }
 
   /// Notificación tocada: abre el ticket, la instalación o la ruta que menciona.

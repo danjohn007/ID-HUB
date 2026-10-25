@@ -16,6 +16,7 @@ use App\Services\BillingService;
 use App\Services\Field\FieldTracker;
 use App\Support\Catalog;
 use App\Support\Evidence;
+use App\Support\FieldClock;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -96,7 +97,7 @@ class CollectionController extends ApiController
         $data = $this->check($request, [
             'client_id' => ['required', 'integer', $this->existsInTenant('clients')],
             'result' => ['required', Rule::in(array_diff(array_keys(config('wisp.visit_results')), ['pago']))],
-            'promise_date' => 'required_if:result,promesa|nullable|date|after_or_equal:today',
+            'promise_date' => 'required_if:result,promesa|nullable|date|after_or_equal:'.FieldClock::now()->toDateString(),
             'promise_amount' => 'nullable|numeric|gt:0',
             'notes' => 'nullable|string|max:190',
             'evidence' => 'nullable|file|max:10240|mimes:jpg,jpeg,png,webp,heic,pdf',
@@ -153,6 +154,7 @@ class CollectionController extends ApiController
                 $payment = app(BillingService::class)->registerPayment($client, (float) $data['amount'], 'efectivo', array_filter([
                     'idempotency_key' => $key,
                     'collector_id' => $user->id,
+                    'paid_at' => FieldClock::now(),
                     'reference' => $data['reference'] ?? null,
                     'notes' => $data['notes'] ?? 'Cobro en campo (app)',
                     'evidence_path' => $evidence,
@@ -259,7 +261,7 @@ class CollectionController extends ApiController
             'idempotency_key' => $data['idempotency_key'] ?? null,
             'lat' => $data['lat'] ?? null,
             'lng' => $data['lng'] ?? null,
-            'visited_at' => now(),
+            'visited_at' => FieldClock::now(),
         ]);
     }
 

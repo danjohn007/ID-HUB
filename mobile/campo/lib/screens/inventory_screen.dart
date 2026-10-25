@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/api.dart';
+import '../core/cache_store.dart';
 import '../core/format.dart';
 import '../core/session.dart';
 import '../models.dart';
@@ -33,7 +34,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     'refaccion': Icons.build_outlined,
   };
 
-  Future<Cached<Map<String, dynamic>>> _load() => context.read<Session>().api.getCached('/inventory', cacheKey: 'inventory');
+  Future<Cached<Map<String, dynamic>>> _load() => context.read<Session>().api.getCached('/inventory', cacheKey: CacheKeys.inventory);
 
   @override
   Widget build(BuildContext context) {

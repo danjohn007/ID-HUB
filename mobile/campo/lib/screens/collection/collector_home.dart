@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/cache_store.dart';
 import '../../core/format.dart';
 import '../../core/session.dart';
 import '../../models.dart';
@@ -33,8 +34,8 @@ class _CollectorHomeScreenState extends State<CollectorHomeScreen> {
   Future<_HomeData> _load() async {
     final api = context.read<Session>().api;
     // El corte es opcional: si falla, el inicio se muestra igual.
-    final cutFuture = api.get('/collection/cash-cut').then<Map<String, dynamic>?>((r) => r, onError: (_) => null);
-    final pending = (await api.getCached('/collection/pending', query: {'per_page': 5}, cacheKey: 'pending-home')).data;
+    final cutFuture = api.getCached('/collection/cash-cut', cacheKey: CacheKeys.cashCut).then<Map<String, dynamic>?>((r) => r.data, onError: (_) => null);
+    final pending = (await api.getCached('/collection/pending', query: {'per_page': 5}, cacheKey: CacheKeys.pendingHome)).data;
     final cut = await cutFuture;
     return _HomeData(
       (pending['data'] as List).map(PendingClient.new).toList(),

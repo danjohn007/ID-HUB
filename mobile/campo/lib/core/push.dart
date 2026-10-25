@@ -49,6 +49,9 @@ class Push {
     try {
       final settings = await FirebaseMessaging.instance.requestPermission();
       if (settings.authorizationStatus == AuthorizationStatus.denied) return;
+      // En iOS el token de FCM requiere el de APNs, que llega unos segundos después del permiso
+      // (en el simulador nunca llega: ahí no hay push).
+      if (defaultTargetPlatform == TargetPlatform.iOS && !await _apnsReady()) return;
       // Token de registro clásico (lo que el servidor manda en message.token de la API HTTP v1).
       // firebase_messaging 17 lo marca obsoleto a favor del FID (register/onRegistered), que usa otro
       // destino de envío; se migrará cuando el servidor lo soporte.
@@ -80,6 +83,14 @@ class Push {
     } catch (_) {}
   }
 
+  static Future<bool> _apnsReady() async {
+    for (var i = 0; i < 10; i++) {
+      if (await FirebaseMessaging.instance.getAPNSToken() != null) return true;
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    return false;
+  }
+
   static Future<void> _send(ApiClient api, String t) => api.post('/push-tokens', data: {
         'token': t,
         'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
@@ -108,7 +119,7 @@ class Push {
     }
   }
 
-  /// Con la app abierta Android no muestra la notificación: se avisa dentro de la app.
+  /// Con la app abierta ni Android ni iOS muestran la notificación: se avisa dentro de la app.
   static void _foreground(RemoteMessage message) {
     final n = message.notification;
     if (n == null) return;

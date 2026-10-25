@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../core/api.dart';
+import '../core/cache_store.dart';
 import '../core/format.dart';
 import '../core/geo.dart';
 import '../core/launch.dart';
@@ -38,7 +39,7 @@ class _RouteScreenState extends State<RouteScreen> {
     final api = context.read<Session>().api;
     final query = {'type': widget.type, 'date': Fmt.apiDate(_date)};
     if (_isToday) {
-      final res = await api.getCached('/field/today', query: query, cacheKey: 'today-${widget.type}');
+      final res = await api.getCached('/field/today', query: query, cacheKey: CacheKeys.today(widget.type));
       return Cached(FieldDay(res.data), fromCache: res.fromCache, savedAt: res.savedAt);
     }
     return Cached(FieldDay(await api.get('/field/today', query: query)));
@@ -57,7 +58,10 @@ class _RouteScreenState extends State<RouteScreen> {
     final ok = await runQueued(
         context,
         () => outbox.submit(
-            path: '/field/stops/${stop.id}/$action', data: gps?.toJson(), label: '${action == 'arrive' ? 'Llegada a' : 'Salida de'} ${stop.title}'),
+            path: '/field/stops/${stop.id}/$action',
+            data: gps?.toJson(),
+            label: '${action == 'arrive' ? 'Llegada a' : 'Salida de'} ${stop.title}',
+            meta: {if (stop.type == 'ticket') 'ticket_id': stop.subject['id']}),
         success: action == 'arrive' ? 'Llegada registrada${gps == null ? ' (sin GPS)' : ''}' : 'Salida registrada');
     if (ok) _loader.currentState?.reload();
   }

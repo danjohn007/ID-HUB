@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api.dart';
+import '../../core/cache_store.dart';
 import '../../core/format.dart';
 import '../../core/geo.dart';
 import '../../core/launch.dart';
@@ -15,6 +16,7 @@ import '../../widgets.dart';
 
 /// Ficha de cobranza del cliente (secciones 26 y 27): saldo, contacto, historial de visitas,
 /// cobro en efectivo con evidencia y GPS, o visita sin pago (no localizado, promesa, rechazo, cerrado).
+/// Sin señal usa la ficha guardada; el cobro o la visita quedan en la bandeja y se ven en el historial.
 class CollectScreen extends StatefulWidget {
   const CollectScreen({super.key, required this.clientId});
 
@@ -25,12 +27,17 @@ class CollectScreen extends StatefulWidget {
 }
 
 class _CollectScreenState extends State<CollectScreen> {
-  final _loader = GlobalKey<LoaderState<(ClientDetail, List<Visit>)>>();
+  final _loader = GlobalKey<LoaderState<(ClientDetail, List<Visit>, Cached<Map<String, dynamic>>)>>();
 
-  Future<(ClientDetail, List<Visit>)> _load() async {
+  Future<(ClientDetail, List<Visit>, Cached<Map<String, dynamic>>)> _load() async {
     final api = context.read<Session>().api;
-    final results = await Future.wait([api.get('/clients/${widget.clientId}'), api.get('/collection/clients/${widget.clientId}/visits')]);
-    return (ClientDetail(results[0]['data']), (results[1]['data'] as List).map(Visit.new).toList());
+    final id = widget.clientId;
+    // El historial es opcional: sin señal y sin copia guardada se puede cobrar igual.
+    final visits = api
+        .getCached('/collection/clients/$id/visits', cacheKey: CacheKeys.visits(id))
+        .then<List<Visit>>((r) => (r.data['data'] as List).map(Visit.new).toList(), onError: (_) => <Visit>[]);
+    final client = await api.getCached('/clients/$id', cacheKey: CacheKeys.client(id));
+    return (ClientDetail(client.data['data']), await visits, client);
   }
 
   Future<void> _pay(ClientDetail c) async {
@@ -57,6 +64,7 @@ class _CollectScreenState extends State<CollectScreen> {
           actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Entendido'))],
         ),
       );
+      _loader.currentState?.reload();
       return;
     }
     final payment = Payment(res['data']);
@@ -99,11 +107,11 @@ class _CollectScreenState extends State<CollectScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Cobranza')),
-      body: Loader<(ClientDetail, List<Visit>)>(
+      body: Loader<(ClientDetail, List<Visit>, Cached<Map<String, dynamic>>)>(
         key: _loader,
         load: _load,
         builder: (context, data, reload) {
-          final (c, visits) = data;
+          final (c, visits, source) = data;
           return ListView(padding: EdgeInsets.zero, children: [
             HeroHeader(children: [
               Text('#${c.code}', style: const TextStyle(color: Color(0xFFB7C4DC))),
@@ -116,6 +124,7 @@ class _CollectScreenState extends State<CollectScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                if (source.fromCache) OfflineBanner(savedAt: source.savedAt),
                 SectionCard(
                   child: Column(children: [
                     InfoRow(icon: Icons.place_outlined, label: 'Dirección', value: c.fullAddress),
@@ -146,6 +155,7 @@ class _CollectScreenState extends State<CollectScreen> {
                               dense: true,
                               leading: StatusChip.of(v.result, dense: true),
                               title: Text(Fmt.dateTime(v.visitedAt), style: const TextStyle(fontWeight: FontWeight.w600)),
+                              trailing: v.pending ? const PendingMark() : null,
                               subtitle: Text([
                                 if (v.payment != null) 'Cobro ${v.payment!['folio']} · ${Fmt.money(v.payment!['amount'] as num?)}',
                                 if (v.promiseDate != null) 'Promesa ${Fmt.date(v.promiseDate)}${v.promiseAmount != null ? ' por ${Fmt.money(v.promiseAmount)}' : ''}',
@@ -219,7 +229,7 @@ class _PaymentFormState extends State<_PaymentForm> {
       final res = await outbox.submit(
         path: '/collection/payments',
         data: fields,
-        photo: _photo,
+        file: _photo == null ? null : OutboxFile(_photo!.bytes, _photo!.name),
         fileField: 'evidence',
         key: _key,
         label: 'Cobro ${Fmt.money(amount)} · ${widget.client.name}',
@@ -326,7 +336,7 @@ class _VisitFormState extends State<_VisitForm> {
       };
       final label = _results.firstWhere((r) => r.$1 == _result).$2;
       final res = await outbox.submit(
-          path: '/collection/visits', data: fields, photo: _photo, fileField: 'evidence', key: _key, label: 'Visita: $label · ${widget.client.name}');
+          path: '/collection/visits', data: fields, file: _photo == null ? null : OutboxFile(_photo!.bytes, _photo!.name), fileField: 'evidence', key: _key, label: 'Visita: $label · ${widget.client.name}');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(res.queued
           ? const SnackBar(content: Text(Outbox.offlineMessage), backgroundColor: AppColors.warning)

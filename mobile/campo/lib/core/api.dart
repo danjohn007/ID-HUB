@@ -1,9 +1,7 @@
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
+import 'cache_store.dart';
 
 /// Error de la API con el mensaje en español que devuelve el servidor.
 class ApiException implements Exception {
@@ -47,6 +45,9 @@ class ApiClient {
   /// Se llama tras cada respuesta correcta del servidor (hay señal): reintenta la bandeja de salida.
   void Function()? onOnline;
 
+  /// Aplica a una respuesta recién descargada (y a su copia local) las acciones aún en la bandeja.
+  Map<String, dynamic> Function(String cacheKey, Map<String, dynamic> data)? pendingOverlay;
+
   void configure({required String server, String? token}) {
     _dio.options.baseUrl = normalizeServer(server) + AppConfig.apiPrefix;
     if (token == null) {
@@ -75,7 +76,7 @@ class ApiClient {
   Future<Map<String, dynamic>> patch(String path, {Map<String, dynamic>? data, Map<String, String>? headers}) =>
       _send(() => _dio.patch(path, data: _clean(data), options: Options(headers: headers)));
 
-  Future<Map<String, dynamic>> delete(String path) => _send(() => _dio.delete(path));
+  Future<Map<String, dynamic>> delete(String path, {Map<String, String>? headers}) => _send(() => _dio.delete(path, options: Options(headers: headers)));
 
   /// Envío multipart (fotos, firma, evidencia de cobro).
   Future<Map<String, dynamic>> upload(String path, {required Map<String, dynamic> fields, required Map<String, MultipartFile> files, Map<String, String>? headers}) {
@@ -84,26 +85,21 @@ class ApiClient {
   }
 
   /// GET con respaldo local: si no hay conexión devuelve la última respuesta guardada.
+  /// Las acciones guardadas sin señal ya se reflejaron en esa copia (LocalPatch).
   Future<Cached<Map<String, dynamic>>> getCached(String path, {Map<String, dynamic>? query, required String cacheKey}) async {
-    final prefs = await SharedPreferences.getInstance();
     try {
-      final data = await get(path, query: query);
-      await prefs.setString('cache:$cacheKey', jsonEncode({'at': DateTime.now().toIso8601String(), 'data': data}));
+      final fresh = await get(path, query: query);
+      final data = pendingOverlay?.call(cacheKey, fresh) ?? fresh;
+      await CacheStore.write(cacheKey, data);
       return Cached(data);
     } on ApiException catch (e) {
-      final raw = e.offline ? prefs.getString('cache:$cacheKey') : null;
-      if (raw == null) rethrow;
-      final saved = jsonDecode(raw) as Map<String, dynamic>;
-      return Cached(Map<String, dynamic>.from(saved['data'] as Map), fromCache: true, savedAt: DateTime.tryParse(saved['at'] as String? ?? ''));
+      final saved = e.offline ? await CacheStore.read(cacheKey) : null;
+      if (saved == null) rethrow;
+      return Cached(saved.data, fromCache: true, savedAt: saved.savedAt);
     }
   }
 
-  static Future<void> clearCache() async {
-    final prefs = await SharedPreferences.getInstance();
-    for (final k in prefs.getKeys().where((k) => k.startsWith('cache:'))) {
-      await prefs.remove(k);
-    }
-  }
+  static Future<void> clearCache() => CacheStore.clear();
 
   Map<String, dynamic>? _clean(Map<String, dynamic>? m) => m == null ? null : (Map.of(m)..removeWhere((_, v) => v == null));
 

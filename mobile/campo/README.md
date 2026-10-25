@@ -15,13 +15,26 @@ Al abrir, la app dibuja el logo (iD + ondas de señal) y lo sube al formulario d
 con sesión guardada entra directo. Si el teléfono tiene "reducir animaciones", se omiten.
 
 El modo se elige con los permisos del token. El color de marca es el `primary_color` del WISP.
-Sin señal, Inicio, Ruta, Cobranza e Inventario muestran la última información guardada.
+**Sin señal:** todas las pantallas muestran la última información guardada (aviso "Sin señal: mostrando la
+información guardada del…"). *Descargar mi día* (pantalla Más; también corre sola al entrar y al volver a la
+app si pasó más de media hora) guarda la ruta, el detalle de cada ticket e instalación, la ficha de sus
+clientes, el inventario y las listas; el cobrador, sus pendientes, la ficha e historial de visitas de sus
+clientes y el corte. En el teléfono cada respuesta es un archivo JSON (`core/cache_store.dart`); en web, en
+shared_preferences. Sin señal, la búsqueda de clientes busca entre los guardados.
 
-**Bandeja de salida (sin conexión):** llegada / salida de paradas, cambio de estado y comentarios de tickets,
-visitas y cobros de cobranza y fotos de evidencia se guardan en el teléfono ("Sin conexión: se enviará al
-recuperar señal") y se envían solos al volver a la app, cada minuto y tras cualquier respuesta correcta del
-servidor. La barra inferior muestra "N pendientes por enviar". Cada acción lleva una clave `Idempotency-Key`
-(UUID v4), así un reintento nunca duplica un cobro ni una visita. El corte de caja se entrega sólo con señal.
+**Bandeja de salida (sin conexión):** todas las acciones de campo funcionan sin señal: llegada / salida,
+en camino, estado y comentarios de tickets, fotos, firma, materiales (y devoluciones), iniciar / checklist /
+mediciones / finalizar instalación, ubicación, visitas y cobros. Se guardan en el teléfono ("Sin conexión: se
+enviará al recuperar señal") y se envían solos, en orden, al volver a la app, cada minuto y tras cualquier
+respuesta correcta del servidor. La barra inferior muestra "N pendientes por enviar".
+- Cada acción lleva una clave `Idempotency-Key` (UUID v4), así un reintento nunca la duplica, y `occurred_at`
+  (hora del teléfono): el servidor registra la hora en que ocurrió, no la de envío (`App\Support\FieldClock`).
+- Lo guardado se ve al momento en la pantalla (`core/local_patch.dart`): la instalación pasa a "En proceso",
+  la foto y la firma aparecen con la marca "por subir", el material se descuenta del inventario, el saldo
+  del cliente baja... y se vuelve a aplicar sobre los datos del servidor mientras siga pendiente.
+- Si el servidor rechaza una acción, las siguientes del mismo ticket / instalación / cliente esperan
+  ("En espera") hasta reintentarla o descartarla: p. ej. "Finalizar" no se envía si la firma falló.
+- El corte de caja no se entrega mientras haya cobros por subir (se muestran aparte en "Mi corte de caja").
 
 **Evidencias confiables:** las fotos de evidencia se toman sólo con la cámara (no desde la galería); la hora
 (`taken_at`) y el GPS se registran en el momento de la captura. El servidor las guarda en disco privado y
@@ -97,6 +110,15 @@ con la llave de depuración (sirve para instalar el APK a mano, **no** para Goog
    ```
 
 3. `flutter build appbundle --release ...` ya sale firmado con esa llave.
+
+### iPhone (TestFlight)
+
+No hace falta una Mac: el workflow `.github/workflows/ios.yml` compila en una Mac de GitHub, firma con la llave de
+la API de App Store Connect y sube el build a TestFlight (pestaña *Actions* → **iOS app de campo (TestFlight)** →
+*Run workflow*). Configuración única: `docs/DESPLIEGUE.md` → *App de campo en iPhone*.
+
+Con una Mac también se puede compilar a mano: `flutter build ipa --release --dart-define=API_URL=https://midominio.com`.
+El proyecto pide iOS 15+ (mínimo de Firebase) y es sólo para iPhone (en iPad abre en modo iPhone).
 
 **Antes de publicar en Play Store / App Store:**
 - Identificadores: Android `applicationId = mx.impactosdigitales.wispcontrol_campo`; iOS

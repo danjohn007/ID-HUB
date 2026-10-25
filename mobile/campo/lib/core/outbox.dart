@@ -8,8 +8,16 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
-import 'photos.dart';
+import 'local_patch.dart';
 import 'uuid.dart';
+
+/// Archivo que acompaña a una acción: foto de evidencia, firma o comprobante.
+class OutboxFile {
+  const OutboxFile(this.bytes, this.name);
+
+  final Uint8List bytes;
+  final String name;
+}
 
 /// Acción guardada sin conexión. [id] es también su clave de idempotencia (Idempotency-Key):
 /// si el servidor ya la recibió, el reintento devuelve el resultado original sin duplicarla.
@@ -22,6 +30,7 @@ class OutboxItem {
     required this.fields,
     required this.label,
     required this.createdAt,
+    this.meta = const {},
     this.fileField,
     this.fileName,
     this.filePath,
@@ -37,6 +46,7 @@ class OutboxItem {
         fields: Map<String, dynamic>.from(j['fields'] as Map? ?? {}),
         label: j['label'] as String? ?? 'Acción',
         createdAt: DateTime.tryParse(j['created_at'] as String? ?? '') ?? DateTime.now(),
+        meta: Map<String, dynamic>.from(j['meta'] as Map? ?? {}),
         fileField: j['file_field'] as String?,
         fileName: j['file_name'] as String?,
         filePath: j['file_path'] as String?,
@@ -51,19 +61,32 @@ class OutboxItem {
   final Map<String, dynamic> fields;
   final String label;
   final DateTime createdAt;
+
+  /// Datos para mostrar la acción en el teléfono mientras se envía (no van al servidor):
+  /// nombre del material, autor del comentario, ticket de la parada...
+  final Map<String, dynamic> meta;
   final String? fileField;
   final String? fileName;
 
-  /// Foto copiada a los documentos de la app (Android / iOS).
+  /// Archivo copiado a los documentos de la app (Android / iOS).
   final String? filePath;
 
-  /// En web no hay sistema de archivos: la foto va en base64.
+  /// En web no hay sistema de archivos: el archivo va en base64.
   final String? fileB64;
 
   /// Rechazada por el servidor (validación, permiso...): ya no se reintenta sola.
   String? error;
 
   bool get failed => error != null;
+
+  /// Trabajo al que pertenece (ticket, instalación, parada o cliente). Si una acción se rechaza, las
+  /// siguientes del mismo trabajo esperan: "finalizar" no se envía si la firma no pudo guardarse.
+  String get group {
+    final m = RegExp(r'^/(?:field/)?(tickets|installations|stops)/(\d+)').firstMatch(path);
+    if (m != null) return '${m[1]}:${m[2]}';
+    if (fields['client_id'] != null) return 'client:${fields['client_id']}';
+    return path;
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -73,6 +96,7 @@ class OutboxItem {
         'fields': fields,
         'label': label,
         'created_at': createdAt.toIso8601String(),
+        'meta': meta,
         'file_field': fileField,
         'file_name': fileName,
         'file_path': filePath,
@@ -83,25 +107,32 @@ class OutboxItem {
 
 /// Resultado de [Outbox.submit]: respuesta del servidor o guardado en la bandeja (sin señal).
 class SendResult {
-  const SendResult(this.response) : queued = false;
-  const SendResult.queued()
-      : response = null,
-        queued = true;
+  const SendResult(this.response) : item = null;
+  const SendResult.queued(OutboxItem this.item) : response = null;
 
   final Map<String, dynamic>? response;
-  final bool queued;
+
+  /// Acción guardada en la bandeja (sin señal).
+  final OutboxItem? item;
+
+  bool get queued => item != null;
 
   String? get message => response?['message'] as String?;
 }
 
-/// Bandeja de salida persistente (shared_preferences). Guarda llegadas / salidas, cambios de estado,
-/// comentarios, visitas y cobros de cobranza y fotos de evidencia cuando no hay señal, y los envía
-/// en orden al recuperarla: al volver a la app, cada minuto y tras cualquier respuesta correcta.
+/// Bandeja de salida persistente (shared_preferences). Guarda las acciones de campo hechas sin señal
+/// (llegadas, estados, comentarios, fotos, firmas, materiales, checklist, cobros y visitas) y las envía en
+/// orden al recuperarla: al volver a la app, cada minuto y tras cualquier respuesta correcta.
+/// Cada acción guardada se refleja en la copia local de los datos (LocalPatch) y lleva la hora en que
+/// ocurrió (occurred_at), que el servidor registra en lugar de la hora de envío.
 class Outbox extends ChangeNotifier {
   Outbox(this.api);
 
   static const _prefsKey = 'outbox:v1';
   static const offlineMessage = 'Sin conexión: se enviará al recuperar señal';
+
+  /// Aumenta cada vez que se envían acciones: las pantallas abiertas (Loader) recargan los datos del servidor.
+  static final synced = ValueNotifier<int>(0);
 
   final ApiClient api;
   final List<OutboxItem> _items = [];
@@ -112,9 +143,16 @@ class Outbox extends ChangeNotifier {
 
   /// Acciones del usuario actual (las de otro usuario esperan a que vuelva a iniciar sesión).
   List<OutboxItem> get items => _items.where((i) => i.userId == userId).toList();
-  int get pendingCount => items.where((i) => !i.failed).length;
+  List<OutboxItem> get pending => items.where((i) => !i.failed).toList();
+  int get pendingCount => pending.length;
   int get failedCount => items.where((i) => i.failed).length;
   bool get flushing => _flushing;
+
+  /// Acción pendiente detenida porque otra del mismo trabajo fue rechazada.
+  bool waiting(OutboxItem item) => !item.failed && items.any((f) => f.failed && f.group == item.group);
+
+  /// Acciones aún no recibidas por el servidor (pendientes o rechazadas) a [path].
+  List<OutboxItem> unsent(String path) => items.where((i) => i.path == path).toList();
 
   Future<void> load() async {
     if (_loaded) return;
@@ -137,26 +175,28 @@ class Outbox extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Envía la acción con su clave de idempotencia; si no hay señal la guarda en la bandeja.
+  /// Envía la acción con su clave de idempotencia y su hora; si no hay señal la guarda en la bandeja.
   /// Errores del servidor (validación, permisos) se lanzan como ApiException.
   Future<SendResult> submit({
     required String path,
     required String label,
     String method = 'POST',
     Map<String, dynamic>? data,
-    EvidencePhoto? photo,
+    OutboxFile? file,
     String fileField = 'file',
     String? key,
+    Map<String, dynamic>? meta,
   }) async {
     final id = key ?? newUuid();
     final fields = Map<String, dynamic>.of(data ?? const {})..removeWhere((_, v) => v == null);
+    fields.putIfAbsent('occurred_at', () => DateTime.now().toUtc().toIso8601String());
     try {
-      return SendResult(await _send(method, path, fields, id, photo == null ? null : {fileField: photo.toMultipart()}));
+      return SendResult(await _send(method, path, fields, id, file == null ? null : {fileField: MultipartFile.fromBytes(file.bytes, filename: file.name)}));
     } on ApiException catch (e) {
       if (!e.offline) rethrow;
     }
     await load();
-    _items.add(OutboxItem(
+    final item = OutboxItem(
       id: id,
       userId: userId ?? 0,
       method: method,
@@ -164,13 +204,16 @@ class Outbox extends ChangeNotifier {
       fields: fields,
       label: label,
       createdAt: DateTime.now(),
-      fileField: photo == null ? null : fileField,
-      fileName: photo?.name,
-      filePath: photo == null || kIsWeb ? null : await _persist(id, photo),
-      fileB64: photo != null && kIsWeb ? base64Encode(photo.bytes) : null,
-    ));
+      meta: meta ?? const {},
+      fileField: file == null ? null : fileField,
+      fileName: file?.name,
+      filePath: file == null || kIsWeb ? null : await _persist(id, file),
+      fileB64: file != null && kIsWeb ? base64Encode(file.bytes) : null,
+    );
+    _items.add(item);
     await _save();
-    return const SendResult.queued();
+    await LocalPatch.apply(item);
+    return SendResult.queued(item);
   }
 
   /// Envía lo pendiente en orden. Se detiene sin señal o si el servidor falla (se reintenta luego).
@@ -183,25 +226,32 @@ class Outbox extends ChangeNotifier {
     _flushing = true;
     _lastFlush = DateTime.now();
     notifyListeners();
+    var sent = 0;
     try {
-      for (final item in items.where((i) => !i.failed).toList()) {
+      final blocked = {for (final i in items) if (i.failed) i.group};
+      for (final item in pending) {
+        if (blocked.contains(item.group)) continue;
         try {
           final files = await _files(item);
           await _send(item.method, item.path, item.fields, item.id, files);
           await _remove(item);
+          sent++;
         } on ApiException catch (e) {
           final retryLater = e.offline || e.status == null || e.status == 401 || e.status == 408 || e.status == 409 || e.status == 429 || e.status! >= 500;
           if (retryLater) break;
           item.error = e.detail;
+          blocked.add(item.group);
           await _save();
         } on io.FileSystemException {
-          item.error = 'No se encontró la foto guardada.';
+          item.error = 'No se encontró el archivo guardado.';
+          blocked.add(item.group);
           await _save();
         }
       }
     } finally {
       _flushing = false;
       notifyListeners();
+      if (sent > 0) synced.value++;
     }
   }
 
@@ -218,7 +268,11 @@ class Outbox extends ChangeNotifier {
   Future<Map<String, dynamic>> _send(String method, String path, Map<String, dynamic> fields, String key, Map<String, MultipartFile>? files) {
     final headers = {'Idempotency-Key': key};
     if (files != null && files.isNotEmpty) return api.upload(path, fields: fields, files: files, headers: headers);
-    return method == 'PATCH' ? api.patch(path, data: fields, headers: headers) : api.post(path, data: fields, headers: headers);
+    return switch (method) {
+      'PATCH' => api.patch(path, data: fields, headers: headers),
+      'DELETE' => api.delete(path, headers: headers),
+      _ => api.post(path, data: fields, headers: headers),
+    };
   }
 
   Future<Map<String, MultipartFile>?> _files(OutboxItem item) async {
@@ -229,13 +283,14 @@ class Outbox extends ChangeNotifier {
     return null;
   }
 
-  Future<String> _persist(String id, EvidencePhoto photo) async {
+  Future<String> _persist(String id, OutboxFile file) async {
     final docs = await getApplicationDocumentsDirectory();
     final dir = io.Directory('${docs.path}/outbox');
     await dir.create(recursive: true);
-    final file = io.File('${dir.path}/$id.jpg');
-    await file.writeAsBytes(photo.bytes, flush: true);
-    return file.path;
+    final ext = file.name.contains('.') ? file.name.substring(file.name.lastIndexOf('.')) : '.jpg';
+    final saved = io.File('${dir.path}/$id$ext');
+    await saved.writeAsBytes(file.bytes, flush: true);
+    return saved.path;
   }
 
   Future<void> _remove(OutboxItem item) async {

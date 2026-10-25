@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api.dart';
+import '../../core/cache_store.dart';
 import '../../core/geo.dart';
 import '../../core/session.dart';
 import '../../models.dart';
@@ -9,6 +11,7 @@ import '../../widgets.dart';
 import '../work/work_sections.dart';
 
 /// 5. Ejecución de servicio: evidencias, comentarios, materiales, firma y estado (secciones 23-24).
+/// Sin señal se trabaja con el ticket guardado y todo queda en la bandeja de salida.
 class ServiceScreen extends StatefulWidget {
   const ServiceScreen({super.key, required this.ticketId});
 
@@ -24,6 +27,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
   bool _internal = false;
   bool _sending = false;
 
+  /// Origen de los datos mostrados (servidor o copia guardada sin señal).
+  Cached<Map<String, dynamic>>? _source;
+
   String get _base => '/tickets/${widget.ticketId}';
 
   @override
@@ -32,17 +38,26 @@ class _ServiceScreenState extends State<ServiceScreen> {
     super.dispose();
   }
 
-  Future<Ticket> _load() async => Ticket((await context.read<Session>().api.get(_base))['data']);
+  Future<Ticket> _load() async {
+    final res = await context.read<Session>().api.getCached(_base, cacheKey: CacheKeys.ticket(widget.ticketId));
+    _source = res;
+    return Ticket(res.data['data']);
+  }
 
   void _reload() => _loader.currentState?.reload();
 
   Future<void> _sendComment() async {
     final body = _comment.text.trim();
     if (body.length < 2) return;
-    final outbox = context.read<Session>().outbox;
+    final session = context.read<Session>();
     setState(() => _sending = true);
     final ok = await runQueued(
-        context, () => outbox.submit(path: '$_base/comments', data: {'body': body, 'internal': _internal ? 1 : 0}, label: 'Comentario en ticket #${widget.ticketId}'),
+        context,
+        () => session.outbox.submit(
+            path: '$_base/comments',
+            data: {'body': body, 'internal': _internal ? 1 : 0},
+            label: 'Comentario en ticket #${widget.ticketId}',
+            meta: {'author': session.user?.name}),
         success: 'Comentario agregado');
     if (!mounted) return;
     setState(() => _sending = false);
@@ -126,6 +141,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
             final open = t.isOpen;
             return TabBarView(children: [
               ListView(padding: const EdgeInsets.all(16), children: [
+                if (_source?.fromCache == true) OfflineBanner(savedAt: _source!.savedAt),
                 EvidenceSection(attachments: t.attachments, actions: actions, enabled: open),
                 const SizedBox(height: 12),
                 SectionCard(

@@ -1,8 +1,8 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/format.dart';
+import '../../core/outbox.dart';
 import '../../core/photos.dart';
 import '../../core/session.dart';
 import '../../models.dart';
@@ -12,6 +12,7 @@ import 'material_picker.dart';
 import 'signature_screen.dart';
 
 /// Acciones de trabajo comunes a tickets (/tickets/{id}) e instalaciones (/installations/{id}).
+/// Todas funcionan sin señal: quedan en la bandeja de salida y se ven en la pantalla al momento.
 class WorkActions {
   WorkActions(this.context, this.base, {required this.onChanged});
 
@@ -30,7 +31,7 @@ class WorkActions {
         () => outbox.submit(
               path: '$base/attachments',
               data: {'kind': kind, 'lat': gps?.lat, 'lng': gps?.lng, 'taken_at': photo.takenAtIso},
-              photo: photo,
+              file: OutboxFile(photo.bytes, photo.name),
               label: 'Foto ${EvidenceSection.labels[kind]?.toLowerCase() ?? kind}',
             ),
         success: 'Foto guardada${gps == null ? ' (sin GPS)' : ' con ubicación'}');
@@ -38,15 +39,22 @@ class WorkActions {
   }
 
   Future<void> addMaterial() async {
-    final api = context.read<Session>().api;
+    final outbox = context.read<Session>().outbox;
     final pick = await showMaterialPicker(context);
     if (pick == null || !context.mounted) return;
-    final ok = await runAction(context, () => api.post('$base/materials', data: pick));
+    final ok = await runQueued(
+        context,
+        () => outbox.submit(
+              path: '$base/materials',
+              data: {'item_id': pick.item.id, 'quantity': pick.quantity, 'serial': pick.serial},
+              label: 'Material: ${Fmt.qty(pick.quantity)} ${pick.item.unit} de ${pick.item.name}',
+              meta: {'item_name': pick.item.name, 'unit': pick.item.unit},
+            ));
     if (ok) onChanged();
   }
 
   Future<void> returnMaterial(UsedMaterial m) async {
-    final api = context.read<Session>().api;
+    final outbox = context.read<Session>().outbox;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -59,19 +67,33 @@ class WorkActions {
       ),
     );
     if (confirm != true || !context.mounted) return;
-    final ok = await runAction(context, () => api.delete('$base/materials/${m.id}'));
+    final ok = await runQueued(
+        context,
+        () => outbox.submit(
+              method: 'DELETE',
+              path: '$base/materials/${m.id}',
+              label: 'Devolución: ${Fmt.qty(m.quantity)} ${m.unit} de ${m.itemName}',
+              meta: {'item_id': m.itemId, 'quantity': m.quantity},
+            ));
     if (ok) onChanged();
   }
 
   Future<void> sign(String? suggestedName) async {
-    final api = context.read<Session>().api;
+    final outbox = context.read<Session>().outbox;
     final result = await Navigator.of(context).push<SignatureResult>(
       MaterialPageRoute(fullscreenDialog: true, builder: (_) => SignatureScreen(initialName: suggestedName)),
     );
     if (result == null || !context.mounted) return;
-    final ok = await runAction(
+    final ok = await runQueued(
       context,
-      () => api.upload('$base/signature', fields: {'signed_by': result.name}, files: {'signature': MultipartFile.fromBytes(result.png, filename: 'firma.png')}),
+      () => outbox.submit(
+        path: '$base/signature',
+        data: {'signed_by': result.name},
+        file: OutboxFile(result.png, 'firma.png'),
+        fileField: 'signature',
+        label: 'Firma de ${result.name}',
+      ),
+      success: 'Firma guardada',
     );
     if (ok) onChanged();
   }
@@ -177,12 +199,18 @@ class _Thumb extends StatelessWidget {
           builder: (ctx) => Dialog(
             clipBehavior: Clip.antiAlias,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              InteractiveViewer(child: NetImage(photo.url, fit: BoxFit.contain)),
-              ListTile(title: Text(photo.kindLabel), subtitle: Text('${Fmt.dateTime(photo.takenAt)}${photo.hasGps ? ' · con GPS' : ''}')),
+              InteractiveViewer(child: NetImage(photo.url, fit: BoxFit.contain, localPath: photo.localPath)),
+              ListTile(
+                title: Text(photo.kindLabel),
+                subtitle: Text('${Fmt.dateTime(photo.takenAt)}${photo.hasGps ? ' · con GPS' : ''}${photo.pending ? ' · por subir' : ''}'),
+              ),
             ]),
           ),
         ),
-        child: photo.isImage ? NetImage(photo.url) : Container(color: const Color(0xFFE2E8F0), child: const Icon(Icons.description_outlined)),
+        child: Stack(fit: StackFit.expand, children: [
+          photo.isImage ? NetImage(photo.url, localPath: photo.localPath) : Container(color: const Color(0xFFE2E8F0), child: const Icon(Icons.description_outlined)),
+          if (photo.pending) const Positioned(right: 4, bottom: 4, child: PendingMark()),
+        ]),
       ),
     );
   }
@@ -211,8 +239,12 @@ class MaterialsSection extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.inventory_2_outlined, color: AppColors.slate),
                   title: Text(m.itemName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text('${Fmt.qty(m.quantity)} ${m.unit}${m.serial != null ? ' · S/N ${m.serial}' : ''}'),
-                  trailing: enabled ? IconButton(tooltip: 'Devolver', onPressed: () => actions.returnMaterial(m), icon: const Icon(Icons.undo_rounded)) : null,
+                  subtitle: Text('${Fmt.qty(m.quantity)} ${m.unit}${m.serial != null ? ' · S/N ${m.serial}' : ''}${m.pending ? ' · por subir' : ''}'),
+                  trailing: m.pending
+                      ? const PendingMark()
+                      : enabled
+                          ? IconButton(tooltip: 'Devolver', onPressed: () => actions.returnMaterial(m), icon: const Icon(Icons.undo_rounded))
+                          : null,
                 ),
             ]),
     );
@@ -237,10 +269,10 @@ class SignatureSection extends StatelessWidget {
           Container(
             height: 110,
             decoration: BoxDecoration(border: Border.all(color: const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(12)),
-            child: NetImage(signature!['url'] as String, fit: BoxFit.contain),
+            child: NetImage(signature!['url'] as String? ?? '', fit: BoxFit.contain, localPath: signature!['local_path'] as String?),
           ),
           const SizedBox(height: 6),
-          Text('Firmó: ${signature!['signed_by'] ?? '—'}', style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text('Firmó: ${signature!['signed_by'] ?? '—'}${signature!['pending'] == true ? ' · por subir' : ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
         ],
         if (enabled)

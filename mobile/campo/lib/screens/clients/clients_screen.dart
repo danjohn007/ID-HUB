@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api.dart';
+import '../../core/cache_store.dart';
+import '../../core/day_download.dart';
 import '../../core/format.dart';
 import '../../core/session.dart';
 import '../../models.dart';
@@ -10,7 +13,8 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import '../open.dart';
 
-/// Búsqueda de clientes del WISP (nombre, ID, teléfono o usuario PPPoE).
+/// Búsqueda de clientes del WISP (nombre, ID, teléfono o usuario PPPoE). Sin señal busca entre los
+/// clientes guardados en el teléfono (lista inicial y fichas descargadas).
 class ClientsScreen extends StatefulWidget {
   const ClientsScreen({super.key});
 
@@ -19,7 +23,7 @@ class ClientsScreen extends StatefulWidget {
 }
 
 class _ClientsScreenState extends State<ClientsScreen> {
-  final _loader = GlobalKey<LoaderState<List<ClientSummary>>>();
+  final _loader = GlobalKey<LoaderState<Cached<List<ClientSummary>>>>();
   String _search = '';
   Timer? _debounce;
 
@@ -29,9 +33,33 @@ class _ClientsScreenState extends State<ClientsScreen> {
     super.dispose();
   }
 
-  Future<List<ClientSummary>> _load() async {
-    final res = await context.read<Session>().api.get('/clients', query: {'search': _search.isEmpty ? null : _search, 'per_page': 40, 'sort': 'first_name'});
-    return (res['data'] as List).map(ClientSummary.new).toList();
+  Future<Cached<List<ClientSummary>>> _load() async {
+    final api = context.read<Session>().api;
+    try {
+      final res = await api.getCached('/clients', query: DayDownload.clientsQuery(_search), cacheKey: CacheKeys.clients(_search));
+      return Cached((res.data['data'] as List).map(ClientSummary.new).toList(), fromCache: res.fromCache, savedAt: res.savedAt);
+    } on ApiException catch (e) {
+      if (!e.offline || _search.isEmpty) rethrow;
+      return Cached(await _searchSaved(_search.toLowerCase()), fromCache: true);
+    }
+  }
+
+  /// Búsqueda sin señal: lista inicial guardada más las fichas de clientes descargadas.
+  static Future<List<ClientSummary>> _searchSaved(String q) async {
+    final found = <int, ClientSummary>{};
+    final base = await CacheStore.read(CacheKeys.clients(''));
+    for (final c in (base?.data['data'] as List? ?? const []).map(ClientSummary.new)) {
+      found[c.id] = c;
+    }
+    for (final key in (await CacheStore.keys('client-')).where((k) => RegExp(r'^client-\d+$').hasMatch(k))) {
+      final saved = await CacheStore.read(key);
+      if (saved?.data['data'] is Map) {
+        final c = ClientSummary(saved!.data['data']);
+        found[c.id] = c;
+      }
+    }
+    bool match(ClientSummary c) => [c.name, c.code, c.phone ?? '', c.address, '${c.json['pppoe_user'] ?? ''}'].any((v) => v.toLowerCase().contains(q));
+    return found.values.where(match).toList()..sort((a, b) => a.name.compareTo(b.name));
   }
 
   void _onSearch(String v) {
@@ -52,20 +80,23 @@ class _ClientsScreenState extends State<ClientsScreen> {
           bottom: HeaderSearch(hint: 'Nombre, ID, teléfono o PPPoE', onChanged: _onSearch),
         ),
         Expanded(
-          child: Loader<List<ClientSummary>>(
+          child: Loader<Cached<List<ClientSummary>>>(
             key: _loader,
             load: _load,
-            builder: (context, clients, reload) {
+            builder: (context, cached, reload) {
+              final clients = cached.data;
+              final banner = cached.fromCache ? OfflineBanner(savedAt: cached.savedAt) : null;
               if (clients.isEmpty) {
-                return ListView(children: [
+                return ListView(padding: const EdgeInsets.all(16), children: [
+                  ?banner,
                   EmptyState(icon: Icons.person_search_outlined, title: 'Sin resultados', message: _search.isEmpty ? null : 'No hay clientes que coincidan con "$_search".'),
                 ]);
               }
               return ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                itemCount: clients.length,
+                itemCount: clients.length + (banner == null ? 0 : 1),
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (context, i) => _ClientCard(client: clients[i], index: i),
+                itemBuilder: (context, i) => banner != null && i == 0 ? banner : _ClientCard(client: clients[i - (banner == null ? 0 : 1)], index: i),
               );
             },
           ),

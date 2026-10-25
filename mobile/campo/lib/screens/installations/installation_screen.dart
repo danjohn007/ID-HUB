@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api.dart';
+import '../../core/cache_store.dart';
 import '../../core/format.dart';
 import '../../core/geo.dart';
 import '../../core/launch.dart';
@@ -12,6 +14,7 @@ import '../work/work_sections.dart';
 
 /// Orden de instalación (sección 40): iniciar, checklist, pruebas de señal y velocidad,
 /// fotografías, materiales, firma y finalizar. La activación se hace en el panel.
+/// Sin señal se trabaja con la orden guardada y todo queda en la bandeja de salida.
 class InstallationScreen extends StatefulWidget {
   const InstallationScreen({super.key, required this.id});
 
@@ -28,6 +31,9 @@ class _InstallationScreenState extends State<InstallationScreen> {
   final _up = TextEditingController();
   bool _measuresLoaded = false;
 
+  /// Origen de los datos mostrados (servidor o copia guardada sin señal).
+  Cached<Map<String, dynamic>>? _source;
+
   String get _base => '/installations/${widget.id}';
 
   @override
@@ -39,7 +45,9 @@ class _InstallationScreenState extends State<InstallationScreen> {
   }
 
   Future<Installation> _load() async {
-    final o = Installation((await context.read<Session>().api.get(_base))['data']);
+    final res = await context.read<Session>().api.getCached(_base, cacheKey: CacheKeys.installation(widget.id));
+    _source = res;
+    final o = Installation(res.data['data']);
     if (!_measuresLoaded) {
       String fmt(dynamic v) => v == null ? '' : (v as num).toString().replaceAll(RegExp(r'\.0$'), '');
       _signal.text = fmt(o.measures['signal_dbm']);
@@ -52,29 +60,40 @@ class _InstallationScreenState extends State<InstallationScreen> {
 
   void _reload() => _loader.currentState?.reload();
 
-  Future<void> _post(String path, {Map<String, dynamic>? data, bool gps = false}) async {
-    final api = context.read<Session>().api;
+  Future<void> _post(String path, String label, {bool gps = false}) async {
+    final outbox = context.read<Session>().outbox;
     final point = gps ? await Geo.current() : null;
     if (!mounted) return;
-    final ok = await runAction(context, () => api.post('$_base/$path', data: {...?data, ...?point?.toJson()}));
+    final ok = await runQueued(context, () => outbox.submit(path: '$_base/$path', data: point?.toJson(), label: '$label · instalación #${widget.id}'));
     if (ok) _reload();
   }
 
   Future<void> _toggle(ChecklistItem item) async {
-    final api = context.read<Session>().api;
-    final ok = await runAction(context, () => api.patch('$_base/checklist', data: {'key': item.key, 'done': !item.done}), success: '');
+    final outbox = context.read<Session>().outbox;
+    final ok = await runQueued(
+        context,
+        () => outbox.submit(
+            method: 'PATCH', path: '$_base/checklist', data: {'key': item.key, 'done': !item.done}, label: 'Checklist: ${item.label} · instalación #${widget.id}'),
+        success: '');
     if (ok) _reload();
   }
 
   Future<void> _saveMeasures() async {
     double? n(TextEditingController c) => double.tryParse(c.text.replaceAll(',', '.').trim());
     final signal = n(_signal);
-    final api = context.read<Session>().api;
-    final ok = await runAction(context, () => api.patch('$_base/measures', data: {
-          'signal_dbm': signal == null ? null : (signal > 0 ? -signal : signal),
-          'speed_down': n(_down),
-          'speed_up': n(_up),
-        }));
+    final outbox = context.read<Session>().outbox;
+    final ok = await runQueued(
+        context,
+        () => outbox.submit(
+              method: 'PATCH',
+              path: '$_base/measures',
+              data: {
+                'signal_dbm': signal == null ? null : (signal > 0 ? -signal : signal),
+                'speed_down': n(_down),
+                'speed_up': n(_up),
+              },
+              label: 'Mediciones · instalación #${widget.id}',
+            ));
     if (ok) _reload();
   }
 
@@ -90,7 +109,7 @@ class _InstallationScreenState extends State<InstallationScreen> {
         ],
       ),
     );
-    if (ok == true) await _post('complete', gps: true);
+    if (ok == true) await _post('complete', 'Finalizar', gps: true);
   }
 
   @override
@@ -118,6 +137,7 @@ class _InstallationScreenState extends State<InstallationScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                if (_source?.fromCache == true) OfflineBanner(savedAt: _source!.savedAt),
                 SectionCard(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     InfoRow(icon: Icons.place_outlined, label: 'Dirección', value: o.address),
@@ -136,7 +156,7 @@ class _InstallationScreenState extends State<InstallationScreen> {
                   SectionCard(title: 'Notas de la oficina', child: Text(o.notes!)),
                 ],
                 const SizedBox(height: 12),
-                if (pending) FilledButton.icon(onPressed: () => _post('start', gps: true), icon: const Icon(Icons.play_arrow_rounded), label: const Text('Iniciar instalación')),
+                if (pending) FilledButton.icon(onPressed: () => _post('start', 'Inicio', gps: true), icon: const Icon(Icons.play_arrow_rounded), label: const Text('Iniciar instalación')),
                 if (!o.canWork)
                   SectionCard(child: Row(children: [
                     const Icon(Icons.task_alt_rounded, color: AppColors.success),

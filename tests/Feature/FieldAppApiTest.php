@@ -251,6 +251,36 @@ class FieldAppApiTest extends TestCase
         $this->api()->patchJson("/api/v1/tickets/{$ticket->id}/status", ['status' => 'en_proceso', 'client_uuid' => 'k-comment-1'])->assertStatus(422);
     }
 
+    public function test_actions_sent_later_keep_the_time_they_happened(): void
+    {
+        $this->travelTo(now()->setTime(15, 0));
+        $ticket = $this->myTicket();
+        $ticket->update(['arrived_at' => null, 'departed_at' => null, 'status' => 'asignado']);
+        $at = now()->subHours(3)->startOfMinute();
+
+        // Llegada y comentario hechos sin señal a las 12:00 y enviados a las 15:00
+        $this->api()->postJson("/api/v1/field/tickets/{$ticket->id}/arrive", ['occurred_at' => $at->copy()->utc()->toIso8601String(), 'lat' => 20.5, 'lng' => -100.4])->assertOk();
+        $this->api()->postJson("/api/v1/tickets/{$ticket->id}/comments", ['body' => 'Sin señal en la zona', 'occurred_at' => $at->toIso8601String()])->assertCreated();
+        $ticket->refresh();
+        $this->assertTrue($ticket->arrived_at->equalTo($at));
+        $this->assertSame('en_proceso', $ticket->status);
+        $this->assertTrue($ticket->comments()->where('body', 'Sin señal en la zona')->first()->created_at->equalTo($at));
+        $this->assertTrue($this->tech->fresh()->last_location_at->equalTo($at));
+
+        // Una ubicación vieja no reemplaza a una más reciente
+        $this->api()->postJson('/api/v1/field/location', ['lat' => 19.4, 'lng' => -99.1])->assertOk();
+        $this->api()->patchJson("/api/v1/tickets/{$ticket->id}/status", ['status' => 'en_espera', 'lat' => 21.0, 'lng' => -101.0, 'occurred_at' => $at->toIso8601String()])->assertOk();
+        $this->assertEquals(19.4, (float) $this->tech->fresh()->last_lat);
+
+        // Horas futuras o muy viejas (reloj del teléfono mal puesto) usan la del servidor
+        $this->api()->patchJson("/api/v1/tickets/{$ticket->id}/status", ['status' => 'resuelto', 'note' => 'Antena realineada', 'occurred_at' => now()->addDay()->toIso8601String()])->assertOk();
+        $this->assertTrue($ticket->fresh()->resolved_at->equalTo(now()->startOfSecond()));
+
+        $order = $this->myOrder();
+        $this->api()->postJson("/api/v1/installations/{$order->id}/start", ['occurred_at' => $at->toIso8601String()])->assertOk();
+        $this->assertTrue($order->fresh()->started_at->equalTo($at));
+    }
+
     public function test_collector_cannot_use_technician_endpoints(): void
     {
         $token = $this->postJson('/api/v1/auth/login', ['email' => 'cobrador@wispcontrol.com', 'password' => 'password', 'device_name' => 'test'])->json('token');

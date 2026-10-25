@@ -83,6 +83,10 @@ class Attachment {
   bool get isImage => json['is_image'] == true;
   String? get takenAt => json['taken_at'] as String?;
   bool get hasGps => json['location'] != null;
+
+  /// Tomada sin señal: aún en la bandeja de salida (se muestra desde el teléfono).
+  bool get pending => json['pending'] == true;
+  String? get localPath => json['local_path'] as String?;
 }
 
 class UsedMaterial {
@@ -95,6 +99,10 @@ class UsedMaterial {
   String get unit => _map(json['item'])['unit'] as String? ?? '';
   String? get serial => json['serial'] as String?;
   String get typeLabel => Catalog(json['type']).label;
+  int? get itemId => _map(json['item'])['id'] as int?;
+
+  /// Registrado sin señal: aún no existe en el servidor (no se puede devolver todavía).
+  bool get pending => json['pending'] == true;
 }
 
 class Comment {
@@ -106,6 +114,7 @@ class Comment {
   String get author => json['author'] as String? ?? 'Sistema';
   bool get internal => json['internal'] == true;
   String? get createdAt => json['created_at'] as String?;
+  bool get pending => json['pending'] == true;
 }
 
 class Ticket {
@@ -277,6 +286,7 @@ class Visit {
   String? get notes => json['notes'] as String?;
   String? get visitedAt => json['visited_at'] as String?;
   Json? get payment => json['payment'] is Map ? _map(json['payment']) : null;
+  bool get pending => json['pending'] == true;
 }
 
 class Payment {

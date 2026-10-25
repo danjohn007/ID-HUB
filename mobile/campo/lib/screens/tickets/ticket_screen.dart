@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api.dart';
+import '../../core/cache_store.dart';
 import '../../core/format.dart';
 import '../../core/geo.dart';
 import '../../core/launch.dart';
@@ -25,7 +27,14 @@ class _TicketScreenState extends State<TicketScreen> {
   final _loader = GlobalKey<LoaderState<Ticket>>();
   String? _busy;
 
-  Future<Ticket> _load() async => Ticket((await context.read<Session>().api.get('/tickets/${widget.id}'))['data']);
+  /// Origen de los datos mostrados (servidor o copia guardada sin señal).
+  Cached<Map<String, dynamic>>? _source;
+
+  Future<Ticket> _load() async {
+    final res = await context.read<Session>().api.getCached('/tickets/${widget.id}', cacheKey: CacheKeys.ticket(widget.id));
+    _source = res;
+    return Ticket(res.data['data']);
+  }
 
   Future<void> _field(String action, String success) async {
     final outbox = context.read<Session>().outbox;
@@ -66,6 +75,7 @@ class _TicketScreenState extends State<TicketScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                if (_source?.fromCache == true) OfflineBanner(savedAt: _source!.savedAt),
                 SectionCard(
                   child: Column(children: [
                     InfoRow(icon: Icons.person_outline, label: 'Cliente', value: client?.name, onTap: client == null ? null : () => Open.client(context, client.id)),
@@ -163,7 +173,7 @@ class _Timeline extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(c.body, style: const TextStyle(fontSize: 13)),
-                Text('${c.author}${c.internal ? ' · interno' : ''}', style: const TextStyle(fontSize: 11, color: AppColors.slate)),
+                Text('${c.author}${c.internal ? ' · interno' : ''}${c.pending ? ' · por subir' : ''}', style: const TextStyle(fontSize: 11, color: AppColors.slate)),
               ]),
             ),
           ]),

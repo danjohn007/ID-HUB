@@ -10,11 +10,15 @@ class _FakeApi extends ApiClient {
 
   bool online = false;
   int? failStatus;
+
+  /// Rutas que el servidor rechaza (422) aunque haya señal.
+  final failPaths = <String>{};
   final sent = <String>[];
 
   Future<Map<String, dynamic>> _fake(String method, String path, Map<String, String>? headers) async {
     if (!online) throw ApiException('Sin conexión', offline: true);
     if (failStatus != null) throw ApiException('El monto no es válido.', status: failStatus);
+    if (failPaths.contains(path)) throw ApiException('La firma no es válida.', status: 422);
     sent.add('$method $path ${headers?['Idempotency-Key']}');
     return {'message': 'ok'};
   }
@@ -51,7 +55,11 @@ void main() {
       // Persistente: otra instancia (app reiniciada) la encuentra
       final reopened = Outbox(api)..userId = 7;
       await reopened.load();
-      expect(reopened.items.single.fields, {'amount': 150});
+      final fields = reopened.items.single.fields;
+      expect(fields['amount'], 150);
+      expect(fields.containsKey('notes'), isFalse);
+      // Hora real de la acción: el servidor la registra en lugar de la hora de envío
+      expect(DateTime.parse(fields['occurred_at'] as String).isUtc, isTrue);
 
       api.online = true;
       await reopened.flush(force: true);
@@ -78,6 +86,31 @@ void main() {
       expect(outbox.items.single.error, 'El monto no es válido.');
 
       await outbox.discard(outbox.items.single);
+      expect(outbox.items, isEmpty);
+    });
+
+    test('una acción rechazada detiene las siguientes del mismo trabajo, no las de otros', () async {
+      final api = _FakeApi();
+      final outbox = Outbox(api)..userId = 7;
+      await outbox.submit(path: '/installations/5/signature', data: {'signed_by': 'Ana'}, label: 'Firma');
+      await outbox.submit(path: '/installations/5/complete', label: 'Finalizar');
+      await outbox.submit(path: '/field/tickets/2/arrive', label: 'Llegada');
+
+      api
+        ..online = true
+        ..failPaths.add('/installations/5/signature');
+      await outbox.flush(force: true);
+
+      expect(api.sent.map((s) => s.split(' ')[1]), ['/field/tickets/2/arrive']);
+      final complete = outbox.items.firstWhere((i) => i.path.endsWith('/complete'));
+      expect(outbox.waiting(complete), isTrue);
+      expect(outbox.failedCount, 1);
+
+      // Al descartar la firma rechazada, "finalizar" ya puede enviarse
+      await outbox.discard(outbox.items.firstWhere((i) => i.failed));
+      expect(outbox.waiting(complete), isFalse);
+      await outbox.flush(force: true);
+      expect(api.sent.last, startsWith('POST /installations/5/complete '));
       expect(outbox.items, isEmpty);
     });
 

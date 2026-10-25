@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api.dart';
+import '../../core/cache_store.dart';
 import '../../core/format.dart';
 import '../../core/geo.dart';
 import '../../core/launch.dart';
@@ -26,7 +27,7 @@ class _TechHomeScreenState extends State<TechHomeScreen> {
   final _loader = GlobalKey<LoaderState<Cached<FieldDay>>>();
 
   Future<Cached<FieldDay>> _load() async {
-    final res = await context.read<Session>().api.getCached('/field/today', query: {'type': 'tecnico'}, cacheKey: 'today-tecnico');
+    final res = await context.read<Session>().api.getCached('/field/today', query: {'type': 'tecnico'}, cacheKey: CacheKeys.today('tecnico'));
     return Cached(FieldDay(res.data), fromCache: res.fromCache, savedAt: res.savedAt);
   }
 
@@ -43,7 +44,7 @@ class _TechHomeScreenState extends State<TechHomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(Geo.lastError ?? 'Sin GPS'), backgroundColor: AppColors.warning));
       return;
     }
-    await runAction(context, () => session.api.post('/field/location', data: gps.toJson()), success: 'Ubicación compartida con la oficina');
+    await runQueued(context, () => session.outbox.submit(path: '/field/location', data: gps.toJson(), label: 'Ubicación compartida'), success: 'Ubicación compartida con la oficina');
   }
 
   @override

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api.dart';
+import '../../core/cache_store.dart';
 import '../../core/format.dart';
 import '../../core/launch.dart';
 import '../../core/session.dart';
@@ -16,15 +18,17 @@ class ClientScreen extends StatelessWidget {
 
   final int id;
 
-  Future<(ClientDetail, List<Ticket>)> _load(BuildContext context) async {
+  Future<(ClientDetail, List<Ticket>, Cached<Map<String, dynamic>>)> _load(BuildContext context) async {
     final api = context.read<Session>().api;
     final session = context.read<Session>();
-    final results = await Future.wait([
-      api.get('/clients/$id'),
-      if (session.can('tickets.view')) api.get('/tickets', query: {'client_id': id, 'per_page': 5}),
-    ]);
-    final tickets = results.length > 1 ? (results[1]['data'] as List).map(Ticket.new).toList() : <Ticket>[];
-    return (ClientDetail(results[0]['data']), tickets);
+    // Los tickets son opcionales: sin señal y sin copia guardada la ficha se muestra igual.
+    final ticketsFuture = session.can('tickets.view')
+        ? api.getCached('/tickets', query: {'client_id': id, 'per_page': 5}, cacheKey: CacheKeys.clientTickets(id)).then<List<Ticket>>(
+            (r) => (r.data['data'] as List).map(Ticket.new).toList(),
+            onError: (_) => <Ticket>[])
+        : Future.value(<Ticket>[]);
+    final client = await api.getCached('/clients/$id', cacheKey: CacheKeys.client(id));
+    return (ClientDetail(client.data['data']), await ticketsFuture, client);
   }
 
   @override
@@ -32,11 +36,12 @@ class ClientScreen extends StatelessWidget {
     final session = context.watch<Session>();
     return Scaffold(
       appBar: AppBar(title: Text('Cliente #$id')),
-      body: Loader<(ClientDetail, List<Ticket>)>(
+      body: Loader<(ClientDetail, List<Ticket>, Cached<Map<String, dynamic>>)>(
         load: () => _load(context),
         builder: (context, data, reload) {
-          final (c, tickets) = data;
+          final (c, tickets, source) = data;
           return ListView(padding: const EdgeInsets.all(16), children: [
+            if (source.fromCache) OfflineBanner(savedAt: source.savedAt),
             SectionCard(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [

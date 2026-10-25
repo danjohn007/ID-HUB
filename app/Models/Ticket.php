@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Support\FieldClock;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -103,13 +104,20 @@ class Ticket extends TenantModel
 
     public function addComment(string $body, string $type = 'comment', bool $internal = false, array $meta = []): TicketComment
     {
-        return $this->comments()->create([
+        $comment = $this->comments()->make([
             'user_id' => auth()->id(),
             'type' => $type,
             'body' => $body,
             'internal' => $internal,
             'meta' => $meta ?: null,
         ]);
+        // Acción de la app de campo hecha sin señal: el historial la ubica a la hora en que ocurrió.
+        if ($at = FieldClock::reported()) {
+            $comment->created_at = $at;
+        }
+        $comment->save();
+
+        return $comment;
     }
 
     public function auditLabel(): string
