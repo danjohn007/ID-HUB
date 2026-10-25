@@ -26,10 +26,12 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
+      # Misma versión con la que se desarrolla y compila localmente (la "stable" más nueva rompía el build).
       - uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.41.6'
           channel: stable
           cache: true
 
