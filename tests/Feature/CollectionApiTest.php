@@ -6,6 +6,7 @@ use App\Models\Attachment;
 use App\Models\CashCut;
 use App\Models\Client;
 use App\Models\CollectionVisit;
+use App\Models\FieldRoute;
 use App\Models\Payment;
 use App\Models\User;
 use App\Support\TenantContext;
@@ -83,6 +84,24 @@ class CollectionApiTest extends TestCase
         $first = $this->api()->postJson('/api/v1/collection/visits', $body)->assertCreated();
         $this->api()->postJson('/api/v1/collection/visits', $body)->assertOk()->assertJsonPath('data.id', $first->json('data.id'));
         $this->assertSame(1, CollectionVisit::query()->where('idempotency_key', 'visit-0001')->count());
+    }
+
+    public function test_payment_or_visit_from_the_app_finishes_the_route_stop(): void
+    {
+        FieldRoute::query()->where('user_id', $this->collector->id)->delete();
+        $other = Client::query()->billable()->whereKeyNot($this->client->id)->firstOrFail();
+        $route = FieldRoute::create(['user_id' => $this->collector->id, 'type' => 'cobranza', 'date' => now()->toDateString(), 'status' => 'planned']);
+        $paid = $route->stops()->create(['stoppable_type' => 'client', 'stoppable_id' => $this->client->id, 'sequence' => 1, 'status' => 'pending']);
+        $visited = $route->stops()->create(['stoppable_type' => 'client', 'stoppable_id' => $other->id, 'sequence' => 2, 'status' => 'pending']);
+
+        $this->api()->postJson('/api/v1/collection/payments', ['client_id' => $this->client->id, 'amount' => 100])->assertCreated();
+        $this->assertSame('done', $paid->fresh()->status);
+        $this->assertNotNull($paid->fresh()->departed_at);
+        $this->assertSame('in_progress', $route->fresh()->status);
+
+        $this->api()->postJson('/api/v1/collection/visits', ['client_id' => $other->id, 'result' => 'cerrado'])->assertCreated();
+        $this->assertSame('done', $visited->fresh()->status);
+        $this->assertSame('completed', $route->fresh()->status);
     }
 
     public function test_payment_and_visit_sent_later_keep_the_time_they_happened(): void

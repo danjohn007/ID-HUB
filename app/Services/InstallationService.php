@@ -8,6 +8,7 @@ use App\Models\InventoryMovement;
 use App\Models\NetworkDevice;
 use App\Models\Plan;
 use App\Models\Repeater;
+use App\Services\Field\FieldTracker;
 use App\Services\Network\MonitoringService;
 use App\Support\Audit;
 use App\Support\Evidence;
@@ -72,6 +73,7 @@ class InstallationService
     public function start(InstallationOrder $order): void
     {
         $order->update(['status' => 'en_proceso', 'started_at' => $order->started_at ?? FieldClock::now()]);
+        app(FieldTracker::class)->syncSubject($order, 'arrived');
     }
 
     public function toggleChecklist(InstallationOrder $order, string $key, bool $value): void
@@ -104,6 +106,7 @@ class InstallationService
     {
         $at = FieldClock::now();
         $order->update(['status' => 'instalada', 'completed_at' => $at, 'started_at' => $order->started_at ?? $at]);
+        app(FieldTracker::class)->syncSubject($order, 'done');
     }
 
     /**

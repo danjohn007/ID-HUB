@@ -66,6 +66,20 @@ class _RouteScreenState extends State<RouteScreen> {
     if (ok) _loader.currentState?.reload();
   }
 
+  /// Navegar a un ticket: antes se avisa al cliente que vas en camino (si aún no se le avisó).
+  Future<void> _navigate(RouteStop stop) async {
+    if (stop.announcesOnWay) {
+      final outbox = context.read<Session>().outbox;
+      final ok = await runQueued(
+          context,
+          () => outbox.submit(path: '/field/tickets/${stop.subject['id']}/on-way', label: 'En camino · ${stop.title}'),
+          success: 'Se avisó al cliente que vas en camino');
+      if (!mounted) return;
+      if (ok) _loader.currentState?.reload();
+    }
+    await Launch.navigate(context, stop.navigationUrl);
+  }
+
   Future<void> _openStop(RouteStop stop) async {
     await Open.stop(context, stop, collector: _collector);
     _loader.currentState?.reload();
@@ -84,7 +98,7 @@ class _RouteScreenState extends State<RouteScreen> {
           }),
           ListTile(leading: const Icon(Icons.navigation_outlined), title: const Text('Navegar'), onTap: () {
             Navigator.pop(ctx);
-            Launch.navigate(context, stop.navigationUrl);
+            _navigate(stop);
           }),
           if (!stop.done && stop.arrivedAt == null)
             ListTile(leading: const Icon(Icons.place_rounded, color: AppColors.info), title: const Text('Registrar llegada'), onTap: () {
@@ -460,6 +474,7 @@ class _StopTile extends StatelessWidget {
     final times = [
       if (stop.arrivedAt != null) 'Llegada ${Fmt.time(stop.arrivedAt)}',
       if (stop.departedAt != null) 'Salida ${Fmt.time(stop.departedAt)}',
+      if (Fmt.span(stop.arrivedAt, stop.departedAt) case final span?) '$span en sitio',
       if (stop.status == 'skipped') 'Omitida',
     ].join(' · ');
     final line = stop.done ? AppColors.success.withValues(alpha: .5) : AppColors.border;

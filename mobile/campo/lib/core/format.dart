@@ -29,6 +29,14 @@ class Fmt {
     return d == null ? '—' : DateFormat('dd/MM HH:mm', 'es_MX').format(d);
   }
 
+  /// Tiempo entre dos horas: "35 min", "1 h 05 min" (null si falta alguna).
+  static String? span(String? fromIso, String? toIso) {
+    final from = parse(fromIso), to = parse(toIso);
+    if (from == null || to == null || to.isBefore(from)) return null;
+    final m = to.difference(from).inMinutes;
+    return m < 60 ? '$m min' : '${m ~/ 60} h ${(m % 60).toString().padLeft(2, '0')} min';
+  }
+
   /// mié, 15 oct 2026
   static String longDate(DateTime d) => DateFormat('EEE, d MMM yyyy', 'es_MX').format(d);
 

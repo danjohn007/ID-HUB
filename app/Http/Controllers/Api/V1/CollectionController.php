@@ -247,6 +247,7 @@ class CollectionController extends ApiController
         if (isset($data['lat'], $data['lng'])) {
             app(FieldTracker::class)->updateLocation($this->apiUser(), $data['lat'], $data['lng']);
         }
+        app(FieldTracker::class)->visitClient($client, $this->apiUser()); // la parada de la ruta queda terminada
 
         return CollectionVisit::create([
             'client_id' => $client->id,

@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Attachment;
+use App\Models\FieldRoute;
 use App\Models\InstallationOrder;
 use App\Models\InventoryItem;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\InstallationService;
 use App\Support\Evidence;
 use App\Support\TenantContext;
 use Database\Seeders\DemoSeeder;
@@ -279,6 +281,39 @@ class FieldAppApiTest extends TestCase
         $order = $this->myOrder();
         $this->api()->postJson("/api/v1/installations/{$order->id}/start", ['occurred_at' => $at->toIso8601String()])->assertOk();
         $this->assertTrue($order->fresh()->started_at->equalTo($at));
+    }
+
+    public function test_saving_the_service_finishes_its_route_stop(): void
+    {
+        $ticket = $this->myTicket();
+        $ticket->update(['arrived_at' => null, 'departed_at' => null, 'status' => 'asignado']);
+        $order = $this->myOrder();
+        FieldRoute::query()->where('user_id', $this->tech->id)->delete();
+        $route = FieldRoute::create(['user_id' => $this->tech->id, 'type' => 'tecnico', 'date' => now()->toDateString(), 'status' => 'planned']);
+        $ticketStop = $route->stops()->create(['stoppable_type' => 'ticket', 'stoppable_id' => $ticket->id, 'sequence' => 1, 'status' => 'pending']);
+        $orderStop = $route->stops()->create(['stoppable_type' => 'installation_order', 'stoppable_id' => $order->id, 'sequence' => 2, 'status' => 'pending']);
+
+        // "Navegar" avisa que va en camino; la ruta lo refleja para no volver a avisar
+        $this->api()->postJson("/api/v1/field/tickets/{$ticket->id}/on-way")->assertOk();
+        $stops = collect($this->api()->getJson('/api/v1/field/today?type=tecnico')->assertOk()->json('route.stops'));
+        $this->assertNotNull($stops->firstWhere('id', $ticketStop->id)['subject']['on_way_at']);
+
+        // "Ejecutar servicio" registra la llegada; "Guardar servicio" (resuelto) la salida, sin pasar por la parada
+        $this->api()->postJson("/api/v1/field/tickets/{$ticket->id}/arrive")->assertOk();
+        $this->assertSame('arrived', $ticketStop->fresh()->status);
+        $this->api()->patchJson("/api/v1/tickets/{$ticket->id}/status", ['status' => 'resuelto', 'note' => 'Antena realineada'])->assertOk();
+        $stop = $ticketStop->fresh();
+        $this->assertSame('done', $stop->status);
+        $this->assertNotNull($stop->departed_at);
+        $this->assertNotNull($ticket->fresh()->departed_at);
+
+        // La instalación: iniciar = llegada, finalizar = salida; con todo hecho la ruta queda completada
+        $this->api()->postJson("/api/v1/installations/{$order->id}/start")->assertOk();
+        $this->assertSame('arrived', $orderStop->fresh()->status);
+        $order->update(['checklist' => array_fill_keys(['antena', 'cableado', 'poe', 'router', 'configuracion', 'firma', 'fotografia', 'senal', 'velocidad'], true)]);
+        app(InstallationService::class)->complete($order->fresh());
+        $this->assertSame('done', $orderStop->fresh()->status);
+        $this->assertSame('completed', $route->fresh()->status);
     }
 
     public function test_collector_cannot_use_technician_endpoints(): void

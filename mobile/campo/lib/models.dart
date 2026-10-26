@@ -205,6 +205,9 @@ class RouteStop {
   bool get done => status == 'done' || status == 'skipped';
   bool get onSite => arrivedAt != null && departedAt == null && !done;
 
+  /// Al navegar a este ticket se avisa al cliente que el técnico va en camino (sólo la primera vez).
+  bool get announcesOnWay => type == 'ticket' && !done && arrivedAt == null && subject['on_way_at'] == null && client != null;
+
   String get title => switch (type) {
         'ticket' => 'Ticket ${subject['folio'] ?? ''}',
         'installation' || 'installation_order' => 'Instalación ${subject['folio'] ?? ''}',

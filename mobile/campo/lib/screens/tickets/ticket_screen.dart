@@ -36,9 +36,9 @@ class _TicketScreenState extends State<TicketScreen> {
     return Ticket(res.data['data']);
   }
 
-  Future<void> _field(String action, String success) async {
+  Future<void> _field(String action, String success, {String? busy}) async {
     final outbox = context.read<Session>().outbox;
-    setState(() => _busy = action);
+    setState(() => _busy = busy ?? action);
     final gps = await Geo.current();
     if (!mounted) return;
     final ok = await runQueued(context, () => outbox.submit(path: '/field/tickets/${widget.id}/$action', data: gps?.toJson(), label: '$success · ticket #${widget.id}'),
@@ -47,8 +47,28 @@ class _TicketScreenState extends State<TicketScreen> {
     if (ok) _loader.currentState?.reload();
   }
 
+  /// Navegar al domicilio: la primera vez también avisa al cliente que vas en camino.
+  Future<void> _navigate(Ticket t, LatLngJson to) async {
+    if (t.isOpen && t.onWayAt == null && t.arrivedAt == null) {
+      await _field('on-way', 'Se avisó al cliente que vas en camino');
+      if (!mounted) return;
+    }
+    await Launch.mapsTo(context, to.lat, to.lng);
+  }
+
+  /// "Ejecutar servicio": si aún no está en sitio, primero registra la llegada (hora y GPS).
+  /// Al guardar el servicio se registra la salida y la parada de la ruta queda terminada.
   Future<void> _execute(Ticket t) async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ServiceScreen(ticketId: t.id)));
+    if (!t.onSite) {
+      await _field('arrive', 'Llegada registrada', busy: 'execute');
+      if (!mounted) return;
+    }
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => ServiceScreen(ticketId: t.id)));
+    if (!mounted) return;
+    if (saved == true) {
+      Navigator.of(context).pop(); // servicio guardado: de vuelta a la ruta
+      return;
+    }
     _loader.currentState?.reload();
   }
 
@@ -91,7 +111,7 @@ class _TicketScreenState extends State<TicketScreen> {
                   Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
                     RoundAction(icon: Icons.call_outlined, label: 'Llamar', onTap: client.phone == null ? null : () => Launch.call(context, client.phone), color: AppColors.success),
                     RoundAction(icon: Icons.chat_outlined, label: 'WhatsApp', onTap: client.phone == null ? null : () => Launch.whatsapp(context, client.phone), color: const Color(0xFF25D366)),
-                    RoundAction(icon: Icons.navigation_outlined, label: 'Navegar', onTap: client.location == null ? null : () => Launch.mapsTo(context, client.location!.lat, client.location!.lng)),
+                    RoundAction(icon: Icons.navigation_outlined, label: 'Navegar', onTap: client.location == null ? null : () => _navigate(t, client.location!)),
                   ]),
                 ],
                 const SizedBox(height: 12),
@@ -116,27 +136,29 @@ class _TicketScreenState extends State<TicketScreen> {
       if (t.onWayAt != null) 'En camino ${Fmt.time(t.onWayAt)}',
       if (t.arrivedAt != null) 'Llegada ${Fmt.time(t.arrivedAt)}',
       if (t.departedAt != null) 'Salida ${Fmt.time(t.departedAt)}',
+      if (Fmt.span(t.arrivedAt, t.departedAt) case final span?) '$span en sitio',
     ];
     Widget busy(String key, String label) => Text(_busy == key ? 'Obteniendo GPS…' : label);
 
+    final onWayFirst = t.arrivedAt == null && t.onWayAt == null && t.client != null;
+    final execute = _busy != null ? null : () => _execute(t);
+    final executeLabel = busy('execute', 'Ejecutar servicio');
     return [
-      if (t.arrivedAt == null && t.onWayAt == null && t.client != null)
+      if (onWayFirst) ...[
         FilledButton.icon(onPressed: _busy != null ? null : () => _field('on-way', 'Se avisó al cliente que vas en camino'), icon: const Icon(Icons.local_shipping_outlined), label: busy('on-way', 'En camino')),
-      if (t.arrivedAt == null) ...[
-        if (t.onWayAt == null && t.client != null) ...[
-          const SizedBox(height: 8),
-          OutlinedButton.icon(onPressed: _busy != null ? null : () => _field('arrive', 'Llegada registrada'), icon: const Icon(Icons.place_rounded), label: busy('arrive', 'Llegué al domicilio')),
-        ] else
-          FilledButton.icon(onPressed: _busy != null ? null : () => _field('arrive', 'Llegada registrada'), icon: const Icon(Icons.place_rounded), label: busy('arrive', 'Llegué al domicilio')),
-      ],
-      if (t.arrivedAt != null) FilledButton.icon(onPressed: () => _execute(t), icon: const Icon(Icons.build_circle_outlined), label: const Text('Ejecutar servicio')),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(onPressed: execute, icon: const Icon(Icons.build_circle_outlined), label: executeLabel),
+      ] else
+        FilledButton.icon(onPressed: execute, icon: const Icon(Icons.build_circle_outlined), label: executeLabel),
       if (t.onSite) ...[
         const SizedBox(height: 8),
         OutlinedButton.icon(onPressed: _busy != null ? null : () => _field('depart', 'Salida registrada'), icon: const Icon(Icons.logout_rounded), label: busy('depart', 'Salí · terminar visita')),
-      ],
-      if (t.arrivedAt == null) ...[
-        const SizedBox(height: 8),
-        TextButton(onPressed: () => _execute(t), child: const Text('Abrir ejecución sin registrar llegada')),
+      ] else ...[
+        const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Text('Al ejecutar el servicio se registra tu llegada; al guardarlo, tu salida.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.slate, fontSize: 12)),
+        ),
+        TextButton(onPressed: _busy != null ? null : () => _field('arrive', 'Llegada registrada'), child: busy('arrive', 'Solo registrar llegada')),
       ],
       if (times.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(times.join(' · '), textAlign: TextAlign.center, style: const TextStyle(color: AppColors.slate, fontSize: 12))),
     ];

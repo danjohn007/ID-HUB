@@ -2,7 +2,9 @@
 
 namespace App\Services\Field;
 
+use App\Models\Client;
 use App\Models\FieldRoute;
+use App\Models\InstallationOrder;
 use App\Models\RouteStop;
 use App\Models\Ticket;
 use App\Models\User;
@@ -57,10 +59,7 @@ class FieldTracker
             $this->departTicket($stop->stoppable, $user, $lat, $lng);
         }
 
-        $route = $stop->route;
-        if ($route && ! $route->stops()->whereIn('status', ['pending', 'arrived'])->exists()) {
-            $route->update(['status' => 'completed']);
-        }
+        $this->finishRoute($stop->route);
     }
 
     /** Llegada registrada directamente sobre el ticket (pantalla de trabajo). */
@@ -74,7 +73,7 @@ class FieldTracker
         if (in_array($ticket->status, ['abierto', 'asignado', 'en_espera'], true)) {
             app(TicketService::class)->changeStatus($ticket, 'en_proceso', 'Técnico en sitio');
         }
-        $this->syncStop($ticket, $user, 'arrived');
+        $this->syncStop($ticket, $user->id, 'arrived');
     }
 
     public function departTicket(Ticket $ticket, User $user, $lat = null, $lng = null): void
@@ -82,14 +81,31 @@ class FieldTracker
         $this->updateLocation($user, $lat, $lng);
         $ticket->forceFill(['departed_at' => FieldClock::now()])->save();
         $ticket->addComment("{$user->name} salió del sitio", 'system', false, $this->geoMeta($lat, $lng));
-        $this->syncStop($ticket, $user, 'done');
+        $this->syncStop($ticket, $user->id, 'done');
     }
 
-    /** Refleja la llegada/salida del ticket en la parada de la ruta de hoy (si existe). */
-    protected function syncStop(Ticket $ticket, User $user, string $status): void
+    /**
+     * Ticket resuelto o instalación iniciada / terminada: refleja el avance en la parada de hoy de su técnico,
+     * sin tener que registrar la llegada o la salida a mano.
+     */
+    public function syncSubject(Ticket|InstallationOrder $subject, string $status): void
     {
-        $stop = RouteStop::query()->where('stoppable_type', 'ticket')->where('stoppable_id', $ticket->id)
-            ->whereHas('route', fn ($q) => $q->where('user_id', $user->id)->whereDate('date', FieldClock::now()->toDateString()))
+        if ($subject->technician_id) {
+            $this->syncStop($subject, (int) $subject->technician_id, $status);
+        }
+    }
+
+    /** Cobro o visita registrada por el cobrador: la parada del cliente en su ruta de hoy queda terminada. */
+    public function visitClient(Client $client, User $collector): void
+    {
+        $this->syncStop($client, (int) $collector->id, 'done');
+    }
+
+    /** Refleja la llegada/salida del ticket, instalación o cliente en la parada de la ruta de hoy (si existe). */
+    protected function syncStop(Ticket|InstallationOrder|Client $subject, int $userId, string $status): void
+    {
+        $stop = RouteStop::query()->where('stoppable_type', $subject->getMorphClass())->where('stoppable_id', $subject->id)
+            ->whereHas('route', fn ($q) => $q->where('user_id', $userId)->whereDate('date', FieldClock::now()->toDateString()))
             ->first();
         if (! $stop || $stop->status === $status) {
             return;
@@ -104,12 +120,23 @@ class FieldTracker
         }
         $stop->update($changes);
         $this->startRoute($stop->route);
+        if ($status === 'done') {
+            $this->finishRoute($stop->route);
+        }
     }
 
     protected function startRoute(?FieldRoute $route): void
     {
         if ($route && $route->status === 'planned') {
             $route->update(['status' => 'in_progress']);
+        }
+    }
+
+    /** Sin paradas pendientes ni en sitio, la ruta queda completada. */
+    protected function finishRoute(?FieldRoute $route): void
+    {
+        if ($route && ! $route->stops()->whereIn('status', ['pending', 'arrived'])->exists()) {
+            $route->update(['status' => 'completed']);
         }
     }
 

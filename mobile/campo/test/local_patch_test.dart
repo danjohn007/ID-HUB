@@ -122,6 +122,54 @@ void main() {
       expect(Ticket(ticket['data']).arrivedAt, _at);
     });
 
+    test('ruta: ejecutar y guardar el servicio, o iniciar y finalizar la instalación, terminan su parada', () {
+      Map<String, dynamic> day() => {
+            'summary': {'done': 0},
+            'route': {
+              'stops': [
+                {'id': 30, 'status': 'pending', 'type': 'ticket', 'subject': {'id': 9}},
+                {'id': 31, 'status': 'pending', 'type': 'installation_order', 'subject': {'id': 4}},
+              ],
+            },
+            'open_tickets': <dynamic>[],
+            'installations': <dynamic>[],
+          };
+      List<RouteStop> stops(Map<String, dynamic> d) => [for (final s in (d['route'] as Map)['stops'] as List) RouteStop(s)];
+
+      final working = LocalPatch.overlay(CacheKeys.today('tecnico'), day(), [_item('/field/tickets/9/arrive'), _item('/installations/4/start')]);
+      expect(stops(working).every((s) => s.onSite), isTrue);
+
+      final done = LocalPatch.overlay(CacheKeys.today('tecnico'), working, [
+        _item('/tickets/9/status', method: 'PATCH', fields: {'status': 'resuelto', 'note': 'Listo'}),
+        _item('/installations/4/complete'),
+      ]);
+      expect(stops(done).every((s) => s.done), isTrue);
+      expect(stops(done).first.departedAt, _at);
+      expect((done['summary'] as Map)['done'], 2);
+    });
+
+    test('ruta: "en camino" no se vuelve a avisar y el cobro termina la parada del cliente', () {
+      Map<String, dynamic> day() => {
+            'summary': {'done': 0},
+            'route': {
+              'stops': [
+                {'id': 30, 'status': 'pending', 'type': 'ticket', 'subject': <String, dynamic>{'id': 9}, 'client': {'id': 7, 'name': 'Ana'}},
+                {'id': 32, 'status': 'pending', 'type': 'client', 'subject': {'id': 7}, 'client': {'id': 7, 'name': 'Ana'}},
+              ],
+            },
+            'open_tickets': <dynamic>[],
+          };
+      List<RouteStop> stops(Map<String, dynamic> d) => [for (final s in (d['route'] as Map)['stops'] as List) RouteStop(s)];
+      expect(stops(day()).first.announcesOnWay, isTrue);
+
+      final onWay = LocalPatch.overlay(CacheKeys.today('tecnico'), day(), [_item('/field/tickets/9/on-way')]);
+      expect(stops(onWay).first.announcesOnWay, isFalse);
+
+      final paid = LocalPatch.overlay(CacheKeys.today('cobranza'), day(), [_item('/collection/payments', fields: {'client_id': 7, 'amount': 100})]);
+      expect(stops(paid).last.done, isTrue);
+      expect(stops(paid).first.done, isFalse);
+    });
+
     test('inventario: lo usado sin señal se descuenta y lo devuelto se regresa', () {
       Map<String, dynamic> inventory() => {
             'data': [

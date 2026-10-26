@@ -67,58 +67,85 @@ class _ServiceScreenState extends State<ServiceScreen> {
     }
   }
 
-  Future<void> _status(String status, {String? note}) async {
+  Future<bool> _status(String status, {String? note, String? success}) async {
     final outbox = context.read<Session>().outbox;
     final gps = await Geo.current();
-    if (!mounted) return;
+    if (!mounted) return false;
     final ok = await runQueued(
         context,
         () => outbox.submit(
             method: 'PATCH',
             path: '$_base/status',
             data: {'status': status, 'note': note, 'lat': gps?.lat, 'lng': gps?.lng},
-            label: 'Estado del ticket #${widget.ticketId}'));
+            label: 'Estado del ticket #${widget.ticketId}'),
+        success: success);
     if (ok) _reload();
+    return ok;
   }
 
-  /// "Guardar servicio": marca el ticket como resuelto con la descripción de la solución.
+  /// "Guardar servicio": marca el ticket como resuelto con la descripción de la solución. El servidor registra
+  /// la hora de salida y deja terminada la parada de la ruta (ya no hace falta marcarla en los tres puntos).
   Future<void> _resolve(Ticket t) async {
-    final missing = [
-      if (t.attachments.where((a) => a.kind != 'firma').isEmpty) 'fotografías',
-      if (t.signature == null) 'firma del cliente',
-    ];
+    // Evidencias obligatorias: sin fotografía no se guarda; sin firma hay que confirmar que el cliente no firmó.
+    final hasPhoto = t.attachments.any((a) => a.kind != 'firma');
+    final hasSignature = t.signature != null;
     final note = TextEditingController(text: t.resolution ?? '');
+    var unsigned = false;
     final value = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Guardar servicio'),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (missing.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: .12), borderRadius: BorderRadius.circular(10)),
-              child: Text('Aún falta: ${missing.join(' y ')}.', style: const TextStyle(fontSize: 13)),
-            ),
-          TextField(
-            controller: note,
-            maxLines: 4,
-            maxLength: 190,
-            decoration: const InputDecoration(labelText: 'Solución aplicada', hintText: 'Ej. Se realineó la antena, señal -58 dBm'),
-          ),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, note.text.trim()), child: const Text('Marcar resuelto')),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          title: const Text('Guardar servicio'),
+          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (!hasPhoto)
+              _Notice(color: AppColors.danger, text: 'Sube al menos una fotografía del trabajo en la pestaña Evidencia antes de guardar.')
+            else ...[
+              if (!hasSignature) ...[
+                const _Notice(color: AppColors.warning, text: 'Falta la firma del cliente.'),
+                CheckboxListTile(
+                  value: unsigned,
+                  onChanged: (v) => setDialog(() => unsigned = v ?? false),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text('El cliente no pudo firmar (se avisa a la oficina)', style: TextStyle(fontSize: 13)),
+                ),
+              ],
+              TextField(
+                controller: note,
+                maxLines: 4,
+                maxLength: 190,
+                decoration: const InputDecoration(labelText: 'Solución aplicada', hintText: 'Ej. Se realineó la antena, señal -58 dBm'),
+              ),
+            ],
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(hasPhoto ? 'Cancelar' : 'Entendido')),
+            if (hasPhoto)
+              FilledButton(onPressed: hasSignature || unsigned ? () => Navigator.pop(ctx, note.text.trim()) : null, child: const Text('Marcar resuelto')),
+          ],
+        ),
       ),
     );
-    if (value == null) return;
+    if (value == null || !mounted) return;
     if (value.length < 5) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Describe la solución aplicada (mínimo 5 caracteres).')));
       return;
     }
-    await _status('resuelto', note: value);
+    if (!hasSignature) {
+      final session = context.read<Session>();
+      try {
+        await session.outbox.submit(
+            path: '$_base/comments',
+            data: {'body': 'Servicio guardado sin firma del cliente.', 'internal': 1},
+            label: 'Sin firma · ticket #${widget.ticketId}',
+            meta: {'author': session.user?.name});
+      } catch (_) {
+        // La nota para la oficina es secundaria: si el servidor la rechaza, igual se guarda el servicio.
+      }
+      if (!mounted) return;
+    }
+    // Guardado: se regresa a la ruta (el ticket se cierra también, ver TicketScreen._execute).
+    if (await _status('resuelto', note: value, success: 'Servicio guardado · salida registrada') && mounted) Navigator.of(context).pop(true);
   }
 
   @override
@@ -210,4 +237,20 @@ class _ServiceScreenState extends State<ServiceScreen> {
       ),
     );
   }
+}
+
+/// Aviso de color dentro del diálogo "Guardar servicio".
+class _Notice extends StatelessWidget {
+  const _Notice({required this.color, required this.text});
+
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(10)),
+        child: Text(text, style: const TextStyle(fontSize: 13)),
+      );
 }

@@ -101,7 +101,7 @@ class _Action {
     'ticket' => [CacheKeys.ticket(id), CacheKeys.today('tecnico'), CacheKeys.inventory],
     'installation' => [CacheKeys.installation(id), CacheKeys.today('tecnico'), CacheKeys.inventory],
     'stop' => [CacheKeys.today('tecnico'), CacheKeys.today('cobranza'), if (item.meta['ticket_id'] is int) CacheKeys.ticket(item.meta['ticket_id'] as int)],
-    _ => [CacheKeys.client(id), CacheKeys.visits(id), CacheKeys.pendingHome],
+    _ => [CacheKeys.client(id), CacheKeys.visits(id), CacheKeys.pendingHome, CacheKeys.today('cobranza')],
   };
 
   List<String> get listPrefixes => switch (kind) {
@@ -121,9 +121,10 @@ class _Action {
           for (final t in _list(data['open_tickets']).whereType<_Json>().where((t) => t['id'] == id)) {
             _ticket(t, verb);
           }
-          if (verb == 'arrive' || verb == 'depart') {
+          _subjectStop(data, 'ticket');
+          if (verb == 'on-way') {
             for (final s in _stops(data).where((s) => s['type'] == 'ticket' && _obj(s['subject'])?['id'] == id)) {
-              _stop(data, s, verb);
+              _obj(s['subject'])?['on_way_at'] = at;
             }
           }
         } else if (key.startsWith('tickets-') || key.startsWith('client-tickets-')) {
@@ -141,6 +142,7 @@ class _Action {
           for (final o in _list(data['installations']).whereType<_Json>().where((o) => o['id'] == id)) {
             _installation(o);
           }
+          _subjectStop(data, 'installation_order');
         } else if (key.startsWith('installations-')) {
           for (final o in _list(data['data']).whereType<_Json>().where((o) => o['id'] == id)) {
             _installation(o);
@@ -285,6 +287,25 @@ class _Action {
 
   // ---------------- Ruta ----------------
 
+  /// Avance que la acción deja en la parada de su ticket, instalación o cliente: llegada, salida o nada. Resolver
+  /// el ticket, terminar la instalación o registrar el cobro/visita también termina la parada (igual que en el servidor).
+  String? get _stopVerb => switch ((kind, verb)) {
+        (_, 'arrive' || 'depart') => verb,
+        ('payment' || 'visit', _) => 'depart',
+        ('ticket', 'status') when ['resuelto', 'cerrado'].contains('${f['status']}') => 'depart',
+        ('installation', 'start') => 'arrive',
+        ('installation', 'complete') => 'depart',
+        _ => null,
+      };
+
+  void _subjectStop(_Json day, String type) {
+    final v = _stopVerb;
+    if (v == null) return;
+    for (final s in _stops(day).where((s) => s['type'] == type && _obj(s['subject'])?['id'] == id)) {
+      _stop(day, s, v);
+    }
+  }
+
   Iterable<_Json> _stops(_Json day) => _list(_obj(day['route'])?['stops']).whereType<_Json>();
 
   void _stop(_Json day, _Json s, String verb) {
@@ -320,6 +341,8 @@ class _Action {
       if (c != null) c['balance'] = _num(c['balance']) - paid;
     } else if (key == CacheKeys.visits(id)) {
       if (data['data'] is List) (data['data'] as List).insert(0, _visit);
+    } else if (key.startsWith('today-')) {
+      _subjectStop(data, 'client');
     } else if (key.startsWith('pending-')) {
       for (final c in _list(data['data']).whereType<_Json>().where((c) => c['id'] == id)) {
         c['balance'] = _num(c['balance']) - paid;

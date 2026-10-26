@@ -23,7 +23,7 @@ class RouteStopResource extends ApiResource
             'status' => $this->status,
             'type' => $this->stoppable_type,
             'subject' => match (true) {
-                $s instanceof Ticket => ['id' => $s->id, 'folio' => $s->folio, 'subject' => $s->subject, 'status' => $s->status, 'priority' => $s->priority],
+                $s instanceof Ticket => ['id' => $s->id, 'folio' => $s->folio, 'subject' => $s->subject, 'status' => $s->status, 'priority' => $s->priority, 'on_way_at' => self::datetime($s->on_way_at)],
                 $s instanceof InstallationOrder => ['id' => $s->id, 'folio' => $s->folio, 'status' => $s->status],
                 $s instanceof Client => ['id' => $s->id, 'code' => $s->code, 'balance' => self::money($s->balance)],
                 default => null,

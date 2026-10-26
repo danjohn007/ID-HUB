@@ -8,9 +8,9 @@ use App\Models\Client;
 use App\Models\CollectionVisit;
 use App\Models\FieldRoute;
 use App\Models\Payment;
-use App\Models\RouteStop;
 use App\Services\Billing\CashCutService;
 use App\Services\BillingService;
+use App\Services\Field\FieldTracker;
 use App\Support\Evidence;
 use App\Support\InputRules;
 use Illuminate\Support\Collection as SupportCollection;
@@ -186,14 +186,7 @@ class Collection extends Component
 
     protected function completeStop(int $clientId): void
     {
-        $route = $this->todayRoute();
-        if ($route) {
-            RouteStop::where('field_route_id', $route->id)->where('stoppable_type', 'client')->where('stoppable_id', $clientId)
-                ->update(['status' => 'done', 'departed_at' => now(), 'arrived_at' => DB::raw('COALESCE(arrived_at, NOW())')]);
-            if ($route->status === 'planned') {
-                $route->update(['status' => 'in_progress']);
-            }
-        }
+        app(FieldTracker::class)->visitClient(Client::query()->findOrFail($clientId), auth()->user());
     }
 
     protected function todayRoute(): ?FieldRoute

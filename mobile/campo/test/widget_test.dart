@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wispcontrol_campo/core/api.dart';
+import 'package:wispcontrol_campo/core/format.dart';
 import 'package:wispcontrol_campo/core/geo.dart';
 import 'package:wispcontrol_campo/core/launch.dart';
 import 'package:wispcontrol_campo/models.dart';
@@ -11,6 +12,12 @@ void main() {
       expect(ApiClient.normalizeServer('http://127.0.0.1:8000/api/v1/'), 'http://127.0.0.1:8000');
       expect(ApiClient.normalizeServer(' https://a.mx/ID-HUB/wispcontrol/public '), 'https://a.mx/ID-HUB/wispcontrol/public');
     });
+  });
+
+  test('Fmt.span: tiempo en sitio entre llegada y salida', () {
+    expect(Fmt.span('2026-10-26T10:05:00Z', '2026-10-26T10:40:00Z'), '35 min');
+    expect(Fmt.span('2026-10-26T10:05:00Z', '2026-10-26T11:10:00Z'), '1 h 05 min');
+    expect(Fmt.span('2026-10-26T10:05:00Z', null), isNull);
   });
 
   group('Launch.directions', () {

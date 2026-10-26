@@ -60,12 +60,14 @@ class _InstallationScreenState extends State<InstallationScreen> {
 
   void _reload() => _loader.currentState?.reload();
 
-  Future<void> _post(String path, String label, {bool gps = false}) async {
+  Future<bool> _post(String path, String label, {bool gps = false, String? success}) async {
     final outbox = context.read<Session>().outbox;
     final point = gps ? await Geo.current() : null;
-    if (!mounted) return;
-    final ok = await runQueued(context, () => outbox.submit(path: '$_base/$path', data: point?.toJson(), label: '$label · instalación #${widget.id}'));
+    if (!mounted) return false;
+    final ok = await runQueued(context, () => outbox.submit(path: '$_base/$path', data: point?.toJson(), label: '$label · instalación #${widget.id}'),
+        success: success);
     if (ok) _reload();
+    return ok;
   }
 
   Future<void> _toggle(ChecklistItem item) async {
@@ -109,7 +111,9 @@ class _InstallationScreenState extends State<InstallationScreen> {
         ],
       ),
     );
-    if (ok == true) await _post('complete', 'Finalizar', gps: true);
+    if (ok != true) return;
+    // Al finalizar, la parada de la ruta queda terminada y se regresa a la pantalla anterior (la ruta).
+    if (await _post('complete', 'Finalizar', gps: true, success: 'Instalación finalizada · salida registrada') && mounted) Navigator.of(context).pop();
   }
 
   @override

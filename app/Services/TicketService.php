@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Field\FieldTracker;
 use App\Services\Messaging\MessageService;
 use App\Support\FieldClock;
 
@@ -71,6 +72,9 @@ class TicketService
             $changes['resolved_at'] = $ticket->resolved_at ?? $at;
         }
         $ticket->update($changes);
+        if (in_array($status, ['resuelto', 'cerrado'], true)) {
+            app(FieldTracker::class)->syncSubject($ticket, 'done'); // la parada de la ruta queda terminada
+        }
 
         $label = config("wisp.ticket_status.$status.0", $status);
         $ticket->addComment('Estado: '.config("wisp.ticket_status.$old.0", $old).' → '.$label.($note ? " — {$note}" : ''), 'status', false, ['from' => $old, 'to' => $status]);
