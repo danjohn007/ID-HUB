@@ -19,8 +19,8 @@
         </span>
     @endif
     <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-1 text-xs font-medium text-slate-500">
-            <span class="truncate">{{ $label }}</span>
+        <div class="flex items-start gap-1 text-xs leading-snug font-medium text-slate-500">
+            <span>{{ $label }}</span>
             @if ($tip)
                 <button type="button" class="shrink-0 text-slate-400 hover:text-brand-600" @mouseenter="tip = true" @mouseleave="tip = false" @click="tip = !tip" aria-label="¿Qué es {{ $label }}?">
                     <x-heroicon-m-information-circle class="h-3.5 w-3.5" />
@@ -29,13 +29,13 @@
         </div>
         <div class="mt-0.5 truncate text-xl font-bold text-navy-900">{{ $value }}</div>
         @if ($trend !== null)
-            <div @class(['mt-0.5 flex items-center gap-1 text-xs font-medium', 'text-success-600' => $good, 'text-danger-600' => ! $good])>
+            <div @class(['mt-0.5 flex flex-wrap items-center gap-x-1 text-xs font-medium', 'text-success-600' => $good, 'text-danger-600' => ! $good])>
                 @if ($trend >= 0)<x-heroicon-m-arrow-up class="h-3.5 w-3.5" />@else<x-heroicon-m-arrow-down class="h-3.5 w-3.5" />@endif
                 {{ ($trend >= 0 ? '+' : '').$trend.$trendSuffix }} <span class="font-normal text-slate-400">vs. periodo anterior</span>
             </div>
         @endif
         @if ($sub)
-            <div class="mt-0.5 truncate text-xs text-slate-500">{{ $sub }}</div>
+            <div class="mt-0.5 text-xs leading-snug text-slate-500">{{ $sub }}</div>
         @endif
     </div>
     @if ($tip)

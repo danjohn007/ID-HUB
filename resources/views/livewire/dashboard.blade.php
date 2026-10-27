@@ -38,44 +38,21 @@
                 </div>
             </x-ui.card>
 
-            {{-- Mapa + estado de repetidores --}}
-            <div class="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-                <x-ui.card :padding="false">
-                    <x-slot:title>Mapa Operativo</x-slot:title>
-                    <x-slot:actions>
-                        <div class="hidden items-center gap-2.5 text-2xs text-slate-500 sm:flex">
-                            <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-success-600"></span>Clientes</span>
-                            <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-navy-800"></span>Repetidores</span>
-                            <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-warning-600"></span>Torres</span>
-                            <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-brand-600"></span>Técnicos</span>
-                            <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-danger-600"></span>Fallas</span>
-                        </div>
-                        @if (Route::has('map.index'))<x-ui.button size="sm" variant="ghost" icon="arrows-pointing-out" :href="route('map.index')" />@endif
-                    </x-slot:actions>
-                    <x-ui.map id="dashboard-map" :markers="$map['markers']" :circles="$map['circles']" height="380px" fit cluster class="rounded-t-none border-0" />
-                </x-ui.card>
-
-                <x-ui.card title="Estado de Repetidores" :padding="false">
-                    <div class="max-h-[392px] divide-y divide-slate-100 overflow-y-auto">
-                        @foreach ($repeaters as $r)
-                            @php $util = $r->utilization(); $st = $r->status === 'online' && $util >= $r->alert_threshold ? 'warning' : $r->status; @endphp
-                            <a @if (Route::has('network.repeaters.show')) href="{{ route('network.repeaters.show', $r) }}" wire:navigate @endif class="grid grid-cols-[64px_1fr_56px] items-center gap-2 px-5 py-2.5 text-sm hover:bg-slate-50">
-                                <span class="flex items-center gap-2 font-semibold text-slate-700">
-                                    <span @class(['h-2.5 w-2.5 rounded-full', 'bg-success-600' => $st === 'online', 'bg-warning-600' => $st === 'warning', 'bg-danger-600' => $st === 'offline', 'bg-slate-400' => ! in_array($st, ['online', 'warning', 'offline'])])></span>
-                                    {{ $r->code }}
-                                </span>
-                                <span @class(['text-xs font-semibold', 'text-success-600' => $st === 'online', 'text-warning-600' => $st === 'warning', 'text-danger-600' => $st === 'offline', 'text-slate-500' => ! in_array($st, ['online', 'warning', 'offline'])])>
-                                    {{ $st === 'offline' ? 'Fuera de servicio' : ($st === 'warning' ? 'Advertencia' : 'Activo') }}
-                                </span>
-                                <span class="text-right text-xs font-bold {{ $st === 'offline' ? 'text-danger-600' : 'text-slate-700' }}">{{ $st === 'offline' ? '0%' : round($util).'%' }}</span>
-                            </a>
-                        @endforeach
+            {{-- Mapa (a todo el ancho; el estado de repetidores va en la columna derecha) --}}
+            <x-ui.card :padding="false">
+                <x-slot:title>Mapa Operativo</x-slot:title>
+                <x-slot:actions>
+                    <div class="hidden items-center gap-2.5 text-2xs text-slate-500 sm:flex">
+                        <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-success-600"></span>Clientes</span>
+                        <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-navy-800"></span>Repetidores</span>
+                        <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-warning-600"></span>Torres</span>
+                        <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-brand-600"></span>Técnicos</span>
+                        <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-danger-600"></span>Fallas</span>
                     </div>
-                    @if (Route::has('network.repeaters.index'))
-                        <div class="border-t border-slate-100 px-5 py-2.5"><a href="{{ route('network.repeaters.index') }}" wire:navigate class="link text-xs">Ver todos los repetidores →</a></div>
-                    @endif
-                </x-ui.card>
-            </div>
+                    @if (Route::has('map.index'))<x-ui.button size="sm" variant="ghost" icon="arrows-pointing-out" :href="route('map.index')" />@endif
+                </x-slot:actions>
+                <x-ui.map id="dashboard-map" :markers="$map['markers']" :circles="$map['circles']" height="380px" fit cluster class="rounded-t-none border-0" />
+            </x-ui.card>
 
             {{-- Gráficas --}}
             <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
@@ -85,19 +62,20 @@
                     @if ($mrrChange !== null)
                         <div class="text-xs font-semibold {{ $mrrChange >= 0 ? 'text-success-600' : 'text-danger-600' }}">{{ $mrrChange >= 0 ? '↑' : '↓' }} {{ abs($mrrChange) }}% vs. mes anterior</div>
                     @endif
-                    <x-ui.chart :options="$mrrChart" height="170px" class="mt-2" />
+                    <x-ui.chart :options="$mrrChart" height="230px" class="mt-3" />
                 </x-ui.card>
 
                 <x-ui.card>
                     <div class="text-sm font-bold text-navy-900">Ingresos por Plan</div>
-                    <div class="mt-2 grid grid-cols-1 items-center gap-4 sm:grid-cols-[120px_1fr] md:grid-cols-1 2xl:grid-cols-[120px_1fr]">
-                        <div class="relative mx-auto w-[120px]">
-                            <x-ui.chart :options="$planChart" height="120px" />
+                    {{-- Dona grande arriba y leyenda debajo: llena la tarjeta a cualquier ancho de pantalla --}}
+                    <div class="mt-3 flex flex-col gap-5">
+                        <div class="relative mx-auto w-[180px]">
+                            <x-ui.chart :options="$planChart" height="180px" />
                             <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                                <span class="text-xs font-bold text-navy-900">{{ money($kpi['mrr'], false) }}</span><span class="text-2xs text-slate-500">MRR</span>
+                                <span class="text-base font-bold text-navy-900">{{ money($kpi['mrr'], false) }}</span><span class="text-xs text-slate-500">MRR</span>
                             </div>
                         </div>
-                        <div class="space-y-2 text-xs">
+                        <div class="space-y-2.5 text-sm">
                             @php $totalMrr = max(1, collect($byPlan)->sum('mrr')); @endphp
                             @foreach ($byPlan as $p)
                                 <div class="grid grid-cols-[1fr_auto_auto] items-center gap-3">
@@ -112,14 +90,14 @@
 
                 <x-ui.card>
                     <div class="text-sm font-bold text-navy-900">Tickets por Prioridad</div>
-                    <div class="mt-2 grid grid-cols-1 items-center gap-4 sm:grid-cols-[120px_1fr] md:grid-cols-1 2xl:grid-cols-[120px_1fr]">
-                        <div class="relative mx-auto w-[120px]">
-                            <x-ui.chart :options="$ticketChart" height="120px" />
+                    <div class="mt-3 flex flex-col gap-5">
+                        <div class="relative mx-auto w-[180px]">
+                            <x-ui.chart :options="$ticketChart" height="180px" />
                             <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                                <span class="text-lg font-bold text-navy-900">{{ $tickets['open'] }}</span><span class="text-2xs text-slate-500">abiertos</span>
+                                <span class="text-2xl font-bold text-navy-900">{{ $tickets['open'] }}</span><span class="text-xs text-slate-500">abiertos</span>
                             </div>
                         </div>
-                        <div class="space-y-2 text-xs">
+                        <div class="space-y-2.5 text-sm">
                             @foreach (config('wisp.ticket_priorities') as $k => $p)
                                 <div class="flex items-center justify-between">
                                     <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background: {{ ['critica' => '#E5484D', 'alta' => '#F7881F', 'media' => '#FBBF24', 'baja' => '#22A06B'][$k] }}"></span>{{ $p[0] }}</span>
@@ -172,6 +150,27 @@
                         </div>
                     @endforelse
                 </div>
+            </x-ui.card>
+
+            <x-ui.card title="Estado de Repetidores" :padding="false">
+                <div class="max-h-[300px] divide-y divide-slate-100 overflow-y-auto">
+                    @foreach ($repeaters as $r)
+                        @php $util = $r->utilization(); $st = $r->status === 'online' && $util >= $r->alert_threshold ? 'warning' : $r->status; @endphp
+                        <a @if (Route::has('network.repeaters.show')) href="{{ route('network.repeaters.show', $r) }}" wire:navigate @endif class="grid grid-cols-[64px_1fr_56px] items-center gap-2 px-5 py-2.5 text-sm hover:bg-slate-50">
+                            <span class="flex items-center gap-2 font-semibold text-slate-700">
+                                <span @class(['h-2.5 w-2.5 rounded-full', 'bg-success-600' => $st === 'online', 'bg-warning-600' => $st === 'warning', 'bg-danger-600' => $st === 'offline', 'bg-slate-400' => ! in_array($st, ['online', 'warning', 'offline'])])></span>
+                                {{ $r->code }}
+                            </span>
+                            <span @class(['text-xs font-semibold', 'text-success-600' => $st === 'online', 'text-warning-600' => $st === 'warning', 'text-danger-600' => $st === 'offline', 'text-slate-500' => ! in_array($st, ['online', 'warning', 'offline'])])>
+                                {{ $st === 'offline' ? 'Fuera de servicio' : ($st === 'warning' ? 'Advertencia' : 'Activo') }}
+                            </span>
+                            <span class="text-right text-xs font-bold {{ $st === 'offline' ? 'text-danger-600' : 'text-slate-700' }}">{{ $st === 'offline' ? '0%' : round($util).'%' }}</span>
+                        </a>
+                    @endforeach
+                </div>
+                @if (Route::has('network.repeaters.index'))
+                    <div class="border-t border-slate-100 px-5 py-2.5"><a href="{{ route('network.repeaters.index') }}" wire:navigate class="link text-xs">Ver todos los repetidores →</a></div>
+                @endif
             </x-ui.card>
 
             <x-ui.card title="Actividad Reciente">

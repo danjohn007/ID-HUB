@@ -124,6 +124,8 @@ class Index extends Component
                 'loss' => $latest->whereNotNull('packet_loss')->avg('packet_loss'),
             ],
             'charts' => $this->charts(),
+            // Sin muestras recientes se muestra un aviso en lugar de cuatro gráficas vacías
+            'hasRecentSamples' => MonitoringSample::query()->where('sampled_at', '>=', now()->subDay())->exists(),
             'saturation' => NetworkCharts::saturation($repeaters),
             'outages' => Outage::query()->whereNull('ended_at')->with(['repeater', 'zone:id,name', 'technician:id,name', 'ticket:id,folio,status'])->latest('started_at')->get(),
             'alerts' => $alerts,

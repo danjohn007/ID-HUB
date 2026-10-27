@@ -18,7 +18,7 @@
     @vite(['resources/css/app.css'])
     <style>
         /* Aparición al hacer scroll (solo si hay JS; sin JS todo queda visible) */
-        .js .reveal { opacity: 0; transform: translateY(24px); transition: opacity .8s cubic-bezier(.2,.7,.2,1), transform .8s cubic-bezier(.2,.7,.2,1); }
+        .js .reveal { opacity: 0; transform: translateY(24px); transition: opacity .55s cubic-bezier(.2,.7,.2,1), transform .55s cubic-bezier(.2,.7,.2,1); }
         .js .reveal.is-visible { opacity: 1; transform: none; }
         @keyframes lp-marquee { to { transform: translateX(-50%); } }
         .lp-marquee { animation: lp-marquee 38s linear infinite; }
@@ -214,14 +214,14 @@
 </section>
 
 {{-- ============================================================ Antes / después --}}
-<section class="bg-white py-24 sm:py-28">
+<section class="bg-white py-16 sm:py-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="reveal mx-auto max-w-3xl text-center">
             <span class="text-sm font-bold tracking-[0.16em] text-brand-600 uppercase">El problema</span>
             <h2 class="mt-3 text-3xl font-extrabold tracking-tight text-navy-900 sm:text-5xl">Administrar un WISP a mano te está costando dinero.</h2>
             <p class="mt-5 text-lg text-slate-600">Cada pago que nadie cobró, cada cliente que siguió navegando sin pagar y cada visita técnica sin registro es dinero que se va. {{ $brand }} lo convierte en un proceso que se cuida solo.</p>
         </div>
-        <div class="mt-16 grid gap-6 lg:grid-cols-2">
+        <div class="mt-10 grid gap-6 lg:grid-cols-2">
             <div class="reveal rounded-3xl border border-slate-200 bg-slate-50 p-7 sm:p-9">
                 <div class="flex items-center gap-3">
                     <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-danger-100 text-danger-600"><x-heroicon-o-x-mark class="h-6 w-6" /></span>
@@ -264,7 +264,7 @@
 </section>
 
 {{-- ============================================================ Ciclo automático --}}
-<section id="automatizacion" class="relative scroll-mt-20 overflow-hidden bg-navy-950 py-24 sm:py-28">
+<section id="automatizacion" class="relative scroll-mt-20 overflow-hidden bg-navy-950 py-16 sm:py-20">
     <div class="pointer-events-none absolute inset-0" aria-hidden="true">
         <div class="lp-grid absolute inset-0" style="mask-image: radial-gradient(ellipse at 50% 50%, #000 15%, transparent 70%)"></div>
         <div class="absolute top-1/2 left-1/2 h-[30rem] w-[60rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-600/15 blur-3xl"></div>
@@ -285,7 +285,7 @@
                 ['arrow-path', 'Reconexión', 'Al confirmarse el pago, el servicio vuelve solo.', 'bg-success-600'],
             ];
         @endphp
-        <div class="reveal relative mt-16">
+        <div class="reveal relative mt-10">
             {{-- Línea conectora con pulso viajero (escritorio) --}}
             <div class="absolute top-8 right-[10%] left-[10%] hidden h-px lg:block" aria-hidden="true">
                 <svg class="absolute inset-0 h-px w-full overflow-visible" preserveAspectRatio="none"><line x1="0" y1="0" x2="100%" y2="0" stroke="rgba(142,196,255,.45)" stroke-width="2" class="lp-dash"/></svg>
@@ -306,7 +306,7 @@
         </div>
 
         {{-- Segundo flujo: incidencias de red --}}
-        <div class="reveal mt-20 rounded-3xl bg-white/[0.04] p-6 ring-1 ring-white/10 sm:p-8">
+        <div class="reveal mt-12 rounded-3xl bg-white/[0.04] p-6 ring-1 ring-white/10 sm:p-8">
             <div class="flex flex-col gap-6 lg:flex-row lg:items-center">
                 <div class="lg:w-72 lg:shrink-0">
                     <span class="inline-flex items-center gap-1.5 rounded-full bg-danger-600/20 px-3 py-1 text-xs font-bold text-danger-100 ring-1 ring-danger-500/30"><span class="h-1.5 w-1.5 rounded-full bg-danger-500 motion-safe:animate-ping"></span>Alerta crítica</span>
@@ -324,7 +324,7 @@
 </section>
 
 {{-- ============================================================ Módulos (bento) --}}
-<section id="modulos" class="scroll-mt-20 bg-surface py-24 sm:py-28">
+<section id="modulos" class="scroll-mt-20 bg-surface py-16 sm:py-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="reveal max-w-3xl">
             <span class="text-sm font-bold tracking-[0.16em] text-brand-600 uppercase">Todo tu WISP</span>
@@ -332,7 +332,7 @@
             <p class="mt-5 text-lg text-slate-600">Dinero, red, campo, clientes y crecimiento hablan entre sí. Lo que pasa en uno se refleja al instante en los demás.</p>
         </div>
 
-        <div class="mt-14 grid gap-5 lg:grid-cols-6">
+        <div class="mt-10 grid gap-5 lg:grid-cols-6">
             {{-- Dinero --}}
             <article class="reveal group relative overflow-hidden rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-200/70 transition hover:-translate-y-1 hover:shadow-xl lg:col-span-4">
                 <div class="flex flex-col gap-8 sm:flex-row">
@@ -414,7 +414,7 @@
 </section>
 
 {{-- ============================================================ Números --}}
-<section class="bg-white py-20">
+<section class="bg-white py-12">
     <div class="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-4 sm:px-6 lg:grid-cols-4 lg:px-8">
         @foreach ([[5000, '+', 'clientes por WISP', 'Escala desde 50 hasta miles de clientes.'], [4, '', 'canales de aviso', 'WhatsApp, SMS, correo y push.'], [8, '', 'roles con permisos', 'Cada quien ve solo lo que le toca.'], [24, '/7', 'automatizaciones', 'Cortes, avisos y alertas sin descanso.']] as [$n, $suffix, $label, $hint])
             <div class="reveal text-center lg:text-left">
@@ -427,13 +427,13 @@
 </section>
 
 {{-- ============================================================ Cómo funciona --}}
-<section id="como-funciona" class="scroll-mt-20 bg-surface py-24 sm:py-28">
+<section id="como-funciona" class="scroll-mt-20 bg-surface py-16 sm:py-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="reveal mx-auto max-w-3xl text-center">
             <span class="text-sm font-bold tracking-[0.16em] text-brand-600 uppercase">Cómo funciona</span>
             <h2 class="mt-3 text-3xl font-extrabold tracking-tight text-navy-900 sm:text-5xl">En marcha en tres pasos.</h2>
         </div>
-        <div class="mt-16 grid gap-6 md:grid-cols-3">
+        <div class="mt-10 grid gap-6 md:grid-cols-3">
             @foreach ([
                 ['building-office-2', 'Da de alta tu WISP', 'Logotipo, colores, planes de internet, métodos de pago y políticas de corte. Tu información queda separada de cualquier otra empresa.'],
                 ['server-stack', 'Conecta tu red', 'Agrega tus MikroTik, torres y repetidores, e importa tus clientes con su IP, MAC y usuario PPPoE.'],
@@ -451,7 +451,7 @@
 </section>
 
 {{-- ============================================================ Para quién --}}
-<section id="para-quien" class="scroll-mt-20 bg-white py-24 sm:py-28">
+<section id="para-quien" class="scroll-mt-20 bg-white py-16 sm:py-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="reveal mx-auto max-w-3xl text-center">
             <span class="text-sm font-bold tracking-[0.16em] text-brand-600 uppercase">Para quién</span>
@@ -556,14 +556,16 @@
 </section>
 
 {{-- ============================================================ Planes --}}
-<section id="planes" class="scroll-mt-20 bg-surface py-24 sm:py-28">
+<section id="planes" class="scroll-mt-20 bg-surface py-16 sm:py-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="reveal mx-auto max-w-3xl text-center">
             <span class="text-sm font-bold tracking-[0.16em] text-brand-600 uppercase">Planes</span>
             <h2 class="mt-3 text-3xl font-extrabold tracking-tight text-navy-900 sm:text-5xl">Un plan para cada etapa de tu WISP.</h2>
             <p class="mt-5 text-lg text-slate-600">Empieza con lo esencial y crece cuando tu red crezca. Precios en pesos mexicanos.</p>
         </div>
-        <div @class(['mt-16 grid gap-6', 'lg:grid-cols-3' => count($plans) >= 3, 'lg:grid-cols-2' => count($plans) === 2])>
+        {{-- Todas las funciones en cada tarjeta (las no incluidas en gris) para comparar planes de un vistazo --}}
+        @php $allFeatures = collect($plans)->flatMap(fn ($p) => $p['feature_labels'])->unique()->values(); @endphp
+        <div @class(['mt-10 grid gap-6', 'lg:grid-cols-3' => count($plans) >= 3, 'lg:grid-cols-2' => count($plans) === 2])>
             @foreach ($plans as $plan)
                 @php $featured = count($plans) > 1 && $loop->iteration === 2; @endphp
                 <div @class([
@@ -589,8 +591,12 @@
                         @endforeach
                     </div>
                     <ul class="mt-7 flex-1 space-y-3">
-                        @foreach ($plan['feature_labels'] as $feature)
-                            <li class="flex items-center gap-2.5 text-sm {{ $featured ? 'text-navy-100' : 'text-slate-600' }}"><x-heroicon-s-check-circle class="h-5 w-5 shrink-0 {{ $featured ? 'text-brand-400' : 'text-brand-600' }}" />{{ $feature }}</li>
+                        @foreach ($allFeatures as $feature)
+                            @if (in_array($feature, $plan['feature_labels'], true))
+                                <li class="flex items-center gap-2.5 text-sm {{ $featured ? 'text-navy-100' : 'text-slate-600' }}"><x-heroicon-s-check-circle class="h-5 w-5 shrink-0 {{ $featured ? 'text-brand-400' : 'text-brand-600' }}" />{{ $feature }}</li>
+                            @else
+                                <li class="flex items-center gap-2.5 text-sm {{ $featured ? 'text-navy-400' : 'text-slate-400' }}"><x-heroicon-o-minus-circle class="h-5 w-5 shrink-0 {{ $featured ? 'text-navy-500' : 'text-slate-300' }}" /><span class="line-through decoration-1">{{ $feature }}</span></li>
+                            @endif
                         @endforeach
                     </ul>
                     @if ((float) ($plan['commission_percent'] ?? 0) > 0)
@@ -608,15 +614,16 @@
 </section>
 
 {{-- ============================================================ Seguridad --}}
-<section id="seguridad" class="scroll-mt-20 bg-white py-24 sm:py-28">
-    <div class="mx-auto grid max-w-7xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
-        <div class="reveal">
+<section id="seguridad" class="scroll-mt-20 bg-white py-16 sm:py-20">
+    {{-- Título arriba y tarjetas en 3 columnas: evita la columna de texto con hueco junto a la cuadrícula --}}
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="reveal max-w-3xl">
             <span class="text-sm font-bold tracking-[0.16em] text-brand-600 uppercase">Seguridad y confianza</span>
             <h2 class="mt-3 text-3xl font-extrabold tracking-tight text-navy-900 sm:text-5xl">Tu información y la de tus clientes, protegida.</h2>
             <p class="mt-5 text-lg text-slate-600">Cada WISP opera con su información completamente separada. Tú decides quién ve qué, y queda registro de cada cambio.</p>
-            <a href="{{ route('login') }}" class="mt-8 inline-flex items-center gap-2 font-semibold text-brand-600 hover:text-brand-700">¿Ya eres cliente? Inicia sesión <x-heroicon-m-arrow-right class="h-4 w-4" /></a>
+            <a href="{{ route('login') }}" class="mt-6 inline-flex items-center gap-2 font-semibold text-brand-600 hover:text-brand-700">¿Ya eres cliente? Inicia sesión <x-heroicon-m-arrow-right class="h-4 w-4" /></a>
         </div>
-        <div class="reveal grid gap-4 sm:grid-cols-2" style="transition-delay:.1s">
+        <div class="reveal mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" style="transition-delay:.1s">
             @foreach ([
                 ['building-office-2', 'Datos aislados por WISP', 'Ninguna empresa puede ver la información de otra.'],
                 ['key', 'Roles y permisos', 'Administración, finanzas, soporte, supervisión, técnicos y cobradores.'],
@@ -636,7 +643,7 @@
 </section>
 
 {{-- ============================================================ Preguntas --}}
-<section id="preguntas" class="scroll-mt-20 bg-surface py-24 sm:py-28">
+<section id="preguntas" class="scroll-mt-20 bg-surface py-16 sm:py-20">
     <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <div class="reveal text-center">
             <span class="text-sm font-bold tracking-[0.16em] text-brand-600 uppercase">Preguntas frecuentes</span>
@@ -664,7 +671,7 @@
 </section>
 
 {{-- ============================================================ CTA final --}}
-<section class="relative overflow-hidden bg-navy-950 py-24 sm:py-28">
+<section class="relative overflow-hidden bg-navy-950 py-16 sm:py-20">
     <div class="pointer-events-none absolute inset-0" aria-hidden="true">
         <div class="lp-grid absolute inset-0" style="mask-image: radial-gradient(ellipse at 50% 50%, #000 20%, transparent 70%)"></div>
         <div class="lp-glow absolute top-1/2 left-1/2 h-[28rem] w-[50rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-600/30 blur-3xl"></div>
@@ -916,7 +923,7 @@
             e.target.classList.add('is-visible');
             e.target.querySelectorAll('[data-count]').forEach(count);
             io.unobserve(e.target);
-        }), { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+        }), { threshold: 0, rootMargin: '0px 0px 15% 0px' });
         document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
     })();
 </script>

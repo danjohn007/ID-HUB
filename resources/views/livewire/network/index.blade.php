@@ -60,6 +60,12 @@
                 </optgroup>
             </select>
         </x-slot:actions>
+        @unless ($hasRecentSamples)
+            <x-ui.empty icon="chart-bar" title="Sin datos de monitoreo en las últimas 24 horas"
+                        :description="'Las gráficas se llenan solas cuando el monitoreo automático consulta tus MikroTik.'.($lastPoll ? ' Última consulta: '.\Carbon\Carbon::parse($lastPoll)->diffForHumans().'.' : '')">
+                @can('network.manage')<x-ui.button size="sm" variant="secondary" icon="arrow-path" wire:click="pollNow">Monitorear ahora</x-ui.button>@endcan
+            </x-ui.empty>
+        @else
         <div class="grid grid-cols-1 divide-slate-100 lg:grid-cols-2 lg:divide-x">
             <div class="border-b border-slate-100 p-4">
                 <div class="mb-1 text-xs font-bold tracking-wide text-slate-500 uppercase">Consumo (tráfico)</div>
@@ -78,9 +84,10 @@
                 <x-ui.chart id="net-clients" :options="$charts['clients']" height="220px" />
             </div>
         </div>
+        @endunless
     </x-ui.card>
 
-    <div class="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+    <div class="mb-5 grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <x-ui.card title="Saturación por repetidor" subtitle="Clientes asignados / capacidad. La línea marca el umbral de alerta.">
             <x-slot:actions><a href="{{ route('network.balancing') }}" wire:navigate class="link text-xs">Balanceo →</a></x-slot:actions>
             <x-ui.chart id="net-saturation" :options="$saturation" height="260px" />
