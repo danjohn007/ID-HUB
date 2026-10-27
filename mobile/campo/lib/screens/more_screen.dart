@@ -95,7 +95,7 @@ class MoreScreen extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(user.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
-                  Text(user.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.navy200, fontSize: 13)),
+                  Text(user.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.navy200, fontSize: 14)),
                   const SizedBox(height: 6),
                   Wrap(spacing: 6, runSpacing: 4, children: [
                     Pill(label: user.roleLabel, color: AppColors.brand400, icon: tech ? Icons.engineering_outlined : Icons.payments_outlined),
@@ -149,9 +149,9 @@ class MoreScreen extends StatelessWidget {
                 icon: Icons.dns_rounded,
                 color: AppColors.slate,
                 label: 'Servidor',
-                trailing: Text(Uri.tryParse(session.server)?.host ?? '', style: const TextStyle(color: AppColors.slate, fontSize: 12)),
+                trailing: Text(Uri.tryParse(session.server)?.host ?? '', style: const TextStyle(color: AppColors.slate, fontSize: 13)),
               ),
-              const _Item(icon: Icons.info_rounded, color: AppColors.slate, label: 'Versión', trailing: Text('${AppConfig.appName} 1.0.0', style: TextStyle(color: AppColors.slate, fontSize: 12))),
+              const _Item(icon: Icons.info_rounded, color: AppColors.slate, label: 'Versión', trailing: Text('${AppConfig.appName} 1.0.0', style: TextStyle(color: AppColors.slate, fontSize: 13))),
             ]),
             const SizedBox(height: 16),
             FadeSlideIn(
@@ -166,7 +166,7 @@ class MoreScreen extends StatelessWidget {
             const SizedBox(height: 28),
             const Opacity(opacity: .55, child: Center(child: IdHubMark(size: 34))),
             const SizedBox(height: 8),
-            const Text('ID-Hub · Tu WISP bajo control', textAlign: TextAlign.center, style: TextStyle(color: AppColors.slate, fontSize: 12)),
+            const Text('ID-Hub · Tu WISP bajo control', textAlign: TextAlign.center, style: TextStyle(color: AppColors.slate, fontSize: 13)),
             const SizedBox(height: 16),
           ]),
         ),
@@ -190,7 +190,7 @@ class _Group extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(title.toUpperCase(), style: const TextStyle(color: AppColors.slate, fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 1.4)),
+          child: Text(title.toUpperCase(), style: const TextStyle(color: AppColors.slate, fontSize: 12.5, fontWeight: FontWeight.w800, letterSpacing: 1.4)),
         ),
         Card(
           clipBehavior: Clip.antiAlias,
@@ -219,7 +219,7 @@ class _Item extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       leading: IconBadge(icon, color: color, size: 40),
       title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy)),
-      subtitle: subtitle == null ? null : Text(subtitle!, style: const TextStyle(fontSize: 12.5, color: AppColors.slate)),
+      subtitle: subtitle == null ? null : Text(subtitle!, style: const TextStyle(fontSize: 13.5, color: AppColors.slate)),
       trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right_rounded, color: AppColors.slate) : null),
       onTap: onTap,
     );

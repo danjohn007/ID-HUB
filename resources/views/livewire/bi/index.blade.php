@@ -198,7 +198,7 @@
                 <div class="flex flex-col gap-3 border-b border-slate-100 py-4 first:pt-0 last:border-0 last:pb-0" wire:key="cand{{ $i }}">
                     <div class="flex items-center gap-3">
                         <span class="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl {{ $c['score'] >= 60 ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-700' }}">
-                            <span class="text-[10px] leading-none opacity-80">#{{ $i + 1 }}</span><span class="text-sm leading-tight font-bold">{{ $c['score'] }}</span>
+                            <span class="text-2xs leading-none opacity-80">#{{ $i + 1 }}</span><span class="text-sm leading-tight font-bold">{{ $c['score'] }}</span>
                         </span>
                         <div class="min-w-0">
                             <div class="text-sm font-semibold text-navy-900">{{ $c['recommendation'] }}</div>

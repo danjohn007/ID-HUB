@@ -57,7 +57,7 @@
                 @empty
                     <p class="text-sm text-slate-500">No hay concentraciones relevantes de prospectos sin cobertura.</p>
                 @endforelse
-                <p class="mt-3 text-[11px] text-slate-400">Cruce de prospectos, radio de los repetidores y sectores. Sirve como apoyo para evaluar la instalación de un nuevo repetidor.</p>
+                <p class="mt-3 text-2xs text-slate-400">Cruce de prospectos, radio de los repetidores y sectores. Sirve como apoyo para evaluar la instalación de un nuevo repetidor.</p>
             </x-ui.card>
         </div>
     </div>
@@ -78,7 +78,7 @@
                     <td class="min-w-[300px]">
                         <div class="flex flex-wrap gap-1.5">
                             @foreach ($t->sectors as $s)
-                                <span class="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2 py-1 text-[11px] text-slate-700 ring-1 ring-slate-200" title="{{ $s->frequency }} · {{ $s->technology }}{{ $s->power_dbm ? ' · '.(float) $s->power_dbm.' dBm' : '' }}{{ $s->height_m ? ' · '.(float) $s->height_m.' m' : '' }}">
+                                <span class="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2 py-1 text-2xs text-slate-700 ring-1 ring-slate-200" title="{{ $s->frequency }} · {{ $s->technology }}{{ $s->power_dbm ? ' · '.(float) $s->power_dbm.' dBm' : '' }}{{ $s->height_m ? ' · '.(float) $s->height_m.' m' : '' }}">
                                     <b>{{ $s->name }}</b> {{ $s->azimuth }}°/{{ $s->beamwidth }}° · {{ (float) $s->range_km }} km{{ $s->repeater ? ' · '.$s->repeater->code : '' }}
                                     @can('network.manage')
                                         <button type="button" wire:click="editSector({{ $s->id }})" class="text-slate-400 hover:text-brand-600" title="Editar"><x-heroicon-m-pencil class="h-3 w-3" /></button>
@@ -87,7 +87,7 @@
                                 </span>
                             @endforeach
                             @can('network.manage')
-                                <button type="button" wire:click="newSector({{ $t->id }})" class="rounded-lg px-2 py-1 text-[11px] font-semibold text-brand-600 hover:bg-brand-50">+ Sector</button>
+                                <button type="button" wire:click="newSector({{ $t->id }})" class="rounded-lg px-2 py-1 text-2xs font-semibold text-brand-600 hover:bg-brand-50">+ Sector</button>
                             @endcan
                         </div>
                     </td>

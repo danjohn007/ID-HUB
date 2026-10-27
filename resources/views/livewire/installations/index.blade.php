@@ -90,7 +90,7 @@
                             <div class="grid grid-cols-1 gap-2 md:grid-cols-2 2xl:grid-cols-3">
                                 @foreach ($overdue as $o)
                                     <div class="relative">
-                                        <span class="absolute -top-2 right-2 z-10 rounded-full bg-danger-600 px-2 text-[10px] font-semibold text-white">{{ $o->scheduled_at->format('d/m') }}</span>
+                                        <span class="absolute -top-2 right-2 z-10 rounded-full bg-danger-600 px-2 text-2xs font-semibold text-white">{{ $o->scheduled_at->format('d/m') }}</span>
                                         @include('livewire.installations.partials.card', ['o' => $o])
                                     </div>
                                 @endforeach

@@ -21,9 +21,9 @@
                     <x-ui.status catalog="device_status" :value="$d->status" size="xs" />
                 </div>
                 <div class="grid grid-cols-3 gap-2 p-4 text-center">
-                    <div><div class="text-[11px] text-slate-500">CPU</div><div class="text-lg font-bold {{ ($d->cpu ?? 0) >= 85 ? 'text-danger-600' : 'text-navy-900' }}">{{ $d->cpu !== null ? round($d->cpu).'%' : '—' }}</div></div>
-                    <div><div class="text-[11px] text-slate-500">Memoria</div><div class="text-lg font-bold text-navy-900">{{ $d->memory !== null ? round($d->memory).'%' : '—' }}</div></div>
-                    <div><div class="text-[11px] text-slate-500">Clientes</div><div class="text-lg font-bold text-navy-900">{{ $s['online'] }}<span class="text-xs font-medium text-slate-400">/{{ $s['total'] }}</span></div></div>
+                    <div><div class="text-2xs text-slate-500">CPU</div><div class="text-lg font-bold {{ ($d->cpu ?? 0) >= 85 ? 'text-danger-600' : 'text-navy-900' }}">{{ $d->cpu !== null ? round($d->cpu).'%' : '—' }}</div></div>
+                    <div><div class="text-2xs text-slate-500">Memoria</div><div class="text-lg font-bold text-navy-900">{{ $d->memory !== null ? round($d->memory).'%' : '—' }}</div></div>
+                    <div><div class="text-2xs text-slate-500">Clientes</div><div class="text-lg font-bold text-navy-900">{{ $s['online'] }}<span class="text-xs font-medium text-slate-400">/{{ $s['total'] }}</span></div></div>
                 </div>
                 <div class="flex flex-wrap gap-1.5 px-4 pb-3 text-xs">
                     <x-ui.badge :color="['api' => 'brand', 'rest' => 'teal', 'push' => 'purple', 'simulated' => 'slate'][$d->api_mode] ?? 'slate'" size="xs">{{ \Illuminate\Support\Str::before(config('wisp.api_modes.'.$d->api_mode, 'Simulador'), ' (') }}</x-ui.badge>
@@ -37,7 +37,7 @@
                     <div class="mx-4 mb-3 rounded-lg bg-danger-50 px-3 py-2 text-xs text-danger-700">{{ $d->last_error }}</div>
                 @endif
                 <div class="mt-auto flex items-center justify-between gap-2 border-t border-slate-100 px-4 py-2.5">
-                    <span class="text-[11px] text-slate-500">{{ $d->last_sync_at ? 'Sincronizado '.$d->last_sync_at->diffForHumans() : 'Sin sincronizar' }}</span>
+                    <span class="text-2xs text-slate-500">{{ $d->last_sync_at ? 'Sincronizado '.$d->last_sync_at->diffForHumans() : 'Sin sincronizar' }}</span>
                     <span class="flex gap-1">
                         <x-ui.button size="sm" variant="ghost" icon="signal" wire:click="testRouter({{ $d->id }})" title="Probar conexión" />
                         <x-ui.button size="sm" variant="ghost" icon="pencil-square" wire:click="editRouter({{ $d->id }})" title="Editar" />

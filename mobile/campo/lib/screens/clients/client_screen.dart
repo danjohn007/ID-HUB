@@ -61,7 +61,7 @@ class ClientScreen extends StatelessWidget {
                   Expanded(child: Text(c.fullAddress.isEmpty ? 'Sin dirección' : c.fullAddress)),
                 ]),
                 if (c.references != null && c.references!.isNotEmpty)
-                  Padding(padding: const EdgeInsets.only(left: 28, top: 2), child: Text('Ref.: ${c.references}', style: const TextStyle(fontSize: 12, color: AppColors.slate))),
+                  Padding(padding: const EdgeInsets.only(left: 28, top: 2), child: Text('Ref.: ${c.references}', style: const TextStyle(fontSize: 13, color: AppColors.slate))),
                 const SizedBox(height: 12),
                 Row(children: [StatusChip.of(c.status), const SizedBox(width: 8), StatusChip(c.online ? 'En línea' : 'Sin conexión', color: c.online ? 'success' : 'slate')]),
                 const Divider(height: 28),

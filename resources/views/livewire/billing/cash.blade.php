@@ -50,7 +50,7 @@
                     </td>
                     <td>
                         <x-ui.status catalog="cash_cut_status" :value="$st" size="xs" />
-                        @if ($c->reconciledBy)<div class="mt-0.5 text-[11px] text-slate-400">{{ $c->reconciledBy->name }}</div>@endif
+                        @if ($c->reconciledBy)<div class="mt-0.5 text-2xs text-slate-400">{{ $c->reconciledBy->name }}</div>@endif
                     </td>
                     <td class="text-right whitespace-nowrap">
                         @if ($st === 'open')
@@ -82,7 +82,7 @@
                 <x-ui.detail label="Conciliado">{{ $detail->reconciled_at ? $detail->reconciled_at->format('d/m/Y H:i').' · '.$detail->reconciledBy?->name : '' }}</x-ui.detail>
             </div>
             <div class="mb-4 grid grid-cols-3 gap-3">
-                <div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">Cobros registrados</div><div class="text-lg font-bold text-navy-900">{{ money($detail->expected_amount) }}</div><div class="text-[11px] text-slate-400">{{ $detail->payments_count }} pagos en efectivo</div></div>
+                <div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">Cobros registrados</div><div class="text-lg font-bold text-navy-900">{{ money($detail->expected_amount) }}</div><div class="text-2xs text-slate-400">{{ $detail->payments_count }} pagos en efectivo</div></div>
                 <div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">Efectivo entregado</div><div class="text-lg font-bold text-navy-900">{{ $detail->delivered_amount !== null ? money($detail->delivered_amount) : '—' }}</div></div>
                 <div @class(['rounded-xl p-3', 'bg-slate-50' => $detail->difference === null || abs((float) $detail->difference) < 0.01, 'bg-danger-50' => $detail->difference !== null && abs((float) $detail->difference) >= 0.01])>
                     <div class="text-xs text-slate-500">Diferencia</div>

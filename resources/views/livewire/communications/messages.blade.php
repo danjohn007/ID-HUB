@@ -36,7 +36,7 @@
     </div>
 
     <x-ui.card :padding="false">
-        <div class="grid grid-cols-1 gap-3 border-b border-slate-100 p-4 md:grid-cols-6">
+        <div class="filter-bar">
             <x-ui.search wire:model.live.debounce.300ms="search" placeholder="Cliente, código o destino..." class="md:col-span-2" />
             <x-ui.select wire:model.live="filterStatus" placeholder="Todos los estados">
                 <option value="sent">Enviados (todos)</option>
@@ -92,7 +92,7 @@
                     <td class="max-w-[340px]"><div class="truncate text-sm text-slate-600">{{ $m->body }}</div></td>
                     <td>
                         <x-ui.badge :color="MC::statusColor($m->status)" dot>{{ MC::statusLabel($m->status) }}</x-ui.badge>
-                        @if ($m->status === 'failed' && $m->error)<div class="mt-0.5 max-w-[160px] truncate text-[11px] text-danger-600" title="{{ $m->error }}">{{ $m->error }}</div>@endif
+                        @if ($m->status === 'failed' && $m->error)<div class="mt-0.5 max-w-[160px] truncate text-2xs text-danger-600" title="{{ $m->error }}">{{ $m->error }}</div>@endif
                     </td>
                     <td class="whitespace-nowrap text-right" @click.stop>
                         @if ($m->status === 'failed')
@@ -186,16 +186,16 @@
                     @forelse ($chat as $m)
                         @if ($lastDay !== $m->created_at->toDateString())
                             @php $lastDay = $m->created_at->toDateString(); @endphp
-                            <div class="flex justify-center py-1"><span class="rounded-lg bg-white/80 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 shadow-xs">{{ $m->created_at->translatedFormat('d \d\e F Y') }}</span></div>
+                            <div class="flex justify-center py-1"><span class="rounded-lg bg-white/80 px-2.5 py-0.5 text-2xs font-medium text-slate-600 shadow-xs">{{ $m->created_at->translatedFormat('d \d\e F Y') }}</span></div>
                         @endif
                         @php $in = $m->status === 'received'; @endphp
                         <div @class(['flex', 'justify-end' => ! $in, 'justify-start' => $in]) wire:key="b{{ $m->id }}">
                             <div @class(['relative max-w-[82%] rounded-xl px-3 py-2 text-sm shadow-xs', 'rounded-tr-sm' => ! $in, 'rounded-tl-sm bg-white' => $in, 'bg-[#D9FDD3]' => ! $in && $m->status !== 'failed', 'bg-danger-50 ring-1 ring-danger-100' => $m->status === 'failed'])>
                                 @if (! $in && ($m->channel !== 'whatsapp' || $m->event))
-                                    <div class="mb-0.5 text-[10.5px] font-semibold text-teal-700">{{ $channels[$m->channel] ?? $m->channel }} · {{ MC::eventLabel($m->event) }}</div>
+                                    <div class="mb-0.5 text-2xs font-semibold text-teal-700">{{ $channels[$m->channel] ?? $m->channel }} · {{ MC::eventLabel($m->event) }}</div>
                                 @endif
                                 <div class="whitespace-pre-line text-slate-800">{{ $m->body }}</div>
-                                <div class="mt-1 flex items-center justify-end gap-1 text-[10.5px] text-slate-500">
+                                <div class="mt-1 flex items-center justify-end gap-1 text-2xs text-slate-500">
                                     {{ $m->created_at->format('H:i') }}
                                     @if ($in)
                                     @elseif ($m->status === 'failed')
@@ -225,7 +225,7 @@
                     </div>
                     @error('chatBody')<p class="mt-1 text-xs font-medium text-danger-600">{{ $message }}</p>@enderror
                     @if ($chatWindow)
-                        <p class="mt-1.5 text-[11px] text-slate-500">El cliente escribió por WhatsApp: puedes responderle con texto libre hasta el {{ $chatWindow->format('d/m H:i') }} (ventana de 24 h).</p>
+                        <p class="mt-1.5 text-2xs text-slate-500">El cliente escribió por WhatsApp: puedes responderle con texto libre hasta el {{ $chatWindow->format('d/m H:i') }} (ventana de 24 h).</p>
                     @endif
                 </form>
             @endif
@@ -295,7 +295,7 @@
                     <x-ui.textarea label="Mensaje" wire:model.live.debounce.400ms="compose.body" x-ref="body" rows="5" maxlength="1600" required />
                     <div class="mt-2 flex flex-wrap gap-1">
                         @foreach (\App\Models\NotificationTemplate::VARIABLES as $v)
-                            <button type="button" @click="insert('{{ $v }}')" class="rounded-md bg-brand-50 px-1.5 py-0.5 font-mono text-[11px] text-brand-700 ring-1 ring-brand-100 hover:bg-brand-100">{{ $v }}</button>
+                            <button type="button" @click="insert('{{ $v }}')" class="rounded-md bg-brand-50 px-1.5 py-0.5 font-mono text-2xs text-brand-700 ring-1 ring-brand-100 hover:bg-brand-100">{{ $v }}</button>
                         @endforeach
                     </div>
                 </div>
@@ -309,13 +309,13 @@
                         <div class="ml-auto max-w-[95%] rounded-xl rounded-tr-sm bg-[#D9FDD3] px-3 py-2 text-sm shadow-xs">
                             @if ($compose['subject'] && in_array($compose['channel'], ['email', 'push']))<div class="mb-1 font-semibold text-slate-800">{{ $compose['subject'] }}</div>@endif
                             <div class="whitespace-pre-line break-words text-slate-800">{{ $preview }}</div>
-                            <div class="mt-1 text-right text-[10.5px] text-slate-500">{{ now()->format('H:i') }} ✓✓</div>
+                            <div class="mt-1 text-right text-2xs text-slate-500">{{ now()->format('H:i') }} ✓✓</div>
                         </div>
                     @else
                         <p class="py-8 text-center text-xs text-slate-500">Escribe un mensaje para ver la vista previa.</p>
                     @endif
                 </div>
-                <p class="mt-2 text-[11px] text-slate-500">
+                <p class="mt-2 text-2xs text-slate-500">
                     {{ mb_strlen((string) $preview) }} caracteres
                     @if ($compose['channel'] === 'sms') · {{ max(1, (int) ceil(mb_strlen((string) $preview) / 160)) }} SMS @endif
                     @unless ($previewClient) · selecciona un cliente para ver sus datos @endunless

@@ -29,7 +29,7 @@
         </x-ui.card>
     @else
         <x-ui.card :padding="false">
-            <div class="grid grid-cols-1 gap-3 border-b border-slate-100 p-4 md:grid-cols-5">
+            <div class="filter-bar">
                 <x-ui.search wire:model.live.debounce.300ms="search" placeholder="ID, nombre o ubicación..." class="md:col-span-2" />
                 <x-ui.select wire:model.live="filterStatus" :options="['online' => 'Operativo', 'warning' => 'Advertencia', 'offline' => 'Fuera de servicio', 'maintenance' => 'Mantenimiento', 'saturated' => 'Saturados']" placeholder="Todos los estados" />
                 <x-ui.select wire:model.live="filterZone" :options="$zones" placeholder="Todas las zonas" />
@@ -63,7 +63,7 @@
                         <td class="text-sm"><span class="font-semibold text-slate-800">{{ $r->status === 'offline' ? 0 : $r->online_clients_count }}</span><span class="text-xs text-slate-500"> en línea</span></td>
                         <td>
                             <x-ui.status catalog="device_status" :value="$r->status" size="xs" />
-                            @if ($r->status === 'offline' && $r->down_since)<div class="mt-0.5 text-[11px] text-danger-600">desde {{ $r->down_since->diffForHumans() }}</div>@endif
+                            @if ($r->status === 'offline' && $r->down_since)<div class="mt-0.5 text-2xs text-danger-600">desde {{ $r->down_since->diffForHumans() }}</div>@endif
                         </td>
                         <td class="text-right whitespace-nowrap">
                             @can('network.manage')

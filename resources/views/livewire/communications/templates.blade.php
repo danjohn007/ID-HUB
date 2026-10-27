@@ -81,7 +81,7 @@
                             <div class="mb-1.5 text-xs font-medium text-slate-500">Variables (clic para insertar)</div>
                             <div class="flex flex-wrap gap-1">
                                 @foreach (\App\Models\NotificationTemplate::VARIABLES as $v)
-                                    <button type="button" @click="insert('{{ $v }}')" class="rounded-md bg-brand-50 px-1.5 py-0.5 font-mono text-[11px] text-brand-700 ring-1 ring-brand-100 hover:bg-brand-100">{{ $v }}</button>
+                                    <button type="button" @click="insert('{{ $v }}')" class="rounded-md bg-brand-50 px-1.5 py-0.5 font-mono text-2xs text-brand-700 ring-1 ring-brand-100 hover:bg-brand-100">{{ $v }}</button>
                                 @endforeach
                             </div>
                         </div>
@@ -103,7 +103,7 @@
                                     </div>
                                     <div x-ref="ptext" class="whitespace-pre-line break-words rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700">{{ $providerText }}</div>
                                     @if ($providerVars)
-                                        <div class="mt-1.5 flex flex-wrap gap-1 text-[11px] text-slate-500">
+                                        <div class="mt-1.5 flex flex-wrap gap-1 text-2xs text-slate-500">
                                             @foreach ($providerVars as $i => $v)
                                                 <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono">&#123;&#123;{{ $i + 1 }}&#125;&#125; = &#123;{{ $v }}&#125;</span>
                                             @endforeach
@@ -168,7 +168,7 @@
                         @elseif ($channel === 'push')
                             <div class="rounded-2xl bg-navy-900 p-3">
                                 <div class="rounded-xl bg-white/95 p-3 shadow">
-                                    <div class="flex items-center gap-2 text-[11px] text-slate-500"><span class="flex h-4 w-4 items-center justify-center rounded bg-brand-600 text-[8px] font-bold text-white">{{ initials(tenant()->name) }}</span>{{ tenant()->name }} · ahora</div>
+                                    <div class="flex items-center gap-2 text-2xs text-slate-500"><span class="flex h-4 w-4 items-center justify-center rounded bg-brand-600 text-[8px] font-bold text-white">{{ initials(tenant()->name) }}</span>{{ tenant()->name }} · ahora</div>
                                     <div class="mt-1 text-sm font-semibold text-slate-900">{{ $previewSubject }}</div>
                                     <div class="line-clamp-4 text-sm text-slate-700">{{ $preview }}</div>
                                 </div>
@@ -177,11 +177,11 @@
                             <div class="rounded-2xl bg-[#ECE5DD] p-3">
                                 <div class="ml-auto max-w-[95%] rounded-xl rounded-tr-sm bg-[#D9FDD3] px-3 py-2 text-sm shadow-xs">
                                     <div class="whitespace-pre-line break-words text-slate-800">{{ $preview }}</div>
-                                    <div class="mt-1 text-right text-[10.5px] text-slate-500">{{ now()->format('H:i') }} ✓✓</div>
+                                    <div class="mt-1 text-right text-2xs text-slate-500">{{ now()->format('H:i') }} ✓✓</div>
                                 </div>
                             </div>
                         @endif
-                        <p class="text-[11px] text-slate-500">{{ mb_strlen($preview) }} caracteres @if ($channel === 'sms') · {{ max(1, (int) ceil(mb_strlen($preview) / 160)) }} SMS @endif</p>
+                        <p class="text-2xs text-slate-500">{{ mb_strlen($preview) }} caracteres @if ($channel === 'sms') · {{ max(1, (int) ceil(mb_strlen($preview) / 160)) }} SMS @endif</p>
 
                         <div class="rounded-xl border border-slate-200 p-3">
                             <div class="mb-2 text-xs font-semibold text-slate-700">Enviar prueba</div>
@@ -195,7 +195,7 @@
                                     <x-ui.input wire:model="testTo" :type="$channel === 'email' ? 'email' : 'tel'" :filter="$channel === 'email' ? 'email' : 'phone'" :placeholder="$channel === 'email' ? 'correo@ejemplo.com' : '55 1234 5678'" class="flex-1" />
                                     <x-ui.button variant="secondary" icon="paper-airplane" wire:click="sendTest" title="Enviar prueba" />
                                 </div>
-                                <p class="mt-1.5 text-[11px] text-slate-500">Usa los datos del cliente de ejemplo. Se registra en la bitácora como "Envío de prueba".</p>
+                                <p class="mt-1.5 text-2xs text-slate-500">Usa los datos del cliente de ejemplo. Se registra en la bitácora como "Envío de prueba".</p>
                             @endif
                         </div>
                     </div>

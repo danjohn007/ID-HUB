@@ -24,7 +24,7 @@
     </div>
 
     <x-ui.card :padding="false">
-        <div class="grid grid-cols-1 gap-3 border-b border-slate-100 p-4 md:grid-cols-6">
+        <div class="filter-bar">
             <x-ui.search wire:model.live.debounce.300ms="search" placeholder="Nombre, código, teléfono, IP, MAC, PPPoE..." class="md:col-span-2" />
             <x-ui.select wire:model.live="filterZone" :options="$zones" placeholder="Todas las zonas" />
             <x-ui.select wire:model.live="filterPlan" :options="$plans" placeholder="Todos los planes" />
@@ -37,12 +37,12 @@
             </div>
         </div>
 
-        <x-ui.table>
+        <x-ui.table stack>
             <x-slot:head>
                 <x-ui.th sort="code" :sort-by="$sortBy" :sort-dir="$sortDir">Cliente</x-ui.th>
                 <th>Contacto</th>
                 <th>Plan</th>
-                <th>Zona / Repetidor</th>
+                <th class="hidden 2xl:table-cell">Zona / Repetidor</th>
                 <th>Estado</th>
                 <x-ui.th sort="balance" :sort-by="$sortBy" :sort-dir="$sortDir" class="text-right">Saldo</x-ui.th>
                 <x-ui.th sort="next_due_date" :sort-by="$sortBy" :sort-dir="$sortDir">Próximo pago</x-ui.th>
@@ -58,27 +58,27 @@
                                 <span @class(['absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full ring-2 ring-white', 'bg-success-500' => $c->online, 'bg-slate-300' => ! $c->online])></span>
                             </span>
                             <span class="min-w-0">
-                                <span class="block font-semibold text-slate-800 hover:text-brand-600">{{ $c->full_name }}</span>
+                                <span class="block font-semibold whitespace-nowrap text-slate-800 hover:text-brand-600">{{ $c->full_name }}</span>
                                 <span class="block text-xs text-slate-500">#{{ $c->code }} · {{ $c->pppoe_user ?: $c->ip_address }}</span>
                             </span>
                         </a>
                     </td>
-                    <td class="text-xs">
+                    <td class="text-xs" data-label="Contacto">
                         <div class="text-slate-700">{{ $c->phone }}</div>
                         <div class="max-w-[200px] truncate text-slate-500">{{ $c->address }}</div>
                     </td>
-                    <td>
+                    <td data-label="Plan">
                         @if ($c->plan)
                             <span class="inline-flex items-center gap-1.5 text-sm font-medium"><span class="h-2 w-2 rounded-full" style="background: {{ $c->plan->color }}"></span>{{ $c->plan->name }}</span>
                             <div class="text-xs text-slate-500">{{ $c->plan->speedLabel() }}</div>
                         @endif
                     </td>
-                    <td class="text-xs"><div class="text-slate-700">{{ $c->zone?->name ?? '—' }}</div><div class="text-slate-500">{{ $c->repeater?->code }}</div></td>
-                    <td><x-ui.status catalog="client_status" :value="$c->service_status" /></td>
-                    <td class="text-right font-semibold {{ $c->balance > 0 ? 'text-danger-600' : 'text-slate-700' }}">{{ money($c->balance) }}</td>
-                    <td class="text-xs text-slate-600">{{ $c->next_due_date?->translatedFormat('d M Y') ?? '—' }}</td>
-                    <td><x-ui.status catalog="risk_levels" :value="$c->risk_level" :dot="false" size="xs" /></td>
-                    <td class="text-right">
+                    <td class="hidden text-xs 2xl:table-cell" data-label="Zona"><div class="text-slate-700">{{ $c->zone?->name ?? '—' }}</div><div class="text-slate-500">{{ $c->repeater?->code }}</div></td>
+                    <td data-label="Estado"><x-ui.status catalog="client_status" :value="$c->service_status" /></td>
+                    <td class="text-right font-semibold {{ $c->balance > 0 ? 'text-danger-600' : 'text-slate-700' }}" data-label="Saldo">{{ money($c->balance) }}</td>
+                    <td class="text-xs text-slate-600" data-label="Próximo pago">{{ $c->next_due_date?->translatedFormat('d M Y') ?? '—' }}</td>
+                    <td data-label="Riesgo"><x-ui.status catalog="risk_levels" :value="$c->risk_level" :dot="false" size="xs" /></td>
+                    <td class="text-right max-md:hidden">
                         <x-ui.button variant="ghost" size="sm" icon="chevron-right" :href="route('clients.show', $c)" />
                     </td>
                 </tr>

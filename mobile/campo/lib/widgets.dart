@@ -79,12 +79,12 @@ class InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final row = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(icon, size: 18, color: AppColors.slate),
         const SizedBox(width: 10),
-        SizedBox(width: 96, child: Text(label, style: const TextStyle(color: AppColors.slate, fontSize: 13))),
-        Expanded(child: Text(value == null || value!.isEmpty ? '—' : value!, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+        SizedBox(width: 108, child: Text(label, style: const TextStyle(color: AppColors.slate, fontSize: 14))),
+        Expanded(child: Text(value == null || value!.isEmpty ? '—' : value!, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
       ]),
     );
     return onTap == null ? row : InkWell(onTap: onTap, child: row);
@@ -111,7 +111,7 @@ class RoundAction extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           CircleAvatar(radius: 24, backgroundColor: c.withValues(alpha: onTap == null ? .05 : .12), child: Icon(icon, color: onTap == null ? AppColors.slate : c)),
           const SizedBox(height: 6),
-          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: onTap == null ? AppColors.slate : null)),
+          Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: onTap == null ? AppColors.slate : null)),
         ]),
       ),
     );
@@ -225,7 +225,7 @@ class OfflineBanner extends StatelessWidget {
       child: Row(children: [
         const Icon(Icons.wifi_off_rounded, color: AppColors.warning, size: 20),
         const SizedBox(width: 10),
-        Expanded(child: Text('Sin señal: mostrando la información guardada$when. Lo que hagas se guarda y se envía al recuperar señal.', style: const TextStyle(fontSize: 12.5))),
+        Expanded(child: Text('Sin señal: mostrando la información guardada$when. Lo que hagas se guarda y se envía al recuperar señal.', style: const TextStyle(fontSize: 13.5))),
       ]),
     );
   }
@@ -460,7 +460,7 @@ class GreetingHeader extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 4),
-          FadeSlideIn(index: 2, offset: 10, child: Text(subtitle, style: const TextStyle(color: AppColors.navy200, fontSize: 13))),
+          FadeSlideIn(index: 2, offset: 10, child: Text(subtitle, style: const TextStyle(color: AppColors.navy200, fontSize: 14))),
           if (bottom != null) ...[const SizedBox(height: 18), FadeSlideIn(index: 3, child: bottom!)],
         ]),
       ),
@@ -492,7 +492,7 @@ class StatTile extends StatelessWidget {
               child: Column(children: [
                 FittedBox(child: CountUpText(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -.4))),
                 const SizedBox(height: 2),
-                Text(label, style: const TextStyle(color: AppColors.navy200, fontSize: 12, fontWeight: FontWeight.w500)),
+                Text(label, style: const TextStyle(color: AppColors.navy200, fontSize: 13, fontWeight: FontWeight.w500)),
               ]),
             ),
           ),
@@ -513,7 +513,7 @@ class FolioTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(color: Colors.white.withValues(alpha: .15), borderRadius: BorderRadius.circular(8)),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
+      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
     );
   }
 }
@@ -546,7 +546,7 @@ class PageHeader extends StatelessWidget {
                 if (eyebrow != null)
                   FadeSlideIn(
                     offset: 8,
-                    child: Text(eyebrow!.toUpperCase(), style: const TextStyle(color: AppColors.brand400, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2)),
+                    child: Text(eyebrow!.toUpperCase(), style: const TextStyle(color: AppColors.brand400, fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 2)),
                   ),
                 FadeSlideIn(
                   index: 1,
@@ -560,7 +560,7 @@ class PageHeader extends StatelessWidget {
           if (subtitle != null)
             Padding(
               padding: EdgeInsets.only(left: canPop ? 48 : 0, top: 2),
-              child: FadeSlideIn(index: 2, offset: 8, child: Text(subtitle!, style: const TextStyle(color: AppColors.navy200, fontSize: 13))),
+              child: FadeSlideIn(index: 2, offset: 8, child: Text(subtitle!, style: const TextStyle(color: AppColors.navy200, fontSize: 14))),
             ),
           if (bottom != null)
             Padding(
@@ -643,6 +643,8 @@ class HeaderTabs extends StatelessWidget {
       child: TabBar(
         tabs: [for (final t in tabs) Tab(text: t)],
         dividerHeight: 0,
+        // Menos relleno lateral para que etiquetas como "En progreso" quepan completas en 3 pestañas.
+        labelPadding: const EdgeInsets.symmetric(horizontal: 6),
         indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
           color: Colors.white,
@@ -651,8 +653,8 @@ class HeaderTabs extends StatelessWidget {
         ),
         labelColor: AppColors.navy,
         unselectedLabelColor: AppColors.navy200,
-        labelStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w800, fontSize: 13),
-        unselectedLabelStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13),
+        labelStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w800, fontSize: 14),
+        unselectedLabelStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14),
         splashBorderRadius: BorderRadius.circular(11),
         overlayColor: WidgetStatePropertyAll(Colors.white.withValues(alpha: .06)),
       ),
@@ -684,11 +686,14 @@ class IconBadge extends StatelessWidget {
 
 /// Etiqueta con icono y fondo suave ("SLA en 2 h", "15 días de atraso").
 class Pill extends StatelessWidget {
-  const Pill({super.key, required this.label, required this.color, this.icon});
+  const Pill({super.key, required this.label, required this.color, this.icon, this.shrink = false});
 
   final String label;
   final Color color;
   final IconData? icon;
+
+  /// Recorta la etiqueta con "…" si no cabe. Solo cuando el padre le da un ancho acotado (p. ej. dentro de Expanded).
+  final bool shrink;
 
   @override
   Widget build(BuildContext context) {
@@ -697,7 +702,10 @@ class Pill extends StatelessWidget {
       decoration: BoxDecoration(color: color.withValues(alpha: .1), borderRadius: BorderRadius.circular(20)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (icon != null) ...[Icon(icon, size: 13, color: color), const SizedBox(width: 4)],
-        Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 11.5)),
+        if (shrink)
+          Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12.5)))
+        else
+          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12.5)),
       ]),
     );
   }

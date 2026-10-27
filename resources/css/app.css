@@ -22,6 +22,17 @@
 @theme {
     --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
 
+    /*
+     * Escala de texto un punto más grande que la de Tailwind para que las pantallas con mucha
+     * información no se vean amontonadas. text-2xs (12px) es el mínimo para etiquetas y badges.
+     */
+    --text-2xs: 0.75rem;
+    --text-2xs--line-height: 1.125rem;
+    --text-xs: 0.8125rem;
+    --text-xs--line-height: 1.25rem;
+    --text-sm: 0.875rem;
+    --text-sm--line-height: 1.375rem;
+
     --color-brand-50: #eef6ff;
     --color-brand-100: #d9eaff;
     --color-brand-200: #bcdbff;
@@ -123,20 +134,84 @@
         @apply mb-1 block text-xs font-semibold text-slate-600;
     }
 
+    /* Barra de filtros de los listados: se acomoda en varias líneas en lugar de cortar el texto de los selects. */
+    .filter-bar {
+        @apply flex flex-wrap items-center gap-3 border-b border-slate-100 p-4;
+    }
+
+    .filter-bar > * {
+        @apply min-w-0 flex-[1_1_12rem] lg:flex-[0_1_12rem];
+    }
+
+    .filter-bar > :first-child {
+        @apply flex-[1_1_18rem];
+    }
+
     .table-base {
         @apply min-w-full divide-y divide-slate-100 text-sm;
     }
 
     .table-base thead th {
-        @apply bg-slate-50/80 px-4 py-2.5 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase whitespace-nowrap;
+        @apply bg-slate-50/80 px-3 py-3 text-left text-2xs font-semibold tracking-wide text-slate-500 uppercase whitespace-nowrap;
     }
 
     .table-base tbody td {
-        @apply px-4 py-3 align-middle text-slate-700;
+        @apply px-3 py-3.5 align-middle text-slate-700;
+    }
+
+    /* Columnas internas más juntas para que las tablas quepan en laptops; los bordes conservan el margen de la tarjeta. */
+    .table-base :is(th, td):first-child {
+        @apply pl-4;
+    }
+
+    .table-base :is(th, td):last-child {
+        @apply pr-4;
     }
 
     .table-base tbody tr {
         @apply hover:bg-slate-50/70;
+    }
+
+    /*
+     * <x-ui.table stack>: en celular cada renglón se muestra como tarjeta (etiqueta: valor) en lugar de
+     * obligar a deslizar de lado. La etiqueta sale de data-label en cada <td>; la celda sin data-label es
+     * el título de la tarjeta. Celdas que sobran en celular (casillas, flechas): clase max-md:hidden.
+     */
+    @media (width < 48rem) {
+        .table-stack thead {
+            @apply hidden;
+        }
+
+        .table-stack,
+        .table-stack tbody,
+        .table-stack tfoot,
+        .table-stack tr {
+            @apply block w-full;
+        }
+
+        .table-stack tbody tr,
+        .table-stack tfoot tr {
+            @apply px-4 py-3;
+        }
+
+        .table-stack tbody td,
+        .table-stack tfoot td {
+            @apply block px-0! py-0.5! text-left!;
+        }
+
+        /* Etiqueta en una columna fija a la izquierda; el contenido fluye normal (badges y botones conservan su ancho). */
+        .table-stack td[data-label] {
+            @apply relative min-h-6 pl-[7.75rem]!;
+        }
+
+        .table-stack td[data-label]::before {
+            content: attr(data-label);
+            @apply absolute top-1 left-0 w-28 text-xs font-medium text-slate-500;
+        }
+
+        .table-stack td:not([data-label]) {
+            @apply pb-1.5!;
+        }
     }
 
     .nav-link {

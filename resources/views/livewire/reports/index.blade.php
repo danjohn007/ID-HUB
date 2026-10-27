@@ -13,7 +13,7 @@
         <x-ui.card :padding="false" class="self-start">
             <div class="max-h-[70vh] overflow-y-auto p-2 lg:max-h-none">
                 @foreach ($catalog as $group => $items)
-                    <div class="px-3 pt-3 pb-1 text-[10.5px] font-semibold tracking-wider text-slate-400 uppercase">{{ $group }}</div>
+                    <div class="px-3 pt-3 pb-1 text-2xs font-semibold tracking-wider text-slate-400 uppercase">{{ $group }}</div>
                     @foreach ($items as $key => $r)
                         <button type="button" wire:click="select('{{ $key }}')" wire:key="rep-{{ $key }}" @class([
                             'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition',

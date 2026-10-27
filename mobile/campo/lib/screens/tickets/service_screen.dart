@@ -107,7 +107,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
                   onChanged: (v) => setDialog(() => unsigned = v ?? false),
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
-                  title: const Text('El cliente no pudo firmar (se avisa a la oficina)', style: TextStyle(fontSize: 13)),
+                  title: const Text('El cliente no pudo firmar (se avisa a la oficina)', style: TextStyle(fontSize: 14)),
                 ),
               ],
               TextField(
@@ -177,7 +177,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
                     TextField(controller: _comment, minLines: 2, maxLines: 4, decoration: const InputDecoration(hintText: 'Escribe un avance o comentario…')),
                     Row(children: [
                       Checkbox(value: _internal, onChanged: (v) => setState(() => _internal = v ?? false)),
-                      const Expanded(child: Text('Nota interna (no la ve el cliente)', style: TextStyle(fontSize: 13))),
+                      const Expanded(child: Text('Nota interna (no la ve el cliente)', style: TextStyle(fontSize: 14))),
                       IconButton.filled(onPressed: _sending ? null : _sendComment, icon: const Icon(Icons.send_rounded)),
                     ]),
                   ]),
@@ -251,6 +251,6 @@ class _Notice extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(10)),
-        child: Text(text, style: const TextStyle(fontSize: 13)),
+        child: Text(text, style: const TextStyle(fontSize: 14)),
       );
 }

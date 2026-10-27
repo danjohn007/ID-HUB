@@ -70,7 +70,7 @@
                 </x-ui.card>
                 @if (! empty($simLog))
                     <x-ui.card title="Bitácora del simulador" subtitle="Últimas órdenes enviadas al equipo">
-                        <ul class="space-y-1.5 font-mono text-[11px] text-slate-600">
+                        <ul class="space-y-1.5 font-mono text-2xs text-slate-600">
                             @foreach ($simLog as $l)
                                 <li class="truncate"><span class="text-slate-400">{{ \Illuminate\Support\Str::after($l['at'], ' ') }}</span> {{ $l['op'] }} {{ $l['path'] }} {{ collect($l['where'] + $l['attrs'])->map(fn ($v, $k) => $k.'='.(is_bool($v) ? ($v ? 'yes' : 'no') : $v))->implode(' ') }}</li>
                             @endforeach
@@ -241,7 +241,7 @@
                     <x-ui.empty :colspan="7" icon="signal" title="Sin conexiones activas" />
                 @endforelse
             </x-ui.table>
-            <div class="border-t border-slate-100 px-4 py-2.5 text-[11px] text-slate-400">Las conexiones resaltadas requieren revisión técnica; no implican necesariamente un uso indebido.</div>
+            <div class="border-t border-slate-100 px-4 py-2.5 text-2xs text-slate-400">Las conexiones resaltadas requieren revisión técnica; no implican necesariamente un uso indebido.</div>
         </x-ui.card>
     @endif
 
@@ -303,7 +303,7 @@
                         </x-ui.detail>
                     </dl>
                     @if ($queue)
-                        <div class="mt-3 max-h-40 overflow-y-auto rounded-lg bg-slate-900 p-3 font-mono text-[11px] text-slate-100">
+                        <div class="mt-3 max-h-40 overflow-y-auto rounded-lg bg-slate-900 p-3 font-mono text-2xs text-slate-100">
                             @foreach ($queue as $line)<div class="truncate">{{ $line }}</div>@endforeach
                         </div>
                         <x-ui.button size="sm" variant="ghost" icon="trash" class="mt-2" wire:click="clearQueue" wire:confirm="¿Descartar los comandos pendientes?">Vaciar cola</x-ui.button>
@@ -333,7 +333,7 @@
                             class="absolute top-2 right-2 rounded-md bg-white/10 px-2 py-1 text-xs font-semibold text-white hover:bg-white/20">
                         <span x-show="!copied">Copiar</span><span x-show="copied" x-cloak>¡Copiado!</span>
                     </button>
-                    <pre x-ref="script" class="max-h-[460px] overflow-auto rounded-xl bg-navy-950 p-4 font-mono text-[11px] leading-relaxed text-slate-100">{{ $script }}</pre>
+                    <pre x-ref="script" class="max-h-[460px] overflow-auto rounded-xl bg-navy-950 p-4 font-mono text-2xs leading-relaxed text-slate-100">{{ $script }}</pre>
                 </div>
             </x-ui.card>
         </div>

@@ -58,7 +58,7 @@
                                     <x-ui.badge :color="$p['badge'][1]" size="xs">{{ $p['badge'][0] }}</x-ui.badge>
                                 </span>
                                 <span class="block truncate text-xs text-slate-500">{{ $p['subtitle'] }}</span>
-                                <span class="block truncate text-[11px] text-slate-400">
+                                <span class="block truncate text-2xs text-slate-400">
                                     @if (! $p['lat'])<span class="text-warning-600">Sin coordenadas · </span>@endif
                                     @if (! $p['assigned'])<span class="text-purple-600">Sin asignar · </span>@endif
                                     {{ $p['address'] }}
@@ -140,7 +140,7 @@
                             <td><div class="flex items-center gap-2"><x-ui.avatar :name="$r->user?->name" size="sm" :color="$r->type === 'tecnico' ? 'brand' : 'purple'" /><span class="font-medium">{{ $r->user?->name }}</span></div></td>
                             <td><x-ui.badge :color="$r->type === 'tecnico' ? 'brand' : 'purple'" size="xs">{{ $r->type === 'tecnico' ? 'Técnico' : 'Cobranza' }}</x-ui.badge></td>
                             <td class="text-xs">{{ $r->zone?->name ?? 'Varias' }}</td>
-                            <td class="w-40"><x-ui.progress :value="$total ? $done / $total * 100 : 0" color="brand" height="h-1.5" /><div class="text-[11px] text-slate-500">{{ $done }}/{{ $total }} paradas</div></td>
+                            <td class="w-40"><x-ui.progress :value="$total ? $done / $total * 100 : 0" color="brand" height="h-1.5" /><div class="text-2xs text-slate-500">{{ $done }}/{{ $total }} paradas</div></td>
                             <td class="text-xs">{{ $r->distance_km ? number_format($r->distance_km, 1).' km' : '—' }}</td>
                             <td><x-ui.status catalog="route_status" :value="$r->status" size="xs" /></td>
                             <td class="text-right whitespace-nowrap">

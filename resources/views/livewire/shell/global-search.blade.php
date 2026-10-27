@@ -5,7 +5,7 @@
     @if (mb_strlen(trim($q)) >= 2)
         <div x-cloak x-show="open" x-transition class="absolute z-40 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
             @forelse ($results as $group => $items)
-                <div class="bg-slate-50 px-3 py-1.5 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">{{ $group }}</div>
+                <div class="bg-slate-50 px-3 py-1.5 text-2xs font-semibold tracking-wide text-slate-500 uppercase">{{ $group }}</div>
                 @foreach ($items as $r)
                     <a href="{{ $r['url'] }}" wire:navigate class="flex items-center gap-3 px-3 py-2 hover:bg-brand-50">
                         <x-dynamic-component :component="'heroicon-o-'.$r['icon']" class="h-4 w-4 shrink-0 text-slate-400" />

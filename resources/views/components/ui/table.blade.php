@@ -4,10 +4,11 @@
         @foreach (...) <tr><td>..</td></tr> @endforeach
     </x-ui.table>
     Usa <x-ui.th sort="campo" :sort-by="$sortBy" :sort-dir="$sortDir"> para columnas ordenables (wire:click="sort('campo')").
+    stack: en celular muestra cada renglón como tarjeta; pon data-label="Columna" en cada <td> (ver .table-stack en app.css).
 --}}
-@props(['head' => null, 'footer' => null])
+@props(['head' => null, 'footer' => null, 'stack' => false])
 <div {{ $attributes->merge(['class' => 'overflow-x-auto']) }}>
-    <table class="table-base">
+    <table @class(['table-base', 'table-stack' => $stack])>
         @if ($head)
             <thead><tr>{{ $head }}</tr></thead>
         @endif

@@ -19,9 +19,9 @@
             <div class="text-sm text-navy-200">{{ ucfirst(now()->translatedFormat('l d \d\e F')) }}</div>
             <h1 class="mt-0.5 text-2xl font-bold">Hola, {{ str($user->name)->before(' ') }}</h1>
             <div class="mt-4 grid grid-cols-3 gap-2 text-center">
-                <div class="rounded-xl bg-white/10 px-2 py-2.5"><div class="text-2xl font-bold">{{ count($stops) }}</div><div class="text-[11px] text-navy-200">Paradas</div></div>
-                <div class="rounded-xl bg-white/10 px-2 py-2.5"><div class="text-2xl font-bold text-success-400">{{ $done }}</div><div class="text-[11px] text-navy-200">Atendidas</div></div>
-                <div class="rounded-xl bg-white/10 px-2 py-2.5"><div class="text-2xl font-bold">{{ number_format((float) $distance, 1) }}</div><div class="text-[11px] text-navy-200">km aprox.</div></div>
+                <div class="rounded-xl bg-white/10 px-2 py-2.5"><div class="text-2xl font-bold">{{ count($stops) }}</div><div class="text-2xs text-navy-200">Paradas</div></div>
+                <div class="rounded-xl bg-white/10 px-2 py-2.5"><div class="text-2xl font-bold text-success-400">{{ $done }}</div><div class="text-2xs text-navy-200">Atendidas</div></div>
+                <div class="rounded-xl bg-white/10 px-2 py-2.5"><div class="text-2xl font-bold">{{ number_format((float) $distance, 1) }}</div><div class="text-2xs text-navy-200">km aprox.</div></div>
             </div>
             <div class="mt-3 h-2 overflow-hidden rounded-full bg-white/15"><div class="h-2 rounded-full bg-success-500 transition-all" style="width: {{ count($stops) ? round($done / count($stops) * 100) : 0 }}%"></div></div>
             <div class="mt-4 grid grid-cols-2 gap-2">
@@ -72,7 +72,7 @@
                 'border-slate-200' => ! $isNext,
                 'opacity-70' => in_array($st, ['done', 'skipped']),
             ])>
-                @if ($isNext)<div class="bg-brand-600 px-4 py-1 text-[11px] font-bold tracking-wide text-white uppercase">Siguiente parada</div>@endif
+                @if ($isNext)<div class="bg-brand-600 px-4 py-1 text-2xs font-bold tracking-wide text-white uppercase">Siguiente parada</div>@endif
                 <div class="flex gap-3 p-4">
                     <span @class(['flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold',
                         'bg-success-600 text-white' => $st === 'done', 'bg-warning-500 text-white' => $st === 'arrived',

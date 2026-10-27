@@ -54,7 +54,7 @@
             </div>
         </div>
 
-        <x-ui.table>
+        <x-ui.table stack>
             <x-slot:head>
                 <x-ui.th sort="folio" :sort-by="$sortBy" :sort-dir="$sortDir">Folio</x-ui.th>
                 <x-ui.th sort="paid_at" :sort-by="$sortBy" :sort-dir="$sortDir">Fecha</x-ui.th>
@@ -62,7 +62,7 @@
                 <th>Método</th>
                 <th>Cobrador / recibió</th>
                 <x-ui.th sort="amount" :sort-by="$sortBy" :sort-dir="$sortDir" class="text-right">Importe</x-ui.th>
-                <th class="text-right">Comisiones</th>
+                <th class="hidden text-right 2xl:table-cell">Comisiones</th>
                 <x-ui.th sort="net_amount" :sort-by="$sortBy" :sort-dir="$sortDir" class="text-right">Neto</x-ui.th>
                 <th>Estado</th>
                 <th></th>
@@ -72,8 +72,8 @@
                     <td class="text-xs font-semibold text-slate-700">{{ $p->folio }}
                         @if ($p->cashCut)<div class="font-normal text-slate-400">Corte {{ $p->cashCut->folio }}</div>@endif
                     </td>
-                    <td class="text-xs text-slate-600">{{ $p->paid_at->format('d/m/Y') }}<div class="text-slate-400">{{ $p->paid_at->format('H:i') }}</div></td>
-                    <td>
+                    <td class="text-xs text-slate-600" data-label="Fecha">{{ $p->paid_at->format('d/m/Y') }}<div class="text-slate-400">{{ $p->paid_at->format('H:i') }}</div></td>
+                    <td data-label="Cliente">
                         @if ($p->client)
                             <a href="{{ route('clients.show', $p->client_id) }}" wire:navigate class="font-semibold text-slate-800 hover:text-brand-600">{{ $p->client->full_name }}</a>
                             <div class="text-xs text-slate-500">#{{ $p->client->code }}</div>
@@ -81,14 +81,14 @@
                             <span class="text-xs text-slate-400">Cliente eliminado</span>
                         @endif
                     </td>
-                    <td class="text-xs">
+                    <td class="text-xs" data-label="Método">
                         <span class="font-medium text-slate-700">{{ $p->methodLabel() }}</span>
                         @if ($p->reference)<div class="max-w-[150px] truncate text-slate-400" title="{{ $p->reference }}">Ref. {{ $p->reference }}</div>@endif
                         @if ($p->evidence_path)<a href="{{ \App\Support\Evidence::url($p->evidence_path) }}" target="_blank" class="link inline-flex items-center gap-0.5"><x-heroicon-o-photo class="h-3.5 w-3.5" />Evidencia</a>@endif
                     </td>
-                    <td class="text-xs text-slate-600">{{ $p->collector?->name ?? $p->receivedBy?->name ?? ($p->gateway ? 'Pago en línea' : 'Sistema') }}</td>
-                    <td class="text-right font-semibold {{ $p->kind === 'credit' ? 'text-teal-700' : 'text-slate-800' }}">{{ money($p->amount) }}</td>
-                    <td class="text-right text-xs text-slate-500">
+                    <td class="text-xs text-slate-600 max-md:hidden" data-label="Cobrador">{{ $p->collector?->name ?? $p->receivedBy?->name ?? ($p->gateway ? 'Pago en línea' : 'Sistema') }}</td>
+                    <td class="text-right font-semibold {{ $p->kind === 'credit' ? 'text-teal-700' : 'text-slate-800' }}" data-label="Importe">{{ money($p->amount) }}</td>
+                    <td class="hidden text-right text-xs text-slate-500 2xl:table-cell">
                         @if ($p->gateway_fee > 0 || $p->platform_fee > 0)
                             @if ($p->gateway_fee > 0)<div title="Comisión pasarela">−{{ money($p->gateway_fee) }}</div>@endif
                             @if ($p->platform_fee > 0)<div class="text-purple-600" title="Comisión plataforma">−{{ money($p->platform_fee) }}</div>@endif
@@ -96,9 +96,9 @@
                             —
                         @endif
                     </td>
-                    <td class="text-right font-semibold text-success-700">{{ money($p->net_amount) }}</td>
-                    <td><x-ui.status catalog="payment_status" :value="$p->status" size="xs" /></td>
-                    <td class="text-right whitespace-nowrap">
+                    <td class="text-right font-semibold text-success-700 max-md:hidden" data-label="Neto">{{ money($p->net_amount) }}</td>
+                    <td data-label="Estado"><x-ui.status catalog="payment_status" :value="$p->status" size="xs" /></td>
+                    <td class="text-right whitespace-nowrap max-md:pt-1.5">
                         <a href="{{ route('documents.receipt', $p) }}" target="_blank" class="inline-block p-1 text-slate-400 hover:text-brand-600" title="Comprobante PDF"><x-heroicon-o-printer class="h-4 w-4" /></a>
                         @can('billing.manage')
                             @if ($p->status === 'completed' && $p->method !== 'saldo')
@@ -113,9 +113,9 @@
             <x-slot:footer>
                 <tr>
                     <td colspan="5" class="px-4 py-3 text-xs text-slate-600">Totales {{ $filterStatus ? '('.\App\Support\Catalog::label('payment_status', $filterStatus).')' : '(pagos aplicados)' }} · {{ number_format($totals->n) }} registros</td>
-                    <td class="px-4 py-3 text-right text-sm">{{ money($totals->gross) }}</td>
-                    <td class="px-4 py-3 text-right text-xs text-slate-500">−{{ money($totals->gateway_fee + $totals->platform_fee) }}</td>
-                    <td class="px-4 py-3 text-right text-sm text-success-700">{{ money($totals->net) }}</td>
+                    <td class="px-4 py-3 text-right text-sm" data-label="Importe">{{ money($totals->gross) }}</td>
+                    <td class="hidden px-4 py-3 text-right text-xs text-slate-500 2xl:table-cell">−{{ money($totals->gateway_fee + $totals->platform_fee) }}</td>
+                    <td class="px-4 py-3 text-right text-sm text-success-700" data-label="Neto">{{ money($totals->net) }}</td>
                     <td colspan="2"></td>
                 </tr>
             </x-slot:footer>

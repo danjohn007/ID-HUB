@@ -18,7 +18,7 @@
                     <div class="min-w-0 flex-1">
                         <div class="text-sm font-semibold text-slate-800">{{ $a->title }}</div>
                         @if ($a->message)<div class="line-clamp-2 text-xs text-slate-500">{{ $a->message }}</div>@endif
-                        <div class="mt-1 flex items-center gap-3 text-[11px] text-slate-400">
+                        <div class="mt-1 flex items-center gap-3 text-2xs text-slate-400">
                             {{ $a->created_at->diffForHumans() }}
                             @if ($url = $a->subjectUrl())<a href="{{ $url }}" wire:navigate class="font-semibold text-brand-600">Ver</a>@endif
                             <button wire:click="acknowledge({{ $a->id }})" class="font-semibold text-slate-500 hover:text-slate-700">Enterado</button>

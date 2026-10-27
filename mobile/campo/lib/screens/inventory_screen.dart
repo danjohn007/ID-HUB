@@ -100,7 +100,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ]),
                 ),
                 const SizedBox(height: 12),
-                const Text('Los materiales se descuentan al registrarlos en un ticket o instalación.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.slate, fontSize: 12)),
+                const Text('Los materiales se descuentan al registrarlos en un ticket o instalación.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.slate, fontSize: 13)),
               ]),
             ),
           ]);

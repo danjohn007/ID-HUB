@@ -104,7 +104,7 @@
                             </td>
                             <td>
                                 <x-ui.badge :color="$stC" dot>{{ $stL }}</x-ui.badge>
-                                @if ($a->acknowledgedBy)<div class="mt-0.5 text-[11px] text-slate-500">{{ $a->acknowledgedBy->name }}</div>@endif
+                                @if ($a->acknowledgedBy)<div class="mt-0.5 text-2xs text-slate-500">{{ $a->acknowledgedBy->name }}</div>@endif
                             </td>
                             <td class="whitespace-nowrap text-xs text-slate-600">
                                 <div>{{ $a->created_at->format('d/m/Y H:i') }}</div>

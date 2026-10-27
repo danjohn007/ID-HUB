@@ -182,7 +182,7 @@ class _NextStop extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text(stop.onSite ? 'EN SITIO' : 'SIGUIENTE PARADA', style: TextStyle(color: stop.onSite ? AppColors.success : brand, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: .6)),
+              Text(stop.onSite ? 'EN SITIO' : 'SIGUIENTE PARADA', style: TextStyle(color: stop.onSite ? AppColors.success : brand, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: .6)),
               const Spacer(),
               StatusChip(stop.kindLabel, color: 'info', dense: true),
             ]),
@@ -194,7 +194,7 @@ class _NextStop extends StatelessWidget {
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Icon(Icons.place_outlined, size: 18, color: AppColors.slate),
                 const SizedBox(width: 6),
-                Expanded(child: Text(client.address, style: const TextStyle(fontSize: 13))),
+                Expanded(child: Text(client.address, style: const TextStyle(fontSize: 14))),
               ]),
             ],
             const SizedBox(height: 14),

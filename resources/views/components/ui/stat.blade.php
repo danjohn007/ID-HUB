@@ -17,33 +17,35 @@
     $tag = $href ? 'a' : 'div';
 @endphp
 @if ($variant === 'solid')
-    <{{ $tag }} @if ($href) href="{{ $href }}" wire:navigate @endif {{ $attributes->merge(['class' => "relative flex items-start gap-4 overflow-hidden rounded-xl p-4 text-white shadow-sm $solid ".($href ? 'transition hover:brightness-105' : '')]) }}>
+    {{-- El ícono va en la esquina para que etiqueta y valor usen todo el ancho y no se corten en tarjetas angostas --}}
+    <{{ $tag }} @if ($href) href="{{ $href }}" wire:navigate @endif {{ $attributes->merge(['class' => "relative overflow-hidden rounded-xl p-4 text-white shadow-sm $solid ".($href ? 'transition hover:brightness-105' : '')]) }}>
         @if ($icon)
-            <x-dynamic-component :component="'heroicon-s-'.$icon" class="mt-1 h-9 w-9 shrink-0 opacity-95" />
+            <x-dynamic-component :component="'heroicon-s-'.$icon" class="absolute top-3.5 right-3.5 h-7 w-7 opacity-90" />
         @endif
         <div class="min-w-0">
-            <div class="truncate text-[13px] font-medium text-white/90">{{ $label }}</div>
-            <div class="mt-0.5 text-[26px] leading-tight font-bold tracking-tight">{{ $value }}</div>
+            <div class="pr-9 text-sm leading-snug font-medium text-white/90">{{ $label }}</div>
+            <div class="mt-1.5 truncate text-[22px] leading-tight font-bold tracking-tight sm:text-[26px]">{{ $value }}</div>
             @if ($trend)
-                <div class="mt-1 flex items-center gap-1 text-xs font-medium text-white/90">
-                    @if ($trendUp === true)<x-heroicon-m-arrow-up class="h-3.5 w-3.5" />@elseif ($trendUp === false)<x-heroicon-m-arrow-down class="h-3.5 w-3.5" />@endif
+                <div class="mt-1 flex items-start gap-1 text-xs leading-snug font-medium text-white/90">
+                    @if ($trendUp === true)<x-heroicon-m-arrow-up class="mt-0.5 h-3.5 w-3.5 shrink-0" />@elseif ($trendUp === false)<x-heroicon-m-arrow-down class="mt-0.5 h-3.5 w-3.5 shrink-0" />@endif
                     {{ $trend }}
                 </div>
             @elseif ($sub)
-                <div class="mt-1 text-xs text-white/85">{{ $sub }}</div>
+                <div class="mt-1 text-xs leading-snug text-white/85">{{ $sub }}</div>
             @endif
         </div>
     </{{ $tag }}>
 @else
     <{{ $tag }} @if ($href) href="{{ $href }}" wire:navigate @endif {{ $attributes->merge(['class' => 'card flex items-start gap-3.5 p-4 '.($href ? 'transition hover:border-brand-200' : '')]) }}>
         @if ($icon)
-            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {{ $softIcon }}">
+            {{-- En celular se oculta el ícono para que etiqueta y valor quepan completos --}}
+            <span class="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:flex {{ $softIcon }}">
                 <x-dynamic-component :component="'heroicon-o-'.$icon" class="h-6 w-6" />
             </span>
         @endif
         <div class="min-w-0">
-            <div class="truncate text-xs font-medium text-slate-500">{{ $label }}</div>
-            <div class="mt-0.5 text-xl font-bold text-navy-900">{{ $value }}</div>
+            <div class="text-xs leading-snug font-medium text-slate-500">{{ $label }}</div>
+            <div class="mt-0.5 text-xl font-bold text-navy-900 [overflow-wrap:anywhere]">{{ $value }}</div>
             @if ($trend)
                 <div @class(['mt-0.5 flex items-center gap-1 text-xs font-medium', 'text-success-600' => $trendUp === true, 'text-danger-600' => $trendUp === false, 'text-slate-500' => $trendUp === null])>
                     @if ($trendUp === true)<x-heroicon-m-arrow-up class="h-3.5 w-3.5" />@elseif ($trendUp === false)<x-heroicon-m-arrow-down class="h-3.5 w-3.5" />@endif

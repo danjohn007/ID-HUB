@@ -10,7 +10,7 @@
                     <div class="text-xs text-slate-500">#{{ $pc->code }} · {{ $pc->plan?->name ?? 'Sin plan' }} · <x-ui.status catalog="client_status" :value="$pc->service_status" size="xs" /></div>
                 </div>
                 <div class="text-right">
-                    <div class="text-[11px] text-slate-500">Saldo</div>
+                    <div class="text-2xs text-slate-500">Saldo</div>
                     <div class="font-bold {{ $pc->balance > 0 ? 'text-danger-600' : 'text-success-700' }}">{{ money($pc->balance) }}</div>
                 </div>
                 <button type="button" wire:click="clearPayClient" class="rounded-lg p-1 text-slate-400 hover:bg-white hover:text-slate-600" title="Cambiar cliente"><x-heroicon-o-x-mark class="h-4 w-4" /></button>

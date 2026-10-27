@@ -62,7 +62,7 @@
                     <td>
                         @if ($c->recipients_count)
                             <x-ui.progress :value="$pctOk" :color="$c->failed_count ? 'warning' : 'success'" />
-                            <div class="mt-1 flex gap-3 text-[11px]">
+                            <div class="mt-1 flex gap-3 text-2xs">
                                 <span class="text-success-700">{{ number_format($c->sent_count) }} enviados</span>
                                 @if ($c->failed_count)<span class="text-danger-600">{{ number_format($c->failed_count) }} fallidos</span>@endif
                             </div>

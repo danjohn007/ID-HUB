@@ -77,7 +77,7 @@ class _CollectScreenState extends State<CollectScreen> {
           Text(Fmt.money(payment.amount), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
           Text('Saldo restante: ${Fmt.money(res['client_balance'] as num?)}', style: const TextStyle(color: AppColors.slate)),
-          if (res['cash_cut'] is Map) Text('Agregado al corte ${(res['cash_cut'] as Map)['folio']}', style: const TextStyle(color: AppColors.slate, fontSize: 12)),
+          if (res['cash_cut'] is Map) Text('Agregado al corte ${(res['cash_cut'] as Map)['folio']}', style: const TextStyle(color: AppColors.slate, fontSize: 13)),
         ]),
         actions: [
           if (payment.receiptUrl != null && c.whatsapp != null)

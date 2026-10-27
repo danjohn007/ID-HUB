@@ -13,28 +13,28 @@
                 <x-heroicon-o-map-pin class="h-4 w-4 text-brand-600" />
                 <span x-text="locating ? 'Ubicando…' : ($wire.myLat ? 'Reordenar' : 'Ubicarme')">Ubicarme</span>
             </button>
-            <p x-show="error" x-text="error" class="mt-1 max-w-[150px] text-[10px] text-danger-600"></p>
+            <p x-show="error" x-text="error" class="mt-1 max-w-[150px] text-2xs text-danger-600"></p>
         </div>
     </div>
 
     {{-- Resumen del día --}}
     <div class="mb-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <div class="rounded-xl bg-success-600 p-3 text-white shadow-sm">
-            <div class="text-[11px] font-medium text-white/85">Cobrado hoy</div>
+            <div class="text-2xs font-medium text-white/85">Cobrado hoy</div>
             <div class="text-xl font-bold">{{ money($summary['collected'], false) }}</div>
-            <div class="text-[11px] text-white/80">{{ $summary['payments'] }} {{ $summary['payments'] === 1 ? 'pago' : 'pagos' }}</div>
+            <div class="text-2xs text-white/80">{{ $summary['payments'] }} {{ $summary['payments'] === 1 ? 'pago' : 'pagos' }}</div>
         </div>
         <div class="rounded-xl bg-purple-600 p-3 text-white shadow-sm">
-            <div class="text-[11px] font-medium text-white/85">Mi corte abierto</div>
+            <div class="text-2xs font-medium text-white/85">Mi corte abierto</div>
             <div class="text-xl font-bold">{{ money($cut?->expected_amount ?? 0, false) }}</div>
-            <div class="text-[11px] text-white/80">{{ $cut ? $cut->payments_count.' cobros · '.$cut->folio : 'Sin efectivo por entregar' }}</div>
+            <div class="text-2xs text-white/80">{{ $cut ? $cut->payments_count.' cobros · '.$cut->folio : 'Sin efectivo por entregar' }}</div>
         </div>
         <div class="card p-3">
-            <div class="text-[11px] font-medium text-slate-500">Visitas hoy</div>
+            <div class="text-2xs font-medium text-slate-500">Visitas hoy</div>
             <div class="text-xl font-bold text-navy-900">{{ $summary['visits'] }}</div>
         </div>
         <div class="card p-3">
-            <div class="text-[11px] font-medium text-slate-500">Por cobrar</div>
+            <div class="text-2xs font-medium text-slate-500">Por cobrar</div>
             <div class="text-xl font-bold text-danger-600">{{ money($summary['pending_amount'], false) }}</div>
         </div>
     </div>
@@ -90,17 +90,17 @@
                                 </div>
                                 <div class="shrink-0 text-right">
                                     <div class="text-lg leading-tight font-bold {{ $c->balance > 0 ? 'text-danger-600' : 'text-success-700' }}">{{ money($c->balance) }}</div>
-                                    @if ($days > 0)<div class="text-[11px] font-semibold text-danger-600">{{ $days }} {{ $days === 1 ? 'día' : 'días' }} de atraso</div>@endif
+                                    @if ($days > 0)<div class="text-2xs font-semibold text-danger-600">{{ $days }} {{ $days === 1 ? 'día' : 'días' }} de atraso</div>@endif
                                 </div>
                             </div>
                             <div class="mt-2 flex flex-wrap items-center gap-1.5">
                                 <x-ui.status catalog="client_status" :value="$c->service_status" size="xs" />
                                 @if ($c->zone)<x-ui.badge size="xs">{{ $c->zone->name }}</x-ui.badge>@endif
                                 @if (isset($c->route_seq))<x-ui.badge color="brand" size="xs">Ruta #{{ $c->route_seq }}</x-ui.badge>@endif
-                                @if (isset($c->distance_km))<span class="text-[11px] text-slate-400">{{ $c->distance_km < 1 ? round($c->distance_km * 1000).' m' : number_format($c->distance_km, 1).' km' }}</span>@endif
+                                @if (isset($c->distance_km))<span class="text-2xs text-slate-400">{{ $c->distance_km < 1 ? round($c->distance_km * 1000).' m' : number_format($c->distance_km, 1).' km' }}</span>@endif
                                 @if ($visit)
                                     <x-ui.status catalog="visit_results" :value="$visit->result" size="xs" />
-                                    @if ($visit->payment)<span class="text-[11px] text-success-700">{{ $visit->payment->folio }}</span>@endif
+                                    @if ($visit->payment)<span class="text-2xs text-success-700">{{ $visit->payment->folio }}</span>@endif
                                 @endif
                             </div>
                             <p class="mt-2 flex items-start gap-1 text-xs text-slate-600">
@@ -130,7 +130,7 @@
                     @endif
                 </div>
 
-                <button type="button" wire:click="toggle({{ $c->id }})" class="flex w-full items-center justify-center gap-1 border-t border-slate-100 py-2 text-[11px] font-semibold text-slate-500 hover:bg-slate-50">
+                <button type="button" wire:click="toggle({{ $c->id }})" class="flex w-full items-center justify-center gap-1 border-t border-slate-100 py-2 text-2xs font-semibold text-slate-500 hover:bg-slate-50">
                     {{ $expanded === $c->id ? 'Ocultar historial' : 'Ver historial y cargos' }}
                     <x-heroicon-m-chevron-down @class(['h-3.5 w-3.5 transition', 'rotate-180' => $expanded === $c->id]) />
                 </button>

@@ -18,7 +18,7 @@
             @if (array_intersect(['technicians', 'collectors'], $layers))
                 <div wire:poll.30s="refreshStaff" class="hidden"></div>
             @endif
-            <div class="pointer-events-none absolute bottom-3 left-3 z-[400] hidden rounded-lg bg-white/95 px-3 py-2 text-[11px] shadow ring-1 ring-slate-200 sm:block">
+            <div class="pointer-events-none absolute bottom-3 left-3 z-[400] hidden rounded-lg bg-white/95 px-3 py-2 text-2xs shadow ring-1 ring-slate-200 sm:block">
                 <div class="mb-1 font-semibold text-slate-700">Estados</div>
                 <div class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-success-600"></span>Operativo</div>
                 <div class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-warning-600"></span>Advertencia</div>
@@ -34,7 +34,7 @@
                 @foreach (['capas' => 'Capas', 'fallas' => 'Fallas', 'expansion' => 'Expansión'] as $key => $label)
                     <button type="button" wire:click="$set('panel', '{{ $key }}')" @class(['flex-1 border-b-2 px-3 py-2.5 transition', 'border-brand-600 text-brand-700' => $panel === $key, 'border-transparent text-slate-500 hover:text-slate-700' => $panel !== $key])>
                         {{ $label }}
-                        @if ($key === 'fallas' && $outageCount)<span class="ml-1 rounded-full bg-danger-600 px-1.5 text-[10px] text-white">{{ $outageCount }}</span>@endif
+                        @if ($key === 'fallas' && $outageCount)<span class="ml-1 rounded-full bg-danger-600 px-1.5 text-2xs text-white">{{ $outageCount }}</span>@endif
                     </button>
                 @endforeach
             </div>
@@ -74,7 +74,7 @@
                             <div class="rounded-xl border border-danger-100 bg-danger-50/50 p-3" wire:key="out-{{ $o['key'] }}">
                                 <div class="flex items-start justify-between gap-2">
                                     <div>
-                                        <div class="text-[11px] font-bold tracking-wide text-danger-600 uppercase">Fuera de servicio</div>
+                                        <div class="text-2xs font-bold tracking-wide text-danger-600 uppercase">Fuera de servicio</div>
                                         <div class="font-bold text-navy-900">{{ $o['title'] }}</div>
                                     </div>
                                     @if ($o['lat'])
@@ -96,7 +96,7 @@
                                 </dl>
                                 @if ($o['cause'])<div class="mt-1.5 text-xs text-slate-500">{{ $o['cause'] }}</div>@endif
                                 <div class="mt-2 border-t border-danger-100 pt-2">
-                                    <div class="text-[11px] font-semibold text-slate-500">Tickets relacionados ({{ $o['tickets']->count() }})</div>
+                                    <div class="text-2xs font-semibold text-slate-500">Tickets relacionados ({{ $o['tickets']->count() }})</div>
                                     @foreach ($o['tickets']->take(4) as $t)
                                         <a @if (Route::has('tickets.show')) href="{{ route('tickets.show', $t->id) }}" wire:navigate @endif class="mt-1 flex items-center gap-2 text-xs hover:text-brand-600">
                                             <x-ui.status catalog="ticket_priorities" :value="$t->priority" size="xs" :dot="false" />
@@ -122,7 +122,7 @@
                                 <div class="flex items-start justify-between gap-2">
                                     <div>
                                         <div class="font-bold text-navy-900">{{ $h['zone_name'] ?? 'Sin zona' }}</div>
-                                        <div class="text-[11px] text-slate-500">{{ number_format($h['lat'], 4) }}, {{ number_format($h['lng'], 4) }}</div>
+                                        <div class="text-2xs text-slate-500">{{ number_format($h['lat'], 4) }}, {{ number_format($h['lng'], 4) }}</div>
                                     </div>
                                     <button type="button" class="rounded-lg bg-white p-1.5 text-warning-700 shadow-xs ring-1 ring-warning-100" title="Ubicar"
                                             @click="$dispatch('map-focus-main-map', { lat: {{ $h['lat'] }}, lng: {{ $h['lng'] }}, zoom: 15 })">

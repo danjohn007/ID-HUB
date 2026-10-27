@@ -141,7 +141,7 @@ ThemeData buildTheme(Color brand) {
       labelTextStyle: WidgetStateProperty.resolveWith(
         (s) => TextStyle(
           fontFamily: 'Inter',
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: s.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
           color: s.contains(WidgetState.selected) ? brand : AppColors.slate,
         ),

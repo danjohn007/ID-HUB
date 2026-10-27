@@ -8,7 +8,7 @@
         </div>
         <x-ui.status catalog="installation_status" :value="$o->status" size="xs" />
     </div>
-    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-slate-500">
+    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-slate-500">
         <span class="font-semibold text-navy-900">{{ $o->folio }}</span>
         @if ($o->scheduled_at)<span class="inline-flex items-center gap-1"><x-heroicon-m-clock class="h-3.5 w-3.5" />{{ $o->scheduled_at->format('H:i') }}</span>@endif
         <span class="inline-flex items-center gap-1"><x-heroicon-m-user class="h-3.5 w-3.5" />{{ $o->technician?->name ?? 'Sin técnico' }}</span>

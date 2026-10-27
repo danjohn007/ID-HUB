@@ -23,7 +23,7 @@
                             <td class="min-w-36">
                                 @if ($s['pct'] !== null)
                                     <x-ui.progress :value="$s['pct']" :color="$s['pct'] >= 90 ? 'success' : ($s['pct'] >= 75 ? 'warning' : 'danger')" label />
-                                    <div class="text-[11px] text-slate-400">{{ $s['resolved'] }} resueltos</div>
+                                    <div class="text-2xs text-slate-400">{{ $s['resolved'] }} resueltos</div>
                                 @else
                                     <span class="text-xs text-slate-400">Sin datos</span>
                                 @endif
@@ -75,7 +75,7 @@
                         <span class="min-w-0">
                             <span class="block text-sm font-semibold text-slate-800">{{ $a->title }}</span>
                             <span class="block text-xs text-slate-500">{{ $a->message }}</span>
-                            <span class="block text-[11px] text-slate-400">{{ $a->created_at->diffForHumans() }}</span>
+                            <span class="block text-2xs text-slate-400">{{ $a->created_at->diffForHumans() }}</span>
                         </span>
                     </a>
                 @empty

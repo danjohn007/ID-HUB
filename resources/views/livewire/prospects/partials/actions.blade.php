@@ -16,7 +16,7 @@
         <x-ui.dropdown-item icon="user" :href="route('clients.show', $p->client_id)">Ver cliente</x-ui.dropdown-item>
     @endif
     <div class="my-1 border-t border-slate-100"></div>
-    <div class="px-3 pt-1 pb-0.5 text-[10.5px] font-semibold tracking-wide text-slate-400 uppercase">Mover a</div>
+    <div class="px-3 pt-1 pb-0.5 text-2xs font-semibold tracking-wide text-slate-400 uppercase">Mover a</div>
     @foreach (['contactado', 'viable', 'sin_cobertura', 'instalacion_pendiente', 'descartado'] as $st)
         @if ($p->status !== $st)
             <x-ui.dropdown-item wire:click="setStatus({{ $p->id }}, '{{ $st }}')">{{ \App\Support\Catalog::label('prospect_status', $st) }}</x-ui.dropdown-item>

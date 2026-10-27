@@ -147,6 +147,6 @@
                 <x-ui.empty :colspan="5" icon="shield-check" title="Sin alertas abiertas" description="La red opera sin incidencias en esta categoría." />
             @endforelse
         </x-ui.table>
-        <div class="border-t border-slate-100 px-5 py-2.5 text-[11px] text-slate-400">Las anomalías son indicadores para revisión técnica y no implican uso indebido del servicio.</div>
+        <div class="border-t border-slate-100 px-5 py-2.5 text-2xs text-slate-400">Las anomalías son indicadores para revisión técnica y no implican uso indebido del servicio.</div>
     </x-ui.card>
 </div>

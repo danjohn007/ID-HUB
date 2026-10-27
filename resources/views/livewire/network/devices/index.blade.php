@@ -23,7 +23,7 @@
     </div>
 
     <x-ui.card :padding="false">
-        <div class="grid grid-cols-1 gap-3 border-b border-slate-100 p-4 md:grid-cols-5">
+        <div class="filter-bar">
             <x-ui.search wire:model.live.debounce.300ms="search" placeholder="Nombre, IP, MAC, modelo, serie..." class="md:col-span-2" />
             <x-ui.select wire:model.live="filterStatus" placeholder="Todos los estados"
                          :options="['online' => 'Operativo ('.($status['online'] ?? 0).')', 'warning' => 'Advertencia ('.($status['warning'] ?? 0).')', 'offline' => 'Fallo / sin comunicación ('.(($status['offline'] ?? 0) + ($status['unknown'] ?? 0)).')', 'maintenance' => 'Mantenimiento', 'retired' => 'Retirado', 'in_stock' => 'En almacén']" />
@@ -55,7 +55,7 @@
                         </a>
                     </td>
                     <td><x-ui.badge :color="['mikrotik' => 'navy', 'ap' => 'purple', 'cpe' => 'brand', 'antenna' => 'teal'][$d->type] ?? 'slate'" size="xs">{{ config('wisp.device_types.'.$d->type, $d->type) }}</x-ui.badge></td>
-                    <td class="text-xs"><div class="text-slate-700">{{ $d->ip ?? '—' }}</div><div class="font-mono text-[11px] text-slate-500">{{ $d->mac }}</div></td>
+                    <td class="text-xs"><div class="text-slate-700">{{ $d->ip ?? '—' }}</div><div class="font-mono text-2xs text-slate-500">{{ $d->mac }}</div></td>
                     <td class="text-xs">
                         @if ($d->client)<a class="link block" href="{{ route('clients.show', $d->client) }}" wire:navigate>#{{ $d->client->code }} {{ \Illuminate\Support\Str::limit($d->client->full_name, 22) }}</a>@endif
                         <span class="text-slate-500">{{ collect([$d->repeater?->code, $d->tower?->code])->filter()->implode(' · ') ?: ($d->location ?? '') }}</span>

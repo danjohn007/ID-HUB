@@ -300,7 +300,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   children: [
                     const Text(
                       'TU WISP BAJO CONTROL',
-                      style: TextStyle(color: AppColors.navy200, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 3.2),
+                      style: TextStyle(color: AppColors.navy200, fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 3.2),
                     ),
                     const SizedBox(height: 18),
                     AnimatedOpacity(
@@ -352,7 +352,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     children: [
                       Text(
                         'APP DE CAMPO',
-                        style: TextStyle(color: AppColors.brand400, fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 2.6),
+                        style: TextStyle(color: AppColors.brand400, fontSize: 12.5, fontWeight: FontWeight.w800, letterSpacing: 2.6),
                       ),
                       SizedBox(height: 4),
                       Text('Técnicos y cobradores en acción', style: TextStyle(color: AppColors.navy200, fontSize: 14)),
@@ -401,7 +401,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -.4, color: AppColors.navy),
               ),
               const SizedBox(height: 4),
-              const Text('Con el correo y la contraseña que te dio tu empresa.', style: TextStyle(color: AppColors.slate, fontSize: 13.5)),
+              const Text('Con el correo y la contraseña que te dio tu empresa.', style: TextStyle(color: AppColors.slate, fontSize: 14.5)),
               const SizedBox(height: 18),
               AnimatedSize(
                 duration: Motion.fast,
@@ -451,7 +451,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               const Text(
                 '¿Olvidaste tu contraseña? Pídele al administrador que la restablezca desde el panel.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.slate, height: 1.35),
+                style: TextStyle(fontSize: 13, color: AppColors.slate, height: 1.35),
               ),
             ],
           ),
@@ -551,7 +551,7 @@ class _ServerChip extends StatelessWidget {
                 child: Text(
                   host,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.navy200, fontSize: 12.5, fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: AppColors.navy200, fontSize: 13.5, fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(width: 6),
@@ -639,7 +639,7 @@ class _Alert extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13.5),
+              style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 14.5),
             ),
           ),
         ],

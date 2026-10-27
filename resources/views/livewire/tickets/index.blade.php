@@ -75,7 +75,7 @@
                     </div>
                 @endif
             @endcan
-            <x-ui.table>
+            <x-ui.table stack>
                 <x-slot:head>
                     @can('tickets.manage')
                         <th class="w-8"><input type="checkbox" class="rounded border-slate-300" wire:click="toggleAllOnPage(@js($tickets->pluck('id')->all()))" @checked($tickets->count() && count(array_intersect($tickets->pluck('id')->map(fn ($i) => (string) $i)->all(), $selected)) === $tickets->count())></th>
@@ -93,13 +93,13 @@
                     @php $st = $t->slaState(); @endphp
                     <tr wire:key="t{{ $t->id }}" @class(['bg-danger-50/40' => $st === 'breached' && $t->isOpen()])>
                         @can('tickets.manage')
-                            <td><input type="checkbox" class="rounded border-slate-300" wire:model.live="selected" value="{{ $t->id }}"></td>
+                            <td class="max-md:hidden"><input type="checkbox" class="rounded border-slate-300" wire:model.live="selected" value="{{ $t->id }}"></td>
                         @endcan
                         <td class="whitespace-nowrap">
                             <a href="{{ route('tickets.show', $t) }}" wire:navigate class="font-semibold text-brand-600 hover:underline">{{ $t->folio }}</a>
-                            <div class="text-[11px] text-slate-400">{{ $this->sources()[$t->source] ?? $t->source }}</div>
+                            <div class="text-2xs text-slate-400">{{ $this->sources()[$t->source] ?? $t->source }}</div>
                         </td>
-                        <td class="max-w-xs">
+                        <td class="max-w-xs" data-label="Cliente">
                             <div class="truncate font-medium text-slate-800">
                                 @if ($t->client){{ $t->client->full_name }} <span class="text-xs font-normal text-slate-400">#{{ $t->client->code }}</span>
                                 @elseif ($t->repeater)<span class="inline-flex items-center gap-1 text-danger-700"><x-heroicon-s-signal-slash class="h-3.5 w-3.5" /> Repetidor {{ $t->repeater->code }}</span>
@@ -107,15 +107,15 @@
                             </div>
                             <div class="truncate text-xs text-slate-500">{{ $t->subject }} · {{ config('wisp.ticket_categories.'.$t->category, $t->category) }}</div>
                         </td>
-                        <td><x-ui.status catalog="ticket_priorities" :value="$t->priority" size="xs" /></td>
-                        <td><x-ui.status catalog="ticket_status" :value="$t->status" size="xs" /></td>
-                        <td class="text-xs">
+                        <td data-label="Prioridad"><x-ui.status catalog="ticket_priorities" :value="$t->priority" size="xs" /></td>
+                        <td data-label="Estado"><x-ui.status catalog="ticket_status" :value="$t->status" size="xs" /></td>
+                        <td class="text-xs" data-label="Técnico">
                             @if ($t->technician)<span class="flex items-center gap-1.5"><x-ui.avatar :name="$t->technician->name" size="sm" /> {{ $t->technician->name }}</span>
                             @else<span class="text-slate-400">Sin asignar</span>@endif
                         </td>
-                        <td>@include('livewire.tickets.partials.sla', ['ticket' => $t])</td>
-                        <td class="text-xs whitespace-nowrap text-slate-600">{{ $t->created_at->format('d/m/Y H:i') }}<div class="text-slate-400">{{ $t->client?->zone?->name }}</div></td>
-                        <td class="text-right"><x-ui.button variant="ghost" size="sm" icon="chevron-right" :href="route('tickets.show', $t)" /></td>
+                        <td data-label="SLA">@include('livewire.tickets.partials.sla', ['ticket' => $t])</td>
+                        <td class="text-xs whitespace-nowrap text-slate-600" data-label="Creado">{{ $t->created_at->format('d/m/Y H:i') }}<div class="text-slate-400">{{ $t->client?->zone?->name }}</div></td>
+                        <td class="text-right max-md:hidden"><x-ui.button variant="ghost" size="sm" icon="chevron-right" :href="route('tickets.show', $t)" /></td>
                     </tr>
                 @empty
                     <x-ui.empty :colspan="9" icon="ticket" title="No hay tickets" description="Ajusta los filtros o registra un nuevo ticket." />
@@ -158,14 +158,14 @@
                                 <div class="mt-0.5 truncate text-xs text-slate-500">{{ $t->client?->full_name ?? ($t->repeater ? 'Repetidor '.$t->repeater->code : '—') }}</div>
                                 <div class="mt-2 flex items-center justify-between gap-2">
                                     @include('livewire.tickets.partials.sla', ['ticket' => $t])
-                                    @if ($t->technician)<x-ui.avatar :name="$t->technician->name" size="sm" title="{{ $t->technician->name }}" />@else<span class="text-[11px] text-slate-400">Sin técnico</span>@endif
+                                    @if ($t->technician)<x-ui.avatar :name="$t->technician->name" size="sm" title="{{ $t->technician->name }}" />@else<span class="text-2xs text-slate-400">Sin técnico</span>@endif
                                 </div>
                             </a>
                         @empty
                             <div class="rounded-lg border border-dashed border-slate-300 py-8 text-center text-xs text-slate-400">Sin tickets</div>
                         @endforelse
                         @if ($col['total'] > $col['items']->count())
-                            <div class="py-1 text-center text-[11px] text-slate-500">+{{ $col['total'] - $col['items']->count() }} más · usa la vista de lista</div>
+                            <div class="py-1 text-center text-2xs text-slate-500">+{{ $col['total'] - $col['items']->count() }} más · usa la vista de lista</div>
                         @endif
                     </div>
                 </div>

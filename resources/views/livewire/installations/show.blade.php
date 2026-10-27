@@ -30,7 +30,7 @@
                         ])>
                             @if ($done || ($current && $o->status === 'activada'))<x-heroicon-m-check class="h-5 w-5" />@else{{ $i + 1 }}@endif
                         </span>
-                        <span @class(['text-[11.5px] font-semibold whitespace-nowrap', 'text-navy-900' => $done || $current, 'text-slate-400' => ! $done && ! $current])>{{ $label }}</span>
+                        <span @class(['text-2xs font-semibold whitespace-nowrap', 'text-navy-900' => $done || $current, 'text-slate-400' => ! $done && ! $current])>{{ $label }}</span>
                     </div>
                     @if (! $loop->last)
                         <div @class(['mx-2 mb-5 h-0.5 flex-1 rounded', 'bg-success-500' => $done, 'bg-slate-200' => ! $done])></div>
@@ -150,7 +150,7 @@
                                     @if ($checked)<x-heroicon-m-check class="h-4 w-4" />@endif
                                 </span>
                                 {{ $label }}
-                                @if (in_array($key, ['fotografia', 'firma']) && ! $checked)<span class="ml-auto text-[11px] font-normal text-slate-400">automático</span>@endif
+                                @if (in_array($key, ['fotografia', 'firma']) && ! $checked)<span class="ml-auto text-2xs font-normal text-slate-400">automático</span>@endif
                             </button>
                         @endforeach
                     </div>
@@ -184,7 +184,7 @@
                         @forelse ($photos as $a)
                             <div class="group relative overflow-hidden rounded-lg border border-slate-200" wire:key="ph{{ $a->id }}">
                                 <a href="{{ $a->url() }}" target="_blank"><img src="{{ $a->url() }}" alt="" class="aspect-square w-full object-cover"></a>
-                                <div class="flex items-center justify-between bg-white px-2 py-1 text-[11px] text-slate-500">
+                                <div class="flex items-center justify-between bg-white px-2 py-1 text-2xs text-slate-500">
                                     <span>{{ config('wisp.evidence_kinds.'.$a->kind, $a->kind) }}</span>
                                     @if ($editable)<button type="button" wire:click="deletePhoto({{ $a->id }})" wire:confirm="¿Eliminar fotografía?" class="text-danger-600"><x-heroicon-o-trash class="h-3.5 w-3.5" /></button>@endif
                                 </div>

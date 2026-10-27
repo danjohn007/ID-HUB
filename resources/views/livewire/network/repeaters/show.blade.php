@@ -52,7 +52,7 @@
                 <x-ui.detail label="Tickets relacionados">
                     @forelse ($relatedTickets ?? [] as $t)
                         <a class="link block" href="{{ Route::has('tickets.show') ? route('tickets.show', $t) : '#' }}" @if (Route::has('tickets.show')) wire:navigate @endif>{{ $t->folio }}</a>
-                        <span class="block text-[11px] font-normal text-slate-500">{{ \App\Support\Catalog::label('ticket_status', $t->status) }}{{ $t->technician ? ' · '.$t->technician->name : '' }}</span>
+                        <span class="block text-2xs font-normal text-slate-500">{{ \App\Support\Catalog::label('ticket_status', $t->status) }}{{ $t->technician ? ' · '.$t->technician->name : '' }}</span>
                     @empty
                         Sin tickets
                     @endforelse
@@ -67,7 +67,7 @@
             <div class="text-xs font-medium text-slate-500">Capacidad</div>
             <div class="mt-0.5 text-lg font-bold text-navy-900">{{ $r->clientLoad() }} / {{ $r->capacity }} <span class="text-sm font-medium text-slate-500">clientes</span></div>
             <x-ui.progress :value="$util" :color="$util >= 95 ? 'danger' : ($util >= $r->alert_threshold ? 'warning' : 'success')" label class="mt-2" />
-            <div class="mt-1 text-[11px] text-slate-500">Umbral de alerta {{ $r->alert_threshold }}%</div>
+            <div class="mt-1 text-2xs text-slate-500">Umbral de alerta {{ $r->alert_threshold }}%</div>
         </div>
         <x-ui.stat variant="soft" label="Clientes conectados" :value="$r->status === 'offline' ? 0 : $r->online_clients_count" icon="wifi" color="success" :sub="$affected.' con servicio vigente'" />
         <x-ui.stat variant="soft" label="Latencia" :value="$last?->latency_ms !== null && $r->status !== 'offline' ? number_format($last->latency_ms, 1).' ms' : '—'" icon="clock"

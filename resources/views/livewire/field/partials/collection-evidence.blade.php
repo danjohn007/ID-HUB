@@ -34,8 +34,8 @@
         <x-heroicon-o-map-pin class="h-5 w-5 {{ $lat ? 'text-success-600' : 'text-slate-400' }}" />
         <span x-show="locating" class="text-slate-500">Obteniendo GPS…</span>
         <span x-show="!locating" class="font-semibold {{ $lat ? 'text-success-700' : 'text-slate-500' }}">{{ $lat ? 'GPS capturado' : 'Sin GPS' }}</span>
-        <button type="button" @click="locate()" class="text-[11px] font-semibold text-brand-600">Actualizar</button>
-        <span x-show="error" x-text="error" class="text-[10px] text-danger-600"></span>
+        <button type="button" @click="locate()" class="text-2xs font-semibold text-brand-600">Actualizar</button>
+        <span x-show="error" x-text="error" class="text-2xs text-danger-600"></span>
     </div>
 </div>
 @error($model)<p class="text-xs font-medium text-danger-600">{{ $message }}</p>@enderror

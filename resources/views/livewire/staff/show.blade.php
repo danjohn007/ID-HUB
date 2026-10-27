@@ -128,7 +128,7 @@
                             <div class="min-w-0 flex-1">
                                 <div class="truncate text-sm font-semibold text-slate-800">{{ $p['title'] }}</div>
                                 <div class="truncate text-xs text-slate-500">{{ $p['subtitle'] }}</div>
-                                <div class="mt-0.5 text-[11px] text-slate-400">
+                                <div class="mt-0.5 text-2xs text-slate-400">
                                     {{ $p['arrived_at'] ? 'Llegó '.$p['arrived_at'] : '' }}{{ $p['departed_at'] ? ' · salió '.$p['departed_at'] : '' }}
                                     {{ ! $p['arrived_at'] ? 'Pendiente' : '' }}
                                 </div>

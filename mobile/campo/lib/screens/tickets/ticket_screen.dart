@@ -156,11 +156,11 @@ class _TicketScreenState extends State<TicketScreen> {
       ] else ...[
         const Padding(
           padding: EdgeInsets.only(top: 6),
-          child: Text('Al ejecutar el servicio se registra tu llegada; al guardarlo, tu salida.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.slate, fontSize: 12)),
+          child: Text('Al ejecutar el servicio se registra tu llegada; al guardarlo, tu salida.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.slate, fontSize: 13)),
         ),
         TextButton(onPressed: _busy != null ? null : () => _field('arrive', 'Llegada registrada'), child: busy('arrive', 'Solo registrar llegada')),
       ],
-      if (times.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(times.join(' · '), textAlign: TextAlign.center, style: const TextStyle(color: AppColors.slate, fontSize: 12))),
+      if (times.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(times.join(' · '), textAlign: TextAlign.center, style: const TextStyle(color: AppColors.slate, fontSize: 13))),
     ];
   }
 }
@@ -191,11 +191,11 @@ class _Timeline extends StatelessWidget {
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Padding(padding: const EdgeInsets.only(top: 4), child: Icon(c.type == 'comment' ? Icons.chat_bubble_outline : Icons.radio_button_checked, size: 14, color: brand)),
             const SizedBox(width: 10),
-            SizedBox(width: 74, child: Text(Fmt.dateTime(c.createdAt), style: const TextStyle(fontSize: 12, color: AppColors.slate))),
+            SizedBox(width: 74, child: Text(Fmt.dateTime(c.createdAt), style: const TextStyle(fontSize: 13, color: AppColors.slate))),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(c.body, style: const TextStyle(fontSize: 13)),
-                Text('${c.author}${c.internal ? ' · interno' : ''}${c.pending ? ' · por subir' : ''}', style: const TextStyle(fontSize: 11, color: AppColors.slate)),
+                Text(c.body, style: const TextStyle(fontSize: 14)),
+                Text('${c.author}${c.internal ? ' · interno' : ''}${c.pending ? ' · por subir' : ''}', style: const TextStyle(fontSize: 12, color: AppColors.slate)),
               ]),
             ),
           ]),

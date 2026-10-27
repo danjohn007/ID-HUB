@@ -35,21 +35,28 @@
         <div class="flex h-16 items-center px-5">
             <a href="{{ route($user->homeRoute()) }}"><x-brand.logo /></a>
         </div>
-        <nav class="flex-1 space-y-5 overflow-y-auto px-3 pt-2 pb-6 [scrollbar-width:thin] [scrollbar-color:theme(colors.navy.700)_transparent]">
+        <nav class="flex-1 space-y-2 overflow-y-auto px-3 pt-2 pb-6 [scrollbar-width:thin] [scrollbar-color:theme(colors.navy.700)_transparent]">
             @foreach ($sections as $section)
                 @php
-                    $items = collect($section['items'])->filter(fn ($i) => Route::has($i[1]) && $user->can($i[3]));
+                    $items = collect($section['items'])->filter(fn ($i) => Route::has($i[1]) && $user->can($i[3]))
+                        ->map(fn ($i) => [...$i, 'badge' => isset($i[5], $badges[$i[5]]) ? $badges[$i[5]]() : 0]);
+                    // Los grupos se pliegan; el de la página actual (o con avisos pendientes) siempre se abre.
+                    $forceOpen = $items->contains(fn ($i) => request()->routeIs($i[4]) || $i['badge'] > 0);
+                    $groupKey = 'nav-'.Str::slug((string) $section['group']);
                 @endphp
                 @if ($items->isNotEmpty())
-                    <div>
+                    <div @if ($section['group']) x-data="{ open: $persist(false).as('{{ $groupKey }}') }" @if ($forceOpen) x-init="open = true" @endif @endif>
                         @if ($section['group'])
-                            <div class="px-3 pb-1.5 text-[10.5px] font-semibold tracking-wider text-navy-400 uppercase">{{ $section['group'] }}</div>
+                            <button type="button" @click="open = !open" class="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-2xs font-semibold tracking-wider text-navy-400 uppercase transition hover:text-navy-100">
+                                {{ $section['group'] }}
+                                <x-heroicon-m-chevron-down class="h-4 w-4 transition-transform" x-bind:class="open ? '' : '-rotate-90'" />
+                            </button>
                         @endif
-                        <div class="space-y-0.5">
+                        <div class="space-y-0.5 {{ $section['group'] ? 'pb-2' : 'pb-1' }}" @if ($section['group']) x-show="open" x-collapse @unless ($forceOpen) x-cloak @endunless @endif>
                             @foreach ($items as $item)
                                 @php
                                     [$label, $route, $icon, $ability, $pattern] = $item;
-                                    $badge = isset($item[5], $badges[$item[5]]) ? $badges[$item[5]]() : 0;
+                                    $badge = $item['badge'];
                                 @endphp
                                 <a href="{{ route($route) }}" wire:navigate class="nav-link {{ request()->routeIs($pattern) ? 'active' : '' }}">
                                     <x-dynamic-component :component="'heroicon-o-'.$icon" class="h-5 w-5 shrink-0" />
@@ -58,7 +65,7 @@
                                         {{-- Los componentes lo actualizan sin recargar con $this->dispatch('nav-badge', key: ..., count: ...) --}}
                                         <span x-data="{ n: {{ (int) $badge }} }" x-on:nav-badge.window="if ($event.detail.key === '{{ $item[5] }}') n = $event.detail.count"
                                               x-show="n > 0" x-text="n > 99 ? '99+' : n" @if (! $badge) style="display: none" @endif
-                                              class="ml-auto rounded-full bg-brand-500 px-1.5 py-px text-[10.5px] font-bold text-white">{{ $badge > 99 ? '99+' : $badge }}</span>
+                                              class="ml-auto rounded-full bg-brand-500 px-1.5 py-px text-[11px] font-bold text-white">{{ $badge > 99 ? '99+' : $badge }}</span>
                                     @endisset
                                 </a>
                             @endforeach

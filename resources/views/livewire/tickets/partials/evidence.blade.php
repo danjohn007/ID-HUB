@@ -18,7 +18,7 @@
                 <x-heroicon-o-photo class="h-5 w-5" /> Galería
                 <input type="file" accept="image/*,application/pdf" wire:model="photo" class="sr-only">
             </label>
-            <p class="col-span-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+            <p class="col-span-2 flex items-center gap-1.5 text-2xs text-slate-500">
                 <x-heroicon-m-map-pin class="h-3.5 w-3.5" />
                 <span x-show="locating">Obteniendo ubicación GPS...</span>
                 <span x-show="!locating && !error">Se guarda como «{{ $kinds[$photoKind] ?? $photoKind }}» con fecha, hora y GPS{{ $photoLat ? ' ('.round((float) $photoLat, 5).', '.round((float) $photoLng, 5).')' : '' }}.</span>
@@ -43,8 +43,8 @@
                     <div class="flex h-28 items-center justify-center bg-slate-50"><x-heroicon-o-document class="h-10 w-10 text-slate-400" /></div>
                 @endif
             </a>
-            <span class="absolute top-1.5 left-1.5 rounded-md bg-navy-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">{{ ['antes' => 'Antes', 'durante' => 'Durante', 'despues' => 'Después', 'equipo' => 'Equipo', 'instalacion' => 'Instalación', 'firma' => 'Firma', 'otro' => 'Otro'][$a->kind] ?? $a->kind }}</span>
-            <div class="p-2 text-[11px] leading-tight">
+            <span class="absolute top-1.5 left-1.5 rounded-md bg-navy-900/80 px-1.5 py-0.5 text-2xs font-semibold text-white">{{ ['antes' => 'Antes', 'durante' => 'Durante', 'despues' => 'Después', 'equipo' => 'Equipo', 'instalacion' => 'Instalación', 'firma' => 'Firma', 'otro' => 'Otro'][$a->kind] ?? $a->kind }}</span>
+            <div class="p-2 text-2xs leading-tight">
                 <div class="text-slate-600">{{ ($a->taken_at ?? $a->created_at)->format('d/m/Y H:i') }}</div>
                 <div class="flex items-center justify-between gap-1">
                     @if ($a->lat)

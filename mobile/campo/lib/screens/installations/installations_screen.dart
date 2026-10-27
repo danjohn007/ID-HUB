@@ -76,7 +76,7 @@ class _ListState extends State<_List> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(o.folio, style: const TextStyle(color: AppColors.slate, fontSize: 12, fontWeight: FontWeight.w700)),
+                      Text(o.folio, style: const TextStyle(color: AppColors.slate, fontSize: 13, fontWeight: FontWeight.w700)),
                       Text(o.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.navy)),
                     ]),
                   ),
@@ -87,7 +87,7 @@ class _ListState extends State<_List> {
                   Row(children: [
                     const Icon(Icons.place_outlined, size: 15, color: AppColors.slate),
                     const SizedBox(width: 4),
-                    Expanded(child: Text(o.address, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate, fontSize: 13))),
+                    Expanded(child: Text(o.address, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate, fontSize: 14))),
                   ]),
                 ],
                 const SizedBox(height: 10),
@@ -101,7 +101,7 @@ class _ListState extends State<_List> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('${o.checklistDone}/$total', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate)),
+                  Text('${o.checklistDone}/$total', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.slate)),
                 ]),
               ]),
             );

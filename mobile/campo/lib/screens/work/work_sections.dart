@@ -147,7 +147,7 @@ class EvidenceSection extends StatelessWidget {
         ],
         if (photos.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text('${photos.length} foto${photos.length == 1 ? '' : 's'} · ${photos.where((p) => p.hasGps).length} con GPS', style: const TextStyle(fontSize: 12, color: AppColors.slate)),
+          Text('${photos.length} foto${photos.length == 1 ? '' : 's'} · ${photos.where((p) => p.hasGps).length} con GPS', style: const TextStyle(fontSize: 13, color: AppColors.slate)),
         ],
       ]),
     );
@@ -179,7 +179,7 @@ class _Slot extends StatelessWidget {
               ),
       ),
       const SizedBox(height: 4),
-      Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
     ]);
   }
 }
@@ -231,7 +231,7 @@ class MaterialsSection extends StatelessWidget {
       trailing: enabled ? IconButton(tooltip: 'Agregar material', onPressed: actions.addMaterial, icon: const Icon(Icons.add_circle_outline)) : null,
       child: materials.isEmpty
           ? Text(enabled ? 'Registra el cable, conectores o equipos que uses; se descuentan del inventario.' : 'Sin materiales registrados.',
-              style: const TextStyle(color: AppColors.slate, fontSize: 13))
+              style: const TextStyle(color: AppColors.slate, fontSize: 14))
           : Column(children: [
               for (final m in materials)
                 ListTile(

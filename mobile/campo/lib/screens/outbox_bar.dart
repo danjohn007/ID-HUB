@@ -35,7 +35,7 @@ class OutboxBar extends StatelessWidget {
                       if (pending > 0) '$pending pendiente${pending == 1 ? '' : 's'} por enviar',
                       if (failed > 0) '$failed con error',
                     ].join(' · '),
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                   ),
                 ),
                 if (outbox.flushing)
@@ -71,7 +71,7 @@ Future<void> showOutboxSheet(BuildContext context, Outbox outbox) {
               const Padding(
                 padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
                 child: Text('Se guardaron sin conexión y se envían solos, en orden, al recuperar señal. Quedan con la hora en que los hiciste.',
-                    style: TextStyle(color: AppColors.slate, fontSize: 13)),
+                    style: TextStyle(color: AppColors.slate, fontSize: 14)),
               ),
               if (items.isEmpty)
                 const Padding(padding: EdgeInsets.all(20), child: Text('Todo enviado.', style: TextStyle(color: AppColors.slate))),

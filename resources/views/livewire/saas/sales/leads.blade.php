@@ -30,7 +30,7 @@
 
     @if ($view !== 'metricas')
         <x-ui.card :padding="false">
-            <div class="grid grid-cols-1 gap-3 border-b border-slate-100 p-4 md:grid-cols-6">
+            <div class="filter-bar">
                 <x-ui.search wire:model.live.debounce.300ms="search" placeholder="Nombre, WISP, correo, teléfono o ciudad..." class="md:col-span-2" />
                 <x-ui.select wire:model.live="filterAssignee" :options="['none' => 'Sin asignar'] + $users" placeholder="Todos los responsables" />
                 <x-ui.select wire:model.live="filterSource" :options="DemoRequest::SOURCES" placeholder="Todos los orígenes" />
@@ -74,7 +74,7 @@
                                                     <x-ui.dropdown-item icon="calendar-days" x-on:click="$dispatch('schedule-demo', { leadId: {{ $l->id }} })">Agendar demo</x-ui.dropdown-item>
                                                 @endif
                                                 <div class="my-1 border-t border-slate-100"></div>
-                                                <div class="px-3 pt-1 pb-0.5 text-[10.5px] font-semibold tracking-wide text-slate-400 uppercase">Mover a</div>
+                                                <div class="px-3 pt-1 pb-0.5 text-2xs font-semibold tracking-wide text-slate-400 uppercase">Mover a</div>
                                                 @foreach (DemoRequest::STAGES as $st => $stLabel)
                                                     @continue($st === $l->status)
                                                     <x-ui.dropdown-item wire:click="move({{ $l->id }}, '{{ $st }}')" :danger="$st === 'lost'">{{ $stLabel }}</x-ui.dropdown-item>
@@ -87,17 +87,17 @@
                                             @if ($l->status === 'lost' && $l->lost_reason)<x-ui.badge color="danger" size="xs">{{ DemoRequest::LOST_REASONS[$l->lost_reason] ?? $l->lost_reason }}</x-ui.badge>@endif
                                         </div>
                                         @if ($l->next_meeting_at)
-                                            <div class="mt-2 flex items-center gap-1 text-[11.5px] font-semibold text-purple-700">
+                                            <div class="mt-2 flex items-center gap-1 text-2xs font-semibold text-purple-700">
                                                 <x-heroicon-m-calendar-days class="h-3.5 w-3.5" /> Demo {{ \Carbon\Carbon::parse($l->next_meeting_at)->translatedFormat('D j M, H:i') }}
                                             </div>
                                         @endif
                                         @if ($l->isOpen() && $l->next_action)
-                                            <div @class(['mt-1.5 flex items-start gap-1 text-[11.5px]', 'font-semibold text-danger-600' => $l->isOverdue(), 'text-slate-500' => ! $l->isOverdue()])>
+                                            <div @class(['mt-1.5 flex items-start gap-1 text-2xs', 'font-semibold text-danger-600' => $l->isOverdue(), 'text-slate-500' => ! $l->isOverdue()])>
                                                 <x-heroicon-m-arrow-right-circle class="mt-px h-3.5 w-3.5 shrink-0" />
                                                 <span class="min-w-0">{{ $l->next_action }}@if ($l->next_action_at) · {{ $l->next_action_at->translatedFormat('j M H:i') }}@endif</span>
                                             </div>
                                         @endif
-                                        <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+                                        <div class="mt-2 flex items-center justify-between text-2xs text-slate-400">
                                             <span>{{ DemoRequest::SOURCES[$l->source] ?? $l->source }} · {{ $l->created_at->diffForHumans(short: true) }}</span>
                                             @if ($l->assignee)<x-ui.avatar :name="$l->assignee->name" size="sm" :title="$l->assignee->name" />@endif
                                         </div>

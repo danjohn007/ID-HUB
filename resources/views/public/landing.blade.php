@@ -68,7 +68,7 @@
 
 <main>
 {{-- ============================================================ Hero --}}
-<section class="relative overflow-hidden bg-navy-950 pt-28 pb-20 sm:pt-32 lg:pt-40 lg:pb-28">
+<section class="relative overflow-hidden bg-navy-950 pt-24 pb-20 sm:pt-28 lg:pt-28 lg:pb-24">
     <div class="pointer-events-none absolute inset-0" aria-hidden="true">
         <div class="lp-glow absolute -top-48 right-[-10%] h-[42rem] w-[42rem] rounded-full bg-brand-600/30 blur-3xl"></div>
         <div class="lp-glow absolute bottom-[-30%] left-[-15%] h-[38rem] w-[38rem] rounded-full bg-teal-600/20 blur-3xl" style="animation-delay:-2s"></div>

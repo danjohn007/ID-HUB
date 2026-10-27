@@ -46,12 +46,12 @@
                     <td class="text-right font-semibold text-success-700">{{ money($s['today']) }}</td>
                     <td class="text-right font-semibold text-slate-800">{{ money($s['week']) }}</td>
                     <td class="text-center text-sm text-slate-700">{{ $s['visits_today'] }} <span class="text-slate-400">/ {{ $s['visits_week'] }}</span>
-                        @if ($s['promises'])<div class="text-[11px] text-brand-600">{{ $s['promises'] }} promesas</div>@endif
+                        @if ($s['promises'])<div class="text-2xs text-brand-600">{{ $s['promises'] }} promesas</div>@endif
                     </td>
                     <td class="w-40"><x-ui.progress :value="$s['effectiveness']" :color="$s['effectiveness'] >= 60 ? 'success' : ($s['effectiveness'] >= 35 ? 'warning' : 'danger')" label /></td>
                     <td class="text-right">
                         <div class="font-semibold text-danger-600">{{ money($s['debt']) }}</div>
-                        <div class="text-[11px] text-slate-500">{{ $s['debtors'] }} de {{ $s['clients'] }} asignados</div>
+                        <div class="text-2xs text-slate-500">{{ $s['debtors'] }} de {{ $s['clients'] }} asignados</div>
                     </td>
                     <td class="text-right font-semibold text-slate-800">{{ money($s['cash']) }}</td>
                     <td class="text-right">
@@ -68,7 +68,7 @@
         {{-- Visitas --}}
         <x-ui.card :padding="false">
             <x-slot:title>Visitas de cobranza</x-slot:title>
-            <div class="grid grid-cols-1 gap-3 border-b border-slate-100 p-4 md:grid-cols-5">
+            <div class="filter-bar">
                 <x-ui.search wire:model.live.debounce.300ms="search" placeholder="Cliente..." class="md:col-span-1" />
                 <x-ui.select wire:model.live="filterResult" :options="config('wisp.visit_results')" placeholder="Todos los resultados" />
                 <x-ui.select wire:model.live="filterCollector" :options="$collectorOptions" placeholder="Todos los cobradores" />
@@ -101,8 +101,8 @@
                         <td class="text-xs text-slate-700">{{ $v->collector?->name }}</td>
                         <td>
                             <x-ui.status catalog="visit_results" :value="$v->result" size="xs" />
-                            @if ($v->result === 'promesa' && $v->promise_date)<div class="mt-0.5 text-[11px] text-slate-500">{{ $v->promise_date->format('d/m/Y') }}{{ $v->promise_amount ? ' · '.money($v->promise_amount) : '' }}</div>@endif
-                            @if ($v->payment)<div class="mt-0.5 text-[11px] text-success-700">{{ $v->payment->folio }} · {{ money($v->payment->amount) }}</div>@endif
+                            @if ($v->result === 'promesa' && $v->promise_date)<div class="mt-0.5 text-2xs text-slate-500">{{ $v->promise_date->format('d/m/Y') }}{{ $v->promise_amount ? ' · '.money($v->promise_amount) : '' }}</div>@endif
+                            @if ($v->payment)<div class="mt-0.5 text-2xs text-success-700">{{ $v->payment->folio }} · {{ money($v->payment->amount) }}</div>@endif
                         </td>
                         <td class="text-right text-sm font-semibold text-slate-700">{{ money($v->amount_due) }}</td>
                         <td class="text-xs text-slate-500">

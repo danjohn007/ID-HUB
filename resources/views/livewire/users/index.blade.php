@@ -137,7 +137,7 @@
                 <tbody class="divide-y divide-slate-100">
                     @foreach ($abilities as $ability => $label)
                         <tr>
-                            <td class="py-1.5 pr-3 text-slate-700">{{ $label }} <span class="font-mono text-[10px] text-slate-400">{{ $ability }}</span></td>
+                            <td class="py-1.5 pr-3 text-slate-700">{{ $label }} <span class="font-mono text-2xs text-slate-400">{{ $ability }}</span></td>
                             @foreach ($matrix as $role => $perms)
                                 <td class="px-2 py-1.5 text-center">
                                     @if (in_array('*', $perms) || in_array($ability, $perms))

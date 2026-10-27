@@ -21,12 +21,12 @@
                 <div class="rounded-xl border border-dashed border-brand-200 bg-brand-50/50 p-4">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <div class="text-[11px] font-semibold tracking-wide text-brand-600 uppercase">Plantilla</div>
+                            <div class="text-2xs font-semibold tracking-wide text-brand-600 uppercase">Plantilla</div>
                             <div class="text-sm font-bold text-navy-900">{{ $t['name'] }}</div>
                         </div>
                         <x-ui.button size="sm" icon="plus" wire:click="createFromTemplate('{{ $key }}')">Crear en un clic</x-ui.button>
                     </div>
-                    <div class="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <div class="mt-3 flex flex-wrap items-center gap-1.5 text-2xs">
                         <span class="inline-flex items-center gap-1 rounded-full bg-brand-600 px-2 py-0.5 font-semibold text-white"><x-dynamic-component :component="'heroicon-o-'.RC::eventIcon($t['event'])" class="h-3 w-3" />{{ config('wisp.automation_events.'.$t['event']) }}</span>
                         @foreach ($t['conditions'] as $c)
                             <x-heroicon-m-chevron-right class="h-3.5 w-3.5 text-slate-400" />
@@ -69,14 +69,14 @@
                     <div class="flex-1 px-5 py-4">
                         <div class="flex flex-col gap-2">
                             <div class="flex items-center gap-2">
-                                <span class="w-20 shrink-0 text-[10.5px] font-bold tracking-wide text-slate-400 uppercase">Evento</span>
+                                <span class="w-20 shrink-0 text-2xs font-bold tracking-wide text-slate-400 uppercase">Evento</span>
                                 <span class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white">
                                     <x-dynamic-component :component="'heroicon-o-'.RC::eventIcon($rule->event)" class="h-3.5 w-3.5" />
                                     {{ config('wisp.automation_events.'.$rule->event, $rule->event) }}
                                 </span>
                             </div>
                             <div class="flex items-start gap-2">
-                                <span class="w-20 shrink-0 pt-1 text-[10.5px] font-bold tracking-wide text-slate-400 uppercase">Si</span>
+                                <span class="w-20 shrink-0 pt-1 text-2xs font-bold tracking-wide text-slate-400 uppercase">Si</span>
                                 <div class="flex flex-wrap gap-1.5">
                                     @forelse ($rule->conditions ?? [] as $c)
                                         <span class="rounded-lg bg-warning-50 px-2 py-1 text-xs font-medium text-warning-800 ring-1 ring-warning-100">{{ RC::describeCondition($rule->event, $c) }}</span>
@@ -86,7 +86,7 @@
                                 </div>
                             </div>
                             <div class="flex items-start gap-2">
-                                <span class="w-20 shrink-0 pt-1 text-[10.5px] font-bold tracking-wide text-slate-400 uppercase">Entonces</span>
+                                <span class="w-20 shrink-0 pt-1 text-2xs font-bold tracking-wide text-slate-400 uppercase">Entonces</span>
                                 <div class="flex flex-wrap items-center gap-1">
                                     @foreach ($rule->actions ?? [] as $a)
                                         @if (! $loop->first)<x-heroicon-m-arrow-right class="h-3.5 w-3.5 text-slate-300" />@endif

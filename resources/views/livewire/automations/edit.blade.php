@@ -92,7 +92,7 @@
                                         @php $sel = array_map('trim', explode(',', (string) $c['value'])); @endphp
                                         <div class="flex flex-wrap gap-1">
                                             @foreach ($def[2] as $k => $l)
-                                                <button type="button" wire:click="toggleIn({{ $i }}, '{{ $k }}')" @class(['rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1', 'bg-brand-600 text-white ring-brand-600' => in_array((string) $k, $sel, true), 'bg-white text-slate-600 ring-slate-200' => ! in_array((string) $k, $sel, true)])>{{ $l }}</button>
+                                                <button type="button" wire:click="toggleIn({{ $i }}, '{{ $k }}')" @class(['rounded-full px-2 py-0.5 text-2xs font-semibold ring-1', 'bg-brand-600 text-white ring-brand-600' => in_array((string) $k, $sel, true), 'bg-white text-slate-600 ring-slate-200' => ! in_array((string) $k, $sel, true)])>{{ $l }}</button>
                                             @endforeach
                                         </div>
                                     @elseif ($type === 'enum')
@@ -130,7 +130,7 @@
                         @php $t = $a['type']; $p = "form.actions.$i.params"; @endphp
                         <div wire:key="act-{{ $i }}-{{ $t }}" class="rounded-xl border border-slate-200">
                             <div class="flex items-center gap-3 border-b border-slate-100 px-3 py-2.5">
-                                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-600">{{ $i + 1 }}</span>
+                                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-2xs font-bold text-slate-600">{{ $i + 1 }}</span>
                                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-success-50 text-success-700"><x-dynamic-component :component="'heroicon-o-'.(RC::ACTION_ICONS[$t] ?? 'bolt')" class="h-4.5 w-4.5" /></span>
                                 <span class="flex-1 text-sm font-semibold text-slate-800">{{ config('wisp.automation_actions.'.$t, $t) }}</span>
                                 <x-ui.button variant="ghost" size="sm" icon="chevron-up" wire:click="moveAction({{ $i }}, -1)" :disabled="$i === 0" title="Subir" />
@@ -208,9 +208,9 @@
                                     @endswitch
                                     @if (in_array($t, ['notify_staff', 'create_ticket', 'create_alert']))
                                         <div class="mt-2 flex flex-wrap items-center gap-1">
-                                            <span class="mr-1 text-[11px] text-slate-500">Insertar:</span>
+                                            <span class="mr-1 text-2xs text-slate-500">Insertar:</span>
                                             @foreach (RC::PLACEHOLDERS as $ph)
-                                                <button type="button" @mousedown.prevent="insert('{{ $ph }}')" class="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-600 hover:bg-slate-200">{{ $ph }}</button>
+                                                <button type="button" @mousedown.prevent="insert('{{ $ph }}')" class="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-2xs text-slate-600 hover:bg-slate-200">{{ $ph }}</button>
                                             @endforeach
                                         </div>
                                     @endif
@@ -261,14 +261,14 @@
                                 <x-ui.input :label="$cl" wire:model="context.{{ $ck }}" class="text-xs" placeholder="opcional" />
                             @endforeach
                         </div>
-                        <p class="text-[11px] text-slate-500">Datos que el evento aporta al dispararse. Si los dejas vacíos se calculan del sujeto cuando es posible.</p>
+                        <p class="text-2xs text-slate-500">Datos que el evento aporta al dispararse. Si los dejas vacíos se calculan del sujeto cuando es posible.</p>
                     @endif
                     <div class="flex gap-2">
                         <x-ui.button variant="secondary" icon="beaker" wire:click="dryRun" class="flex-1">Probar</x-ui.button>
                         <x-ui.button variant="warning" icon="play" wire:click="runNow" class="flex-1" :disabled="! $rule"
                                      wire:confirm="Se ejecutarán las acciones REALES de la regla guardada (suspender, enviar mensajes, crear tickets...). ¿Continuar?">Ejecutar ahora</x-ui.button>
                     </div>
-                    @unless ($rule)<p class="text-[11px] text-slate-500">Guarda la regla para poder ejecutarla manualmente.</p>@endunless
+                    @unless ($rule)<p class="text-2xs text-slate-500">Guarda la regla para poder ejecutarla manualmente.</p>@endunless
                 </div>
 
                 @if ($test)

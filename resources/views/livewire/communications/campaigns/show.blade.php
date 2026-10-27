@@ -83,7 +83,7 @@
                             <td class="text-xs text-slate-600">{{ $m->to }}</td>
                             <td>
                                 <x-ui.badge :color="MC::statusColor($m->status)" dot>{{ MC::statusLabel($m->status) }}</x-ui.badge>
-                                @if ($m->error)<div class="mt-0.5 max-w-[220px] truncate text-[11px] text-danger-600" title="{{ $m->error }}">{{ $m->error }}</div>@endif
+                                @if ($m->error)<div class="mt-0.5 max-w-[220px] truncate text-2xs text-danger-600" title="{{ $m->error }}">{{ $m->error }}</div>@endif
                             </td>
                             <td class="text-xs text-slate-600">{{ $m->sent_at?->format('d/m/Y H:i') ?? '—' }}</td>
                         </tr>

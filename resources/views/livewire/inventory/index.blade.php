@@ -68,7 +68,7 @@
                         <td class="text-right whitespace-nowrap"><span class="text-base font-bold {{ $state === 'danger' ? 'text-danger-600' : ($state === 'warning' ? 'text-warning-700' : 'text-navy-900') }}">{{ $inv->qty($i->stock) }}</span> <span class="text-xs text-slate-500">{{ $i->unit }}</span></td>
                         <td>
                             <x-ui.progress :value="min(100, (float) $i->stock / $cap * 100)" :color="['danger' => 'danger', 'warning' => 'warning', 'info' => 'purple', 'success' => 'success'][$state]" height="h-1.5" />
-                            <div class="mt-0.5 text-[11px] text-slate-500">Mín {{ $inv->qty($i->min_stock) }} · Máx {{ $i->max_stock !== null ? $inv->qty($i->max_stock) : '—' }}</div>
+                            <div class="mt-0.5 text-2xs text-slate-500">Mín {{ $inv->qty($i->min_stock) }} · Máx {{ $i->max_stock !== null ? $inv->qty($i->max_stock) : '—' }}</div>
                         </td>
                         <td><x-ui.badge :color="$state === 'info' ? 'purple' : $state" dot size="xs">{{ \App\Livewire\Inventory\Index::stockLabel($i) }}</x-ui.badge></td>
                         <td class="text-right text-xs">{{ money($i->unit_cost) }}</td>
@@ -102,7 +102,7 @@
     {{-- ============================== MOVIMIENTOS ============================== --}}
     @if ($tab === 'movimientos')
         <x-ui.card :padding="false">
-            <div class="grid grid-cols-2 gap-3 border-b border-slate-100 p-4 md:grid-cols-6">
+            <div class="filter-bar">
                 <x-ui.search wire:model.live.debounce.300ms="search" placeholder="Artículo, referencia, serie..." class="col-span-2" />
                 <x-ui.select wire:model.live="filterType" :options="config('wisp.inventory_movement_types')" placeholder="Tipo" />
                 <x-ui.select wire:model.live="filterItem" :options="$itemOptions" placeholder="Artículo" />
@@ -114,7 +114,7 @@
                 @forelse ($movements as $m)
                     <tr wire:key="m{{ $m->id }}">
                         <td class="text-xs whitespace-nowrap">{{ $m->created_at->format('d/m/Y H:i') }}</td>
-                        <td><button wire:click="openHistory({{ $m->inventory_item_id }})" class="text-left text-sm font-medium text-slate-800 hover:text-brand-600">{{ $m->item?->name }}</button><div class="font-mono text-[11px] text-slate-400">{{ $m->item?->sku }}{{ $m->serial ? ' · S/N '.$m->serial : '' }}</div></td>
+                        <td><button wire:click="openHistory({{ $m->inventory_item_id }})" class="text-left text-sm font-medium text-slate-800 hover:text-brand-600">{{ $m->item?->name }}</button><div class="font-mono text-2xs text-slate-400">{{ $m->item?->sku }}{{ $m->serial ? ' · S/N '.$m->serial : '' }}</div></td>
                         <td><x-ui.status catalog="inventory_movement_types" :value="$m->type" size="xs" /></td>
                         <td class="text-right font-semibold {{ $m->quantity < 0 ? 'text-danger-600' : 'text-success-700' }}">{{ $m->quantity > 0 ? '+' : '' }}{{ $inv->qty($m->quantity) }} <span class="text-xs font-normal text-slate-400">{{ $m->item?->unit }}</span></td>
                         <td class="text-right text-sm text-slate-700">{{ $m->stock_after !== null ? $inv->qty($m->stock_after) : '—' }}</td>

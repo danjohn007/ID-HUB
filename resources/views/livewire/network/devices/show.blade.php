@@ -31,7 +31,7 @@
                             <x-dynamic-component :component="'heroicon-o-'.$s['icon']" class="h-5 w-5" />
                         </span>
                         <span class="min-w-0">
-                            <span class="block text-[11px] font-bold tracking-wide text-slate-500 uppercase">{{ $s['label'] }}</span>
+                            <span class="block text-2xs font-bold tracking-wide text-slate-500 uppercase">{{ $s['label'] }}</span>
                             <span class="block truncate text-sm font-semibold text-slate-800">{{ $s['value'] ?? '—' }}</span>
                             <span class="block truncate text-xs text-slate-500">{{ $s['sub'] }}</span>
                         </span>

@@ -28,7 +28,7 @@
 
         {{-- ============================== MES ============================== --}}
         @if ($view === 'mes')
-            <div class="grid grid-cols-7 border-b border-slate-100 bg-slate-50 text-center text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+            <div class="grid grid-cols-7 border-b border-slate-100 bg-slate-50 text-center text-2xs font-semibold tracking-wide text-slate-500 uppercase">
                 @foreach (['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] as $wd)<div class="py-2">{{ $wd }}</div>@endforeach
             </div>
             <div class="grid grid-cols-7">
@@ -44,7 +44,7 @@
                         <div class="space-y-1">
                             @foreach ($items->take(4) as $m)
                                 <button type="button" wire:key="mm{{ $m->id }}" wire:click="select({{ $m->id }})" @class([
-                                    'block w-full truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium',
+                                    'block w-full truncate rounded px-1.5 py-0.5 text-left text-2xs font-medium',
                                     'bg-purple-100 text-purple-800 hover:bg-purple-200' => $m->status === 'scheduled',
                                     'bg-success-50 text-success-700' => $m->status === 'done',
                                     'bg-warning-50 text-warning-700' => $m->status === 'no_show',
@@ -52,7 +52,7 @@
                                 ])>{{ $m->starts_at->format('H:i') }} {{ $m->lead->company ?: $m->lead->name }}</button>
                             @endforeach
                             @if ($items->count() > 4)
-                                <button type="button" wire:click="showWeek('{{ $d->toDateString() }}')" class="px-1.5 text-[11px] font-semibold text-brand-600">+{{ $items->count() - 4 }} más</button>
+                                <button type="button" wire:click="showWeek('{{ $d->toDateString() }}')" class="px-1.5 text-2xs font-semibold text-brand-600">+{{ $items->count() - 4 }} más</button>
                             @endif
                         </div>
                     </div>
@@ -68,7 +68,7 @@
                     <div wire:key="w{{ $d->toDateString() }}" @class(['min-h-64 p-2', 'bg-brand-50/40' => $d->isToday()])>
                         <div class="mb-2 flex items-center justify-between">
                             <div>
-                                <div class="text-[11px] font-semibold text-slate-500 uppercase">{{ $d->translatedFormat('D') }}</div>
+                                <div class="text-2xs font-semibold text-slate-500 uppercase">{{ $d->translatedFormat('D') }}</div>
                                 <div @class(['text-lg font-bold', 'text-brand-600' => $d->isToday(), 'text-navy-900' => ! $d->isToday()])>{{ $d->day }}</div>
                             </div>
                             @if (! $d->isPast() || $d->isToday())
@@ -86,10 +86,10 @@
                                 ])>
                                     <div class="text-xs font-bold text-slate-800">{{ $m->starts_at->format('H:i') }}–{{ $m->endsAt()->format('H:i') }}</div>
                                     <div class="truncate text-xs text-slate-700">{{ $m->lead->company ?: $m->lead->name }}</div>
-                                    @if ($m->assignee)<div class="truncate text-[11px] text-slate-400">{{ $m->assignee->name }}</div>@endif
+                                    @if ($m->assignee)<div class="truncate text-2xs text-slate-400">{{ $m->assignee->name }}</div>@endif
                                 </button>
                             @empty
-                                <p class="py-4 text-center text-[11px] text-slate-300">—</p>
+                                <p class="py-4 text-center text-2xs text-slate-300">—</p>
                             @endforelse
                         </div>
                     </div>

@@ -8,41 +8,31 @@
 
     <div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_330px]">
         <div class="min-w-0 space-y-5">
-            {{-- KPIs --}}
+            {{-- KPIs: 8 indicadores clave; el detalle operativo que no se repite va en "Operación" --}}
             <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <x-ui.stat label="Clientes activos" :value="number_format($kpi['live'])" icon="users" color="brand" :trend="'+'.$kpi['new'].' este mes'" :trend-up="true" :href="route('clients.index')" />
-                <x-ui.stat label="Clientes nuevos" :value="$kpi['new']" icon="user-plus" color="success" :trend="$kpi['new_change'] !== null ? ($kpi['new_change'] >= 0 ? '+' : '').$kpi['new_change'].'% vs mes anterior' : 'este mes'" :trend-up="$kpi['new_change'] !== null ? $kpi['new_change'] >= 0 : null" />
                 <x-ui.stat label="Morosos" :value="$kpi['morosos']" icon="exclamation-triangle" color="danger" :sub="$kpi['morosos_pct'].'% del total'" :href="Route::has('billing.index') ? route('billing.index') : null" />
                 <x-ui.stat label="MRR" :value="money($kpi['mrr'], false)" icon="currency-dollar" color="purple" :trend="$mrrChange !== null ? ($mrrChange >= 0 ? '+' : '').$mrrChange.'%' : null" :trend-up="$mrrChange !== null ? $mrrChange >= 0 : null" :href="Route::has('finance.index') ? route('finance.index') : null" />
+                <x-ui.stat label="Cobranza del mes" :value="money($kpi['collected'], false)" icon="banknotes" color="success" :sub="'Ticket promedio '.money($kpi['avg_ticket'], false)" :href="Route::has('billing.payments') ? route('billing.payments') : null" />
                 <x-ui.stat label="Churn" :value="pct($kpi['churn'])" icon="arrow-path" color="warning" :trend="($kpi['churn'] - $kpi['churn_prev'] >= 0 ? '+' : '').round($kpi['churn'] - $kpi['churn_prev'], 1).' pts'" :trend-up="$kpi['churn'] <= $kpi['churn_prev'] ? false : true" />
-                <x-ui.stat label="Tickets abiertos" :value="$kpi['tickets_open']" icon="ticket" color="teal" :sub="$kpi['tickets_critical'].' críticos'" :href="Route::has('tickets.index') ? route('tickets.index') : null" />
+                <x-ui.stat label="Tickets abiertos" :value="$kpi['tickets_open']" icon="ticket" color="teal" :sub="$kpi['tickets_critical'].' críticos · '.$ops['tickets_overdue'].' vencidos'" :href="Route::has('tickets.index') ? route('tickets.index') : null" />
                 <x-ui.stat label="Repetidores" :value="$kpi['repeaters']" icon="signal" color="navy" :sub="($kpi['repeaters'] - $kpi['repeaters_alert']).' activos / '.$kpi['repeaters_alert'].' alertas'" :href="Route::has('network.repeaters.index') ? route('network.repeaters.index') : null" />
                 <x-ui.stat label="Equipos online" :value="pct($kpi['online_pct'], 0)" icon="wifi" color="success" :sub="$ops['disconnected'].' clientes desconectados'" :href="Route::has('network.index') ? route('network.index') : null" />
-                <x-ui.stat label="Ticket promedio" :value="money($kpi['avg_ticket'], false)" icon="receipt-percent" color="purple" sub="Pago promedio del mes" />
-                <x-ui.stat label="Cobranza del mes" :value="money($kpi['collected'], false)" icon="banknotes" color="success" :href="Route::has('billing.payments') ? route('billing.payments') : null" />
-                <x-ui.stat label="Tickets críticos" :value="$kpi['tickets_critical']" icon="fire" color="danger" :sub="$ops['tickets_overdue'].' vencidos (SLA)'" :href="Route::has('tickets.index') ? route('tickets.index') : null" />
-                <x-ui.stat label="Prospectos" :value="number_format($kpi['prospects'])" icon="user-plus" color="teal" sub="En seguimiento" :href="Route::has('prospects.index') ? route('prospects.index') : null" />
             </div>
 
-            {{-- Dashboard operativo (sección 31) --}}
-            <x-ui.card title="Operación" subtitle="Clientes, tickets, personal de campo y red en este momento">
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            {{-- Dashboard operativo (sección 31): solo lo que no aparece en los KPIs --}}
+            <x-ui.card title="Operación" subtitle="Lo que requiere atención en este momento">
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                     @foreach ([
-                        ['Activos', $ops['active'], 'text-success-700', 'clients.index'],
                         ['Suspendidos', $ops['suspended'], 'text-danger-600', 'clients.index'],
-                        ['Nuevos (mes)', $ops['new'], 'text-brand-700', 'clients.index'],
                         ['Desconectados', $ops['disconnected'], 'text-warning-700', 'network.index'],
-                        ['Tickets abiertos', $ops['tickets_open'], 'text-navy-900', 'tickets.index'],
-                        ['Tickets vencidos', $ops['tickets_overdue'], 'text-danger-600', 'tickets.index'],
-                        ['Tickets críticos', $ops['tickets_critical'], 'text-danger-600', 'tickets.index'],
-                        ['Técnicos activos', $ops['staff_active'].' / '.$ops['staff_total'], 'text-navy-900', 'staff.index'],
+                        ['Técnicos en campo', $ops['staff_active'].' / '.$ops['staff_total'], 'text-navy-900', 'staff.index'],
                         ['Instalaciones pendientes', $ops['installs_pending'], 'text-brand-700', 'installations.index'],
-                        ['Repetidores activos', $ops['repeaters_online'], 'text-success-700', 'network.repeaters.index'],
-                        ['Repetidores con alerta', $ops['repeaters_alert'], 'text-warning-700', 'network.repeaters.index'],
+                        ['Prospectos', number_format($kpi['prospects']), 'text-teal-700', 'prospects.index'],
                     ] as [$label, $value, $color, $route])
-                        <a @if (Route::has($route)) href="{{ route($route) }}" wire:navigate @endif class="rounded-lg bg-slate-50 px-3 py-2 transition hover:bg-slate-100">
+                        <a @if (Route::has($route)) href="{{ route($route) }}" wire:navigate @endif class="rounded-lg bg-slate-50 px-3 py-2.5 transition hover:bg-slate-100">
                             <div class="text-lg font-bold {{ $color }}">{{ $value }}</div>
-                            <div class="text-[11px] text-slate-500">{{ $label }}</div>
+                            <div class="text-xs leading-snug text-slate-500">{{ $label }}</div>
                         </a>
                     @endforeach
                 </div>
@@ -53,7 +43,7 @@
                 <x-ui.card :padding="false">
                     <x-slot:title>Mapa Operativo</x-slot:title>
                     <x-slot:actions>
-                        <div class="hidden items-center gap-3 text-xs text-slate-500 sm:flex">
+                        <div class="hidden items-center gap-2.5 text-2xs text-slate-500 sm:flex">
                             <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-success-600"></span>Clientes</span>
                             <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-navy-800"></span>Repetidores</span>
                             <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-full bg-warning-600"></span>Torres</span>
@@ -100,17 +90,17 @@
 
                 <x-ui.card>
                     <div class="text-sm font-bold text-navy-900">Ingresos por Plan</div>
-                    <div class="mt-2 grid grid-cols-[120px_1fr] items-center gap-3">
-                        <div class="relative">
+                    <div class="mt-2 grid grid-cols-1 items-center gap-4 sm:grid-cols-[120px_1fr] md:grid-cols-1 2xl:grid-cols-[120px_1fr]">
+                        <div class="relative mx-auto w-[120px]">
                             <x-ui.chart :options="$planChart" height="120px" />
                             <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                                <span class="text-xs font-bold text-navy-900">{{ money($kpi['mrr'], false) }}</span><span class="text-[10px] text-slate-500">MRR</span>
+                                <span class="text-xs font-bold text-navy-900">{{ money($kpi['mrr'], false) }}</span><span class="text-2xs text-slate-500">MRR</span>
                             </div>
                         </div>
-                        <div class="space-y-1.5 text-xs">
+                        <div class="space-y-2 text-xs">
                             @php $totalMrr = max(1, collect($byPlan)->sum('mrr')); @endphp
                             @foreach ($byPlan as $p)
-                                <div class="grid grid-cols-[1fr_34px_64px] items-center gap-1">
+                                <div class="grid grid-cols-[1fr_auto_auto] items-center gap-3">
                                     <span class="flex items-center gap-1.5 truncate"><span class="h-2.5 w-2.5 rounded-full" style="background: {{ $p['color'] }}"></span>{{ $p['name'] }}</span>
                                     <span class="text-slate-500">{{ round($p['mrr'] / $totalMrr * 100) }}%</span>
                                     <span class="text-right font-semibold text-slate-700">{{ money($p['mrr'], false) }}</span>
@@ -122,14 +112,14 @@
 
                 <x-ui.card>
                     <div class="text-sm font-bold text-navy-900">Tickets por Prioridad</div>
-                    <div class="mt-2 grid grid-cols-[120px_1fr] items-center gap-3">
-                        <div class="relative">
+                    <div class="mt-2 grid grid-cols-1 items-center gap-4 sm:grid-cols-[120px_1fr] md:grid-cols-1 2xl:grid-cols-[120px_1fr]">
+                        <div class="relative mx-auto w-[120px]">
                             <x-ui.chart :options="$ticketChart" height="120px" />
                             <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                                <span class="text-lg font-bold text-navy-900">{{ $tickets['open'] }}</span><span class="text-[10px] text-slate-500">abiertos</span>
+                                <span class="text-lg font-bold text-navy-900">{{ $tickets['open'] }}</span><span class="text-2xs text-slate-500">abiertos</span>
                             </div>
                         </div>
-                        <div class="space-y-1.5 text-xs">
+                        <div class="space-y-2 text-xs">
                             @foreach (config('wisp.ticket_priorities') as $k => $p)
                                 <div class="flex items-center justify-between">
                                     <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" style="background: {{ ['critica' => '#E5484D', 'alta' => '#F7881F', 'media' => '#FBBF24', 'baja' => '#22A06B'][$k] }}"></span>{{ $p[0] }}</span>
@@ -157,8 +147,10 @@
         <div class="space-y-5">
             <x-ui.card title="Alertas Inteligentes" :padding="false">
                 <x-slot:actions>@if (Route::has('alerts.index'))<a href="{{ route('alerts.index') }}" wire:navigate class="link text-xs">Ver todas →</a>@endif</x-slot:actions>
+                {{-- Solo los tipos con alertas abiertas (máx. 4); el resto está en "Ver todas" --}}
+                @php $activeAlerts = $alertGroups->where('count', '>', 0)->sortByDesc('count')->take(4); @endphp
                 <div class="divide-y divide-slate-100">
-                    @foreach ($alertGroups as $g)
+                    @forelse ($activeAlerts as $g)
                         @php
                             $bg = ['danger' => 'bg-danger-600', 'warning' => 'bg-warning-600', 'brand' => 'bg-brand-600', 'purple' => 'bg-purple-600', 'success' => 'bg-success-600'][$g['color']];
                             $tx = ['danger' => 'text-danger-600', 'warning' => 'text-warning-600', 'brand' => 'text-brand-600', 'purple' => 'text-purple-600', 'success' => 'text-success-600'][$g['color']];
@@ -170,16 +162,24 @@
                             <span class="text-xl font-bold {{ $tx }} w-7 text-center">{{ $g['count'] }}</span>
                             <span class="min-w-0">
                                 <span class="block text-sm font-semibold text-slate-800">{{ $g['label'] }}</span>
-                                <span class="block truncate text-xs text-slate-500">{{ $g['detail'] ?: 'Sin incidencias' }}</span>
+                                <span class="block truncate text-xs text-slate-500">{{ $g['detail'] }}</span>
                             </span>
                         </a>
-                    @endforeach
+                    @empty
+                        <div class="flex items-center gap-3 px-5 py-4 text-sm text-slate-500">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-50 text-success-600"><x-heroicon-s-check-circle class="h-5 w-5" /></span>
+                            Sin alertas activas. Todo en orden.
+                        </div>
+                    @endforelse
                 </div>
             </x-ui.card>
 
             <x-ui.card title="Actividad Reciente">
+                @can('audit.view')
+                    <x-slot:actions>@if (Route::has('audit.index'))<a href="{{ route('audit.index') }}" wire:navigate class="link text-xs">Ver bitácora →</a>@endif</x-slot:actions>
+                @endcan
                 <ol class="relative space-y-4 border-l-2 border-slate-100 pl-5">
-                    @foreach ($activity as $a)
+                    @foreach ($activity->take(5) as $a)
                         @php $c = ['success' => 'bg-success-600', 'danger' => 'bg-danger-600', 'brand' => 'bg-brand-600'][$a['color']] ?? 'bg-brand-600'; @endphp
                         <li class="relative">
                             <span class="absolute top-0 -left-[31px] flex h-6 w-6 items-center justify-center rounded-full {{ $c }} text-white ring-4 ring-white">
@@ -187,7 +187,7 @@
                             </span>
                             <div class="text-sm font-semibold text-slate-800">{{ $a['title'] }}</div>
                             <div class="text-xs text-slate-500">{{ $a['sub'] }}</div>
-                            <div class="mt-0.5 text-[11px] text-slate-400">{{ $a['at']?->diffForHumans() }}</div>
+                            <div class="mt-0.5 text-2xs text-slate-400">{{ $a['at']?->diffForHumans() }}</div>
                         </li>
                     @endforeach
                 </ol>

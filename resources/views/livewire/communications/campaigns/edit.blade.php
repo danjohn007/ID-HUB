@@ -62,7 +62,7 @@
                         <div class="mt-2 flex flex-wrap items-center gap-1">
                             <span class="mr-1 text-xs text-slate-500">Variables:</span>
                             @foreach (\App\Models\NotificationTemplate::VARIABLES as $v)
-                                <button type="button" @click="insert('{{ $v }}')" class="rounded-md bg-brand-50 px-1.5 py-0.5 font-mono text-[11px] text-brand-700 ring-1 ring-brand-100 hover:bg-brand-100">{{ $v }}</button>
+                                <button type="button" @click="insert('{{ $v }}')" class="rounded-md bg-brand-50 px-1.5 py-0.5 font-mono text-2xs text-brand-700 ring-1 ring-brand-100 hover:bg-brand-100">{{ $v }}</button>
                             @endforeach
                         </div>
                         @if ($form['channel'] === 'whatsapp')
@@ -117,10 +117,10 @@
                     <div class="ml-auto max-w-[95%] rounded-xl rounded-tr-sm bg-[#D9FDD3] px-3 py-2 text-sm shadow-xs">
                         @if ($form['subject'] && in_array($form['channel'], ['email', 'push']))<div class="mb-1 font-semibold text-slate-800">{{ $form['subject'] }}</div>@endif
                         <div class="whitespace-pre-line break-words text-slate-800">{{ $preview ?: '…' }}</div>
-                        <div class="mt-1 text-right text-[10.5px] text-slate-500">{{ now()->format('H:i') }} ✓✓</div>
+                        <div class="mt-1 text-right text-2xs text-slate-500">{{ now()->format('H:i') }} ✓✓</div>
                     </div>
                 </div>
-                <p class="mt-2 text-[11px] text-slate-500">
+                <p class="mt-2 text-2xs text-slate-500">
                     {{ mb_strlen($preview) }} caracteres
                     @if ($form['channel'] === 'sms') · {{ max(1, (int) ceil(mb_strlen($preview) / 160)) }} SMS por destinatario @endif
                 </p>

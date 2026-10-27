@@ -54,7 +54,7 @@
         <div class="grid grid-cols-1 gap-5 xl:grid-cols-3">
             <div class="space-y-5 xl:col-span-2">
                 <x-ui.card title="Información del cliente">
-                    <dl class="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
+                    <dl class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 md:grid-cols-3">
                         <x-ui.detail label="Teléfono">{{ $client->phone }}</x-ui.detail>
                         <x-ui.detail label="WhatsApp">
                             @if ($client->whatsapp)<a class="link" target="_blank" href="https://wa.me/{{ preg_replace('/\D/', '', strlen(preg_replace('/\D/', '', $client->whatsapp)) === 10 ? '52'.$client->whatsapp : $client->whatsapp) }}">{{ $client->whatsapp }}</a>@endif
@@ -75,7 +75,7 @@
                 </x-ui.card>
 
                 <x-ui.card title="Red">
-                    <dl class="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
+                    <dl class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 md:grid-cols-4">
                         <x-ui.detail label="Repetidor">
                             @if ($client->repeater)<a class="link" href="{{ Route::has('network.repeaters.show') ? route('network.repeaters.show', $client->repeater) : '#' }}" wire:navigate>{{ $client->repeater->code }} · {{ $client->repeater->name }}</a>@endif
                         </x-ui.detail>
@@ -127,14 +127,14 @@
                             <div class="flex justify-between"><dt class="text-slate-500">{{ $label }}</dt><dd class="font-semibold text-slate-700">{{ $value }}</dd></div>
                         @endforeach
                     </dl>
-                    <p class="mt-3 text-[11px] text-slate-400">Indicador basado en comportamiento histórico; no es garantía de incumplimiento.</p>
+                    <p class="mt-3 text-2xs text-slate-400">Indicador basado en comportamiento histórico; no es garantía de incumplimiento.</p>
                 </x-ui.card>
 
                 <x-ui.card title="Programa de referidos">
                     <div class="rounded-lg bg-brand-50 p-3 text-center">
                         <div class="text-xs text-brand-700">Código del cliente</div>
                         <div class="text-xl font-extrabold tracking-wider text-brand-700">{{ $client->referral_code }}</div>
-                        <div class="mt-1 truncate text-[11px] text-slate-500">{{ $referralUrl }}</div>
+                        <div class="mt-1 truncate text-2xs text-slate-500">{{ $referralUrl }}</div>
                     </div>
                     @if ($client->referrer)<p class="mt-2 text-xs text-slate-500">Referido por <a class="link" href="{{ route('clients.show', $client->referrer) }}" wire:navigate>{{ $client->referrer->full_name }}</a></p>@endif
                     @foreach ($referrals as $r)
@@ -162,7 +162,7 @@
                         <tr wire:key="ch{{ $ch->id }}">
                             <td><div class="font-medium text-slate-700">{{ $ch->description }}</div><div class="text-xs text-slate-400">{{ $ch->folio }} · {{ config('wisp.charge_types.'.$ch->type) }}</div></td>
                             <td class="text-xs {{ $ch->isOverdue() ? 'font-semibold text-danger-600' : 'text-slate-600' }}">{{ $ch->due_date->format('d/m/Y') }}</td>
-                            <td class="text-right font-semibold">{{ money($ch->total) }}@if ($ch->status === 'partial')<div class="text-[11px] font-normal text-slate-500">Resta {{ money($ch->balance()) }}</div>@endif</td>
+                            <td class="text-right font-semibold">{{ money($ch->total) }}@if ($ch->status === 'partial')<div class="text-2xs font-normal text-slate-500">Resta {{ money($ch->balance()) }}</div>@endif</td>
                             <td><x-ui.status catalog="charge_status" :value="$ch->status" size="xs" /></td>
                             <td class="text-right">
                                 @can('billing.manage')

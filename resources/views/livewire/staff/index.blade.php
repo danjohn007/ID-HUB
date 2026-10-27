@@ -51,7 +51,7 @@
                             <div class="mt-1 flex flex-wrap items-center gap-1.5">
                                 @if ($u->on_call)<x-ui.badge color="danger" dot size="xs">De guardia</x-ui.badge>@endif
                                 @if (! $u->active)<x-ui.badge color="slate" size="xs">Inactivo</x-ui.badge>@endif
-                                <span class="text-[11px] text-slate-400">{{ $u->last_location_at ? 'Ubicado '.$u->last_location_at->diffForHumans() : 'Sin ubicación' }}</span>
+                                <span class="text-2xs text-slate-400">{{ $u->last_location_at ? 'Ubicado '.$u->last_location_at->diffForHumans() : 'Sin ubicación' }}</span>
                             </div>
                         </div>
                         @if ($role === 'tecnico')
@@ -66,13 +66,13 @@
 
                     <div class="mt-4 grid grid-cols-3 gap-2 text-center">
                         @if ($role === 'tecnico')
-                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold {{ $s['critical'] ? 'text-danger-600' : 'text-navy-900' }}">{{ $s['open'] }}</div><div class="text-[11px] text-slate-500">Abiertos{{ $s['critical'] ? ' · '.$s['critical'].' crít.' : '' }}</div></div>
-                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold text-navy-900">{{ $s['resolved'] }}</div><div class="text-[11px] text-slate-500">Resueltos</div></div>
-                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold text-navy-900">{{ $s['installs'] }}</div><div class="text-[11px] text-slate-500">Instalaciones</div></div>
+                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold {{ $s['critical'] ? 'text-danger-600' : 'text-navy-900' }}">{{ $s['open'] }}</div><div class="text-2xs text-slate-500">Abiertos{{ $s['critical'] ? ' · '.$s['critical'].' crít.' : '' }}</div></div>
+                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold text-navy-900">{{ $s['resolved'] }}</div><div class="text-2xs text-slate-500">Resueltos</div></div>
+                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold text-navy-900">{{ $s['installs'] }}</div><div class="text-2xs text-slate-500">Instalaciones</div></div>
                         @else
-                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold text-success-700">{{ money($s['collected'], false) }}</div><div class="text-[11px] text-slate-500">Cobrado</div></div>
-                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold text-navy-900">{{ $s['visits'] }}</div><div class="text-[11px] text-slate-500">Visitas</div></div>
-                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold text-navy-900">{{ $s['pending_clients'] }}</div><div class="text-[11px] text-slate-500">Clientes con adeudo</div></div>
+                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold text-success-700">{{ money($s['collected'], false) }}</div><div class="text-2xs text-slate-500">Cobrado</div></div>
+                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold text-navy-900">{{ $s['visits'] }}</div><div class="text-2xs text-slate-500">Visitas</div></div>
+                            <div class="rounded-lg bg-slate-50 p-2"><div class="text-lg font-bold text-navy-900">{{ $s['pending_clients'] }}</div><div class="text-2xs text-slate-500">Clientes con adeudo</div></div>
                         @endif
                     </div>
 
@@ -91,7 +91,7 @@
                             <div class="flex justify-between"><dt class="text-slate-500">Comisión del periodo</dt><dd class="font-semibold text-success-700">{{ money($s['commission']) }}</dd></div>
                         @endif
                         <div class="flex items-center justify-between gap-3 pt-1"><dt class="shrink-0 text-slate-500">Ruta de hoy</dt>
-                            <dd class="flex-1">@if ($s['has_route'])<x-ui.progress :value="$s['stops'] ? $s['stops_done'] / $s['stops'] * 100 : 0" color="brand" height="h-1.5" /><div class="text-right text-[11px] text-slate-500">{{ $s['stops_done'] }}/{{ $s['stops'] }} paradas</div>@else<span class="block text-right text-slate-400">Sin ruta</span>@endif</dd></div>
+                            <dd class="flex-1">@if ($s['has_route'])<x-ui.progress :value="$s['stops'] ? $s['stops_done'] / $s['stops'] * 100 : 0" color="brand" height="h-1.5" /><div class="text-right text-2xs text-slate-500">{{ $s['stops_done'] }}/{{ $s['stops'] }} paradas</div>@else<span class="block text-right text-slate-400">Sin ruta</span>@endif</dd></div>
                     </dl>
                     <div class="mt-3 flex justify-end border-t border-slate-100 pt-3">
                         <a href="{{ route('staff.show', $u) }}" wire:navigate class="link text-xs">Ver detalle →</a>
@@ -105,7 +105,7 @@
         <div class="space-y-5">
             <x-ui.card title="Última ubicación" :padding="false" class="xl:sticky xl:top-20">
                 <x-ui.map id="staff-map" :markers="$markers" height="460px" fit class="rounded-t-none border-0" />
-                <p class="px-4 py-2.5 text-[11px] text-slate-500">La ubicación se actualiza cuando el personal registra llegadas, salidas, evidencias o pagos desde la app de campo.</p>
+                <p class="px-4 py-2.5 text-2xs text-slate-500">La ubicación se actualiza cuando el personal registra llegadas, salidas, evidencias o pagos desde la app de campo.</p>
             </x-ui.card>
         </div>
     </div>

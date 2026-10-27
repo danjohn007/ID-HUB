@@ -65,7 +65,7 @@ class _CashCutScreenState extends State<CashCutScreen> {
           _TotalRow('Efectivo a entregar', Fmt.money(cut['expected_amount'] as num?), strong: true),
           const SizedBox(height: 12),
           const Text('Se cerrará el corte con este importe. Los cobros nuevos irán a un corte nuevo. Entrega el efectivo a tu supervisor.',
-              style: TextStyle(color: AppColors.slate, fontSize: 13, height: 1.35)),
+              style: TextStyle(color: AppColors.slate, fontSize: 14, height: 1.35)),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
@@ -119,7 +119,7 @@ class _CashCutScreenState extends State<CashCutScreen> {
                   eyebrow: 'Efectivo · corte ${cut['folio']}',
                   title: 'Mi corte de caja',
                   bottom: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Efectivo por entregar', style: TextStyle(color: AppColors.navy200, fontSize: 13)),
+                    const Text('Efectivo por entregar', style: TextStyle(color: AppColors.navy200, fontSize: 14)),
                     CountUpText(Fmt.money(cut['expected_amount'] as num?), style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w800, letterSpacing: -1)),
                     const SizedBox(height: 10),
                     Wrap(spacing: 8, runSpacing: 8, children: [
@@ -147,7 +147,7 @@ class _CashCutScreenState extends State<CashCutScreen> {
                           SizedBox(width: 12),
                           Expanded(
                               child: Text('Al terminar tu jornada toca "Entregar corte" y entrega el efectivo a tu supervisor. Él registra lo recibido y concilia en el panel.',
-                                  style: TextStyle(fontSize: 13, height: 1.35))),
+                                  style: TextStyle(fontSize: 14, height: 1.35))),
                         ]),
                       ),
                     ),
@@ -180,7 +180,7 @@ class _CashCutScreenState extends State<CashCutScreen> {
                                       Expanded(
                                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                           Text(p.client?.name ?? p.folio, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy)),
-                                          Text('${p.folio} · ${Fmt.dateTime(p.paidAt)}', style: const TextStyle(color: AppColors.slate, fontSize: 12.5)),
+                                          Text('${p.folio} · ${Fmt.dateTime(p.paidAt)}', style: const TextStyle(color: AppColors.slate, fontSize: 13.5)),
                                         ]),
                                       ),
                                       Text(Fmt.money(p.amount), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.success)),
@@ -229,7 +229,7 @@ class _Unsent extends StatelessWidget {
               Text('${items.length} cobro${items.length == 1 ? '' : 's'} por subir · ${Fmt.money(total)}', style: const TextStyle(fontWeight: FontWeight.w800)),
               Text(
                 failed > 0 ? '$failed con error: revísalos en "Pendientes por enviar".' : 'Se guardaron sin señal y se suman a tu corte al enviarse. Entrega el corte cuando lleguen.',
-                style: const TextStyle(fontSize: 12.5, color: AppColors.slate, height: 1.3),
+                style: const TextStyle(fontSize: 13.5, color: AppColors.slate, height: 1.3),
               ),
             ]),
           ),
@@ -238,7 +238,7 @@ class _Unsent extends StatelessWidget {
         for (final i in items)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 50),
-            child: Text('${i.label}${i.failed ? ' · error' : ''}', style: TextStyle(fontSize: 12.5, color: i.failed ? AppColors.danger : AppColors.navy)),
+            child: Text('${i.label}${i.failed ? ' · error' : ''}', style: TextStyle(fontSize: 13.5, color: i.failed ? AppColors.danger : AppColors.navy)),
           ),
       ]),
     );
@@ -273,15 +273,15 @@ class _History extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${c['payments_count']} cobros · ${Fmt.date(c['opened_at'] as String?)}${c['closed_at'] != null ? ' – ${Fmt.date(c['closed_at'] as String?)}' : ''}',
-                    style: const TextStyle(color: AppColors.slate, fontSize: 12.5),
+                    style: const TextStyle(color: AppColors.slate, fontSize: 13.5),
                   ),
                   if (c['difference'] is num && (c['difference'] as num).abs() > 0.009)
-                    Text('Diferencia ${Fmt.money(c['difference'] as num)}', style: const TextStyle(color: AppColors.danger, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                    Text('Diferencia ${Fmt.money(c['difference'] as num)}', style: const TextStyle(color: AppColors.danger, fontSize: 13.5, fontWeight: FontWeight.w600)),
                 ]),
               ),
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 Text(Fmt.money(c['expected_amount'] as num?), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                if (c['delivered_amount'] is num) Text('Entregado ${Fmt.money(c['delivered_amount'] as num)}', style: const TextStyle(color: AppColors.slate, fontSize: 12)),
+                if (c['delivered_amount'] is num) Text('Entregado ${Fmt.money(c['delivered_amount'] as num)}', style: const TextStyle(color: AppColors.slate, fontSize: 13)),
               ]),
             ]),
           ),
@@ -328,7 +328,7 @@ class _GlassTag extends StatelessWidget {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 14, color: AppColors.navy200),
         const SizedBox(width: 6),
-        Text(text, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(text, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
       ]),
     );
   }

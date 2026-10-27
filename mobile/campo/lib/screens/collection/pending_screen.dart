@@ -120,14 +120,14 @@ class PendingTile extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy)),
-            Text(c.address.isEmpty ? '#${c.code}' : c.address, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate, fontSize: 13)),
+            Text(c.address.isEmpty ? '#${c.code}' : c.address, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate, fontSize: 14)),
             if (v != null)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
                   StatusChip.of(v.result, dense: true),
-                  Text(Fmt.date(v.visitedAt), style: const TextStyle(fontSize: 11, color: AppColors.slate)),
-                  if (v.promiseDate != null) Text('promete ${Fmt.date(v.promiseDate)}', style: const TextStyle(fontSize: 11, color: AppColors.slate)),
+                  Text(Fmt.date(v.visitedAt), style: const TextStyle(fontSize: 12, color: AppColors.slate)),
+                  if (v.promiseDate != null) Text('promete ${Fmt.date(v.promiseDate)}', style: const TextStyle(fontSize: 12, color: AppColors.slate)),
                 ]),
               ),
           ]),

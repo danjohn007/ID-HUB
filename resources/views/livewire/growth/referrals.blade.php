@@ -101,7 +101,7 @@
                         </div>
                         <div class="text-right">
                             <div class="text-sm font-bold text-navy-900">{{ $t['total'] }}</div>
-                            <div class="text-[11px] text-success-600">{{ money($t['earned'], false) }}</div>
+                            <div class="text-2xs text-success-600">{{ money($t['earned'], false) }}</div>
                         </div>
                     </div>
                 @empty

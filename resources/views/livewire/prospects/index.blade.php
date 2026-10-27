@@ -84,7 +84,7 @@
     </div>
 
     <x-ui.card :padding="false">
-        <div class="grid grid-cols-1 gap-3 border-b border-slate-100 p-4 md:grid-cols-6">
+        <div class="filter-bar">
             <x-ui.search wire:model.live.debounce.300ms="search" placeholder="Nombre, teléfono, dirección..." class="md:col-span-2" />
             <x-ui.select wire:model.live="filterZone" placeholder="Todas las zonas">
                 @foreach ($zones as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach
@@ -102,7 +102,7 @@
 
         {{-- ============================== LISTA ============================== --}}
         @if ($view === 'lista')
-            <x-ui.table>
+            <x-ui.table stack>
                 <x-slot:head>
                     <x-ui.th sort="name" :sort-by="$sortBy" :sort-dir="$sortDir">Prospecto</x-ui.th>
                     <th>Dirección / zona</th>
@@ -125,11 +125,11 @@
                                 </span>
                             </button>
                         </td>
-                        <td class="text-xs"><div class="max-w-[220px] truncate text-slate-700">{{ $p->address ?: '—' }}</div><div class="text-slate-500">{{ $p->zone?->name ?? 'Sin zona' }}</div></td>
-                        <td>
+                        <td class="text-xs" data-label="Dirección"><div class="max-w-[220px] truncate text-slate-700">{{ $p->address ?: '—' }}</div><div class="text-slate-500">{{ $p->zone?->name ?? 'Sin zona' }}</div></td>
+                        <td data-label="Plan deseado">
                             @if ($p->desiredPlan)<span class="inline-flex items-center gap-1.5 text-sm font-medium"><span class="h-2 w-2 rounded-full" style="background: {{ $p->desiredPlan->color }}"></span>{{ $p->desiredPlan->name }}</span>@else<span class="text-slate-400">—</span>@endif
                         </td>
-                        <td class="text-xs">
+                        <td class="text-xs" data-label="Cobertura">
                             @if ($p->lat)
                                 @if ($p->has_coverage)<x-ui.badge color="success" dot size="xs">Con cobertura</x-ui.badge>@else<x-ui.badge color="danger" dot size="xs">Sin cobertura</x-ui.badge>@endif
                                 <div class="mt-0.5 text-slate-500">{{ $p->nearestRepeater?->code }} · {{ $p->distance_km }} km</div>
@@ -137,11 +137,11 @@
                                 <span class="text-slate-400">Sin ubicación</span>
                             @endif
                         </td>
-                        <td><x-ui.status catalog="prospect_status" :value="$p->status" /></td>
-                        <td class="text-xs"><div class="text-slate-700">{{ \App\Support\Catalog::label('prospect_sources', $p->source) }}</div><div class="text-slate-500">{{ $p->assignedTo?->name ?? 'Sin asignar' }}</div></td>
-                        <td class="text-xs whitespace-nowrap text-slate-600">{{ $p->created_at?->format('d/m/Y') }}</td>
-                        <td class="text-right">
-                            <div class="flex items-center justify-end gap-1">
+                        <td data-label="Estado"><x-ui.status catalog="prospect_status" :value="$p->status" /></td>
+                        <td class="text-xs" data-label="Fuente"><div class="text-slate-700">{{ \App\Support\Catalog::label('prospect_sources', $p->source) }}</div><div class="text-slate-500">{{ $p->assignedTo?->name ?? 'Sin asignar' }}</div></td>
+                        <td class="text-xs whitespace-nowrap text-slate-600" data-label="Fecha">{{ $p->created_at?->format('d/m/Y') }}</td>
+                        <td class="text-right max-md:pt-1">
+                            <div class="flex items-center justify-end gap-1 max-md:justify-start">
                                 @if ($wa)
                                     <a href="{{ $wa }}" target="_blank" wire:click="contacted({{ $p->id }})" class="rounded-lg p-1.5 text-success-600 hover:bg-success-50" title="Contactar por WhatsApp">
                                         <x-heroicon-o-chat-bubble-left-ellipsis class="h-5 w-5" />
@@ -184,7 +184,7 @@
                                             <x-ui.badge :color="$p->has_coverage ? 'success' : 'danger'" size="xs">{{ $p->has_coverage ? 'Cobertura' : 'Sin cobertura' }} · {{ $p->distance_km }} km</x-ui.badge>
                                         @endif
                                     </div>
-                                    <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+                                    <div class="mt-2 flex items-center justify-between text-2xs text-slate-400">
                                         <span>{{ $p->created_at?->format('d/m/Y') }} · {{ \App\Support\Catalog::label('prospect_sources', $p->source) }}</span>
                                         @if ($wa)<a href="{{ $wa }}" target="_blank" wire:click="contacted({{ $p->id }})" class="font-semibold text-success-600">WhatsApp</a>@endif
                                     </div>

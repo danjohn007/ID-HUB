@@ -49,7 +49,7 @@
         </div>
 
         <x-ui.card :padding="false">
-            <div class="grid grid-cols-1 gap-3 border-b border-slate-100 p-4 md:grid-cols-6">
+            <div class="filter-bar">
                 <x-ui.search wire:model.live.debounce.300ms="search" placeholder="Cliente, código, teléfono..." class="md:col-span-2" />
                 <x-ui.select wire:model.live="filterZone" :options="$zones" placeholder="Todas las zonas" />
                 <x-ui.select wire:model.live="filterStatus" :options="collect(config('wisp.client_status'))->only(['activo', 'moroso', 'suspendido', 'en_revision'])" placeholder="Todos los estados" />
@@ -66,7 +66,7 @@
                 <span>Total vencido: <b class="text-danger-600">{{ money($portfolioTotals->amount) }}</b></span>
             </div>
 
-            <x-ui.table>
+            <x-ui.table stack>
                 <x-slot:head>
                     <th>Cliente</th>
                     <th>Zona / Cobrador</th>
@@ -88,22 +88,22 @@
                                 </span>
                             </a>
                         </td>
-                        <td class="text-xs"><div class="text-slate-700">{{ $c->zone?->name ?? '—' }}</div><div class="text-slate-500">{{ $c->collector?->name ?? 'Sin cobrador' }}</div></td>
-                        <td><x-ui.status catalog="client_status" :value="$c->service_status" /></td>
-                        <td class="text-right">
+                        <td class="text-xs" data-label="Zona / Cobrador"><div class="text-slate-700">{{ $c->zone?->name ?? '—' }}</div><div class="text-slate-500">{{ $c->collector?->name ?? 'Sin cobrador' }}</div></td>
+                        <td data-label="Estado"><x-ui.status catalog="client_status" :value="$c->service_status" /></td>
+                        <td class="text-right" data-label="Vencido">
                             <div class="font-bold text-danger-600">{{ money($c->overdue_amount) }}</div>
-                            @if ((float) $c->balance > (float) $c->overdue_amount + 0.009)<div class="text-[11px] text-slate-500">Total {{ money($c->balance) }}</div>@endif
+                            @if ((float) $c->balance > (float) $c->overdue_amount + 0.009)<div class="text-2xs text-slate-500">Total {{ money($c->balance) }}</div>@endif
                         </td>
-                        <td>
+                        <td data-label="Atraso">
                             @php $d = (int) $c->overdue_days; @endphp
                             <x-ui.badge :color="$d > 60 ? 'danger' : ($d > 30 ? 'warning' : 'slate')">{{ $d }} {{ $d === 1 ? 'día' : 'días' }}</x-ui.badge>
-                            <div class="mt-0.5 text-[11px] text-slate-400">{{ $c->overdue_charges }} {{ $c->overdue_charges == 1 ? 'cargo' : 'cargos' }}</div>
+                            <div class="mt-0.5 text-2xs text-slate-400">{{ $c->overdue_charges }} {{ $c->overdue_charges == 1 ? 'cargo' : 'cargos' }}</div>
                         </td>
-                        <td><x-ui.status catalog="risk_levels" :value="$c->risk_level" :dot="false" size="xs" /></td>
-                        <td class="text-xs text-slate-600">{{ $c->last_payment_at ? \Carbon\Carbon::parse($c->last_payment_at)->format('d/m/Y') : 'Nunca' }}
+                        <td data-label="Riesgo"><x-ui.status catalog="risk_levels" :value="$c->risk_level" :dot="false" size="xs" /></td>
+                        <td class="text-xs text-slate-600" data-label="Último pago">{{ $c->last_payment_at ? \Carbon\Carbon::parse($c->last_payment_at)->format('d/m/Y') : 'Nunca' }}
                             @if ($c->last_payment_at)<div class="text-slate-400">{{ \Carbon\Carbon::parse($c->last_payment_at)->diffForHumans() }}</div>@endif
                         </td>
-                        <td class="text-right whitespace-nowrap">
+                        <td class="text-right whitespace-nowrap max-md:pt-2">
                             @can('billing.manage')
                                 <x-ui.button size="sm" variant="success" icon="banknotes" wire:click="openPayment({{ $c->id }})" title="Registrar pago">Pago</x-ui.button>
                             @endcan
@@ -129,7 +129,7 @@
     {{-- ======================================================= Cargos pendientes --}}
     @if ($tab === 'cargos')
         <x-ui.card :padding="false">
-            <div class="grid grid-cols-1 gap-3 border-b border-slate-100 p-4 md:grid-cols-6">
+            <div class="filter-bar">
                 <x-ui.search wire:model.live.debounce.300ms="search" placeholder="Folio o cliente..." class="md:col-span-2" />
                 <x-ui.select wire:model.live="filterDue" :options="['vencidos' => 'Vencidos', 'hoy' => 'Vencen hoy', 'semana' => 'Próximos 7 días', 'futuros' => 'Por vencer']" placeholder="Cualquier vencimiento" />
                 <x-ui.select wire:model.live="filterType" :options="config('wisp.charge_types')" placeholder="Todos los tipos" />
@@ -147,7 +147,7 @@
                 </span>
                 <span>Saldo: <b class="text-slate-800">{{ money($chargesTotal) }}</b></span>
             </div>
-            <x-ui.table>
+            <x-ui.table stack>
                 <x-slot:head>
                     <th>Folio</th>
                     <th>Cliente</th>
@@ -160,22 +160,22 @@
                 </x-slot:head>
                 @forelse ($charges as $ch)
                     <tr wire:key="ch{{ $ch->id }}">
-                        <td class="text-xs font-medium text-slate-700">{{ $ch->folio }}</td>
+                        <td class="text-xs font-medium text-slate-700" data-label="Folio">{{ $ch->folio }}</td>
                         <td>
                             @if ($ch->client)
                                 <a href="{{ route('clients.show', $ch->client_id) }}" wire:navigate class="font-semibold text-slate-800 hover:text-brand-600">{{ $ch->client->full_name }}</a>
                                 <div class="text-xs text-slate-500">#{{ $ch->client->code }} · {{ $ch->client->zone?->name ?? 'Sin zona' }}</div>
                             @endif
                         </td>
-                        <td class="text-xs"><div class="text-slate-700">{{ $ch->description }}</div><div class="text-slate-400">{{ \App\Support\Catalog::label('charge_types', $ch->type) }}</div></td>
-                        <td class="text-xs">
+                        <td class="text-xs" data-label="Concepto"><div class="text-slate-700">{{ $ch->description }}</div><div class="text-slate-400">{{ \App\Support\Catalog::label('charge_types', $ch->type) }}</div></td>
+                        <td class="text-xs" data-label="Vence">
                             <span @class(['font-semibold', 'text-danger-600' => $ch->isOverdue(), 'text-warning-600' => $ch->due_date->isToday(), 'text-slate-700' => ! $ch->isOverdue() && ! $ch->due_date->isToday()])>{{ $ch->due_date->format('d/m/Y') }}</span>
                             <div class="text-slate-400">{{ $ch->due_date->isToday() ? 'Hoy' : $ch->due_date->diffForHumans() }}</div>
                         </td>
-                        <td class="text-right text-slate-700">{{ money($ch->total) }}</td>
-                        <td class="text-right font-semibold {{ $ch->isOverdue() ? 'text-danger-600' : 'text-slate-800' }}">{{ money($ch->balance()) }}</td>
-                        <td><x-ui.status catalog="charge_status" :value="$ch->status" size="xs" /></td>
-                        <td class="text-right">
+                        <td class="text-right text-slate-700" data-label="Total">{{ money($ch->total) }}</td>
+                        <td class="text-right font-semibold {{ $ch->isOverdue() ? 'text-danger-600' : 'text-slate-800' }}" data-label="Saldo">{{ money($ch->balance()) }}</td>
+                        <td data-label="Estado"><x-ui.status catalog="charge_status" :value="$ch->status" size="xs" /></td>
+                        <td class="text-right max-md:pt-1">
                             @can('billing.manage')
                                 <x-ui.button size="sm" variant="ghost" icon="banknotes" wire:click="openPayment({{ $ch->client_id }})" title="Registrar pago" />
                             @endcan
@@ -268,7 +268,7 @@
                         <div>
                             <div class="text-sm font-semibold text-slate-800">Generar cargos del periodo</div>
                             <p class="mt-0.5 text-xs text-slate-500">Crea las mensualidades que correspondan a hoy. Es seguro repetirlo: no duplica cargos.</p>
-                            <p class="mt-1 text-[11px] text-slate-400">Última ejecución: {{ $runLabel($lastRuns['generate']) }}@if ($lastRuns['generate']) · {{ $lastRuns['generate']['stats']['charges'] ?? 0 }} cargos @endif</p>
+                            <p class="mt-1 text-2xs text-slate-400">Última ejecución: {{ $runLabel($lastRuns['generate']) }}@if ($lastRuns['generate']) · {{ $lastRuns['generate']['stats']['charges'] ?? 0 }} cargos @endif</p>
                             @can('billing.manage')
                                 <x-ui.button class="mt-2 w-full" variant="secondary" icon="document-plus" wire:click="runGenerate" wire:confirm="¿Generar los cargos del periodo para hoy?">Generar cargos del periodo ahora</x-ui.button>
                             @endcan
@@ -276,7 +276,7 @@
                         <div class="border-t border-slate-100 pt-4">
                             <div class="text-sm font-semibold text-slate-800">Enviar recordatorios</div>
                             <p class="mt-0.5 text-xs text-slate-500">Pendientes ahora: {{ $reminderPreview['reminders'] }} recordatorios, {{ $reminderPreview['due'] }} avisos de vencimiento, {{ $reminderPreview['warnings'] }} avisos de suspensión, {{ $reminderPreview['morosos'] }} por marcar morosos.</p>
-                            <p class="mt-1 text-[11px] text-slate-400">Última ejecución: {{ $runLabel($lastRuns['reminders']) }}</p>
+                            <p class="mt-1 text-2xs text-slate-400">Última ejecución: {{ $runLabel($lastRuns['reminders']) }}</p>
                             @can('billing.manage')
                                 <x-ui.button class="mt-2 w-full" variant="secondary" icon="paper-airplane" wire:click="runReminders" wire:confirm="¿Enviar ahora los recordatorios pendientes?">Enviar recordatorios ahora</x-ui.button>
                             @endcan
@@ -290,7 +290,7 @@
                                     <b class="{{ $preview['evaluated'] ? 'text-danger-600' : 'text-success-700' }}">{{ $preview['evaluated'] }}</b> clientes fuera de tolerancia pendientes de procesar hoy. Se ejecuta cada 15 minutos a partir de las {{ $policy['cut_hour'] }} h.
                                 @endif
                             </p>
-                            <p class="mt-1 text-[11px] text-slate-400">Última ejecución: {{ $runLabel($lastRuns['cutoffs']) }}@if ($lastRuns['cutoffs']) · {{ $lastRuns['cutoffs']['stats']['suspended'] ?? 0 }} suspendidos @endif</p>
+                            <p class="mt-1 text-2xs text-slate-400">Última ejecución: {{ $runLabel($lastRuns['cutoffs']) }}@if ($lastRuns['cutoffs']) · {{ $lastRuns['cutoffs']['stats']['suspended'] ?? 0 }} suspendidos @endif</p>
                         </div>
                     </div>
                 </x-ui.card>
@@ -350,7 +350,7 @@
                         <td class="text-right font-semibold {{ ($v->client?->balance ?? 0) > 0 ? 'text-danger-600' : 'text-success-700' }}">{{ money($v->client?->balance ?? 0) }}</td>
                         <td>
                             <x-ui.status catalog="promise_status" :value="$st" size="xs" />
-                            @if ($v->fulfilled_at)<div class="mt-0.5 text-[11px] text-slate-400">Pagó {{ \Carbon\Carbon::parse($v->fulfilled_at)->format('d/m/Y') }}</div>@endif
+                            @if ($v->fulfilled_at)<div class="mt-0.5 text-2xs text-slate-400">Pagó {{ \Carbon\Carbon::parse($v->fulfilled_at)->format('d/m/Y') }}</div>@endif
                         </td>
                         <td class="text-right whitespace-nowrap">
                             @can('billing.manage')

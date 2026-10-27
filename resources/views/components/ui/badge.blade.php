@@ -13,7 +13,7 @@
         'purple' => 'bg-purple-600', 'teal' => 'bg-teal-600', 'slate' => 'bg-slate-400', 'navy' => 'bg-white',
     ][$color] ?? 'bg-slate-400';
 @endphp
-<span {{ $attributes->merge(['class' => 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-semibold ring-1 ring-inset '.$classes.($size === 'xs' ? ' px-1.5 py-0 text-[10.5px]' : ' px-2 py-0.5 text-xs')]) }}>
+<span {{ $attributes->merge(['class' => 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-semibold ring-1 ring-inset '.$classes.($size === 'xs' ? ' px-1.5 py-0 text-2xs' : ' px-2 py-0.5 text-xs')]) }}>
     @if ($dot)<span class="h-1.5 w-1.5 rounded-full {{ $dots }}"></span>@endif
     {{ $slot }}
 </span>

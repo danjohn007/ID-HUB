@@ -45,10 +45,10 @@
                 <div class="mt-1 font-mono text-2xl font-bold" :class="due - now < 0 ? 'text-danger-600' : '{{ $state === 'risk' ? 'text-warning-600' : 'text-navy-900' }}'">
                     <span x-text="(due - now < 0 ? '-' : '') + fmt(due - now)"></span>
                 </div>
-                <div class="text-[11px] text-slate-500" x-text="due - now < 0 ? 'Tiempo excedido' : 'Tiempo restante'"></div>
+                <div class="text-2xs text-slate-500" x-text="due - now < 0 ? 'Tiempo excedido' : 'Tiempo restante'"></div>
             @else
                 <div class="mt-1 text-2xl font-bold {{ $t->sla_breached ? 'text-danger-600' : 'text-success-600' }}">{{ $t->resolved_at ? \App\Livewire\Tickets\Index::duration($t->created_at->diffInMinutes($t->resolved_at)) : '—' }}</div>
-                <div class="text-[11px] text-slate-500">Tiempo de resolución</div>
+                <div class="text-2xs text-slate-500">Tiempo de resolución</div>
             @endif
             <x-ui.progress :value="$elapsedPct" :color="$state === 'breached' ? 'danger' : ($state === 'risk' ? 'warning' : 'success')" class="mt-2" />
         </div>
@@ -206,7 +206,7 @@
                     <label @class(['flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-semibold transition', 'border-brand-600 bg-brand-50 text-brand-700' => $newStatus === $k, 'border-slate-200 text-slate-600 hover:border-slate-300' => $newStatus !== $k])>
                         <input type="radio" wire:model.live="newStatus" value="{{ $k }}" class="sr-only">
                         <x-ui.badge :color="$color" dot size="xs">{{ $label }}</x-ui.badge>
-                        @if ($t->status === $k)<span class="ml-auto text-[10px] font-normal text-slate-400">actual</span>@endif
+                        @if ($t->status === $k)<span class="ml-auto text-2xs font-normal text-slate-400">actual</span>@endif
                     </label>
                 @endforeach
             </div>

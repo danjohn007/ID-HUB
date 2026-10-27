@@ -36,7 +36,7 @@
                     <div class="mt-2">
                         <span class="text-2xl font-bold text-navy-900">{{ money($b['total']) }}</span>
                         <span class="text-sm text-slate-500">/ {{ mb_strtolower($p->periodicityLabel()) }}</span>
-                        <div class="text-[11px] text-slate-400">{{ $p->price_includes_tax ? 'IVA incluido' : 'Más IVA' }} ({{ (float) $p->tax_rate }}%) · subtotal {{ money($b['subtotal']) }}</div>
+                        <div class="text-2xs text-slate-400">{{ $p->price_includes_tax ? 'IVA incluido' : 'Más IVA' }} ({{ (float) $p->tax_rate }}%) · subtotal {{ money($b['subtotal']) }}</div>
                     </div>
                     <ul class="mt-4 space-y-1.5 text-xs text-slate-600">
                         <li class="flex items-center gap-2"><x-heroicon-m-circle-stack class="h-4 w-4 text-slate-400" />{{ $p->data_cap_gb ? 'Límite '.number_format($p->data_cap_gb).' GB' : 'Sin límite de consumo' }}</li>
@@ -52,8 +52,8 @@
                     @endif
                     <div class="mt-auto pt-4">
                         <div class="grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-2.5 text-center">
-                            <div><div class="text-lg font-bold text-navy-900">{{ number_format($r['billable']) }}</div><div class="text-[11px] text-slate-500">clientes</div></div>
-                            <div><div class="text-lg font-bold text-navy-900">{{ money($r['mrr'], false) }}</div><div class="text-[11px] text-slate-500">MRR</div></div>
+                            <div><div class="text-lg font-bold text-navy-900">{{ number_format($r['billable']) }}</div><div class="text-2xs text-slate-500">clientes</div></div>
+                            <div><div class="text-lg font-bold text-navy-900">{{ money($r['mrr'], false) }}</div><div class="text-2xs text-slate-500">MRR</div></div>
                         </div>
                         <div class="mt-3 flex gap-2">
                             <x-ui.button variant="secondary" size="sm" icon="pencil-square" class="flex-1" wire:click="edit({{ $p->id }})">Editar</x-ui.button>
@@ -86,12 +86,12 @@
                 <tr wire:key="row-{{ $p->id }}">
                     <td><span class="inline-flex items-center gap-2 font-semibold text-slate-800"><span class="h-2.5 w-2.5 rounded-full" style="background: {{ $p->color }}"></span>{{ $p->name }}</span></td>
                     <td class="text-xs whitespace-nowrap">↓ {{ (float) $p->download_mbps }} / ↑ {{ (float) $p->upload_mbps }} Mbps</td>
-                    <td class="text-right font-semibold whitespace-nowrap">{{ money($p->price) }}<div class="text-[11px] font-normal text-slate-400">{{ $p->price_includes_tax ? 'IVA incl.' : '+IVA' }} {{ (float) $p->tax_rate }}%</div></td>
+                    <td class="text-right font-semibold whitespace-nowrap">{{ money($p->price) }}<div class="text-2xs font-normal text-slate-400">{{ $p->price_includes_tax ? 'IVA incl.' : '+IVA' }} {{ (float) $p->tax_rate }}%</div></td>
                     <td class="text-xs">{{ $p->periodicityLabel() }}</td>
                     <td class="text-xs">{{ $p->data_cap_gb ? number_format($p->data_cap_gb).' GB' : 'Ilimitado' }}</td>
                     <td class="text-xs">{{ $p->block_type ? ($p->block_type === 'partial' ? 'Parcial' : 'Total') : 'Política' }} · {{ $p->grace_days ?? 'def.' }} días</td>
                     <td class="text-right text-xs">{{ $p->late_fee !== null ? money($p->late_fee) : 'Política' }}</td>
-                    <td class="text-right text-xs">{{ money($p->reconnection_fee) }}<div class="text-[11px] text-slate-400">{{ $p->auto_reconnect ? 'Automática' : 'Manual' }}</div></td>
+                    <td class="text-right text-xs">{{ money($p->reconnection_fee) }}<div class="text-2xs text-slate-400">{{ $p->auto_reconnect ? 'Automática' : 'Manual' }}</div></td>
                     <td class="text-right text-xs">{{ money($p->installation_fee) }}</td>
                     <td class="max-w-[160px] truncate text-xs text-slate-500">{{ $p->allowed_equipment ?: '—' }}<div>{{ $p->mikrotik_profile }}</div></td>
                     <td class="text-right font-semibold">{{ number_format($r['billable']) }}</td>

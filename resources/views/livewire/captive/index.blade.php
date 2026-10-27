@@ -79,7 +79,7 @@
                         <li>Reemplaza el archivo <b>hotspot/login.html</b> del MikroTik por este:</li>
                     </ol>
                     <div class="mt-3" x-data="{ copied: false }">
-                        <textarea readonly rows="7" x-ref="html" class="form-input font-mono text-[11px] leading-snug">{{ $loginHtml }}</textarea>
+                        <textarea readonly rows="7" x-ref="html" class="form-input font-mono text-2xs leading-snug">{{ $loginHtml }}</textarea>
                         <x-ui.button variant="secondary" size="sm" icon="clipboard" class="mt-2" x-on:click="navigator.clipboard?.writeText($refs.html.value); copied = true"><span x-text="copied ? 'Copiado' : 'Copiar login.html'"></span></x-ui.button>
                     </div>
                     <div class="mt-4 border-t border-slate-100 pt-4">

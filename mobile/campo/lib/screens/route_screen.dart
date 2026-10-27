@@ -224,7 +224,7 @@ class _DateSwitcher extends StatelessWidget {
             transitionBuilder: (c, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween(begin: .92, end: 1.0).animate(a), child: c)),
             child: Column(key: ValueKey(date), mainAxisAlignment: MainAxisAlignment.center, children: [
               Text(Fmt.longDate(date), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
-              Text(rel, style: TextStyle(color: diff == 0 ? AppColors.brand400 : AppColors.navy200, fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(rel, style: TextStyle(color: diff == 0 ? AppColors.brand400 : AppColors.navy200, fontSize: 13, fontWeight: FontWeight.w700)),
             ]),
           ),
         ),
@@ -259,7 +259,7 @@ class _RouteProgress extends StatelessWidget {
               curve: Curves.easeOutCubic,
               builder: (_, v, _) => Stack(alignment: Alignment.center, children: [
                 SizedBox.expand(child: CircularProgressIndicator(value: v, strokeWidth: 6, strokeCap: StrokeCap.round, backgroundColor: AppColors.border, color: p == 1 ? AppColors.success : brand)),
-                Text('${(v * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.navy)),
+                Text('${(v * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.navy)),
               ]),
             ),
           ),
@@ -268,7 +268,7 @@ class _RouteProgress extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(p == 1 ? '¡Ruta terminada!' : 'Avance de la ruta', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.navy)),
               const SizedBox(height: 2),
-              Text('$done de $total paradas atendidas', style: const TextStyle(color: AppColors.slate, fontSize: 13)),
+              Text('$done de $total paradas atendidas', style: const TextStyle(color: AppColors.slate, fontSize: 14)),
               if (km != null) ...[
                 const SizedBox(height: 6),
                 Pill(label: '${km!.toStringAsFixed(1)} km estimados', color: brand, icon: Icons.straighten_rounded),
@@ -356,7 +356,7 @@ class _RouteMap extends StatelessWidget {
                           pulse: s.onSite,
                           child: s.done
                               ? const Icon(Icons.check_rounded, color: Colors.white, size: 17)
-                              : Text('${s.sequence}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+                              : Text('${s.sequence}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
                         ),
                       )
                   else
@@ -387,7 +387,7 @@ class _RouteMap extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     routed.isNotEmpty ? '${routed.length} paradas' : '${pending.length} pendientes sin ruta',
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: AppColors.navy),
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.navy),
                   ),
                 ]),
               ),
@@ -514,7 +514,7 @@ class _StopTile extends StatelessWidget {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
                       Text(stop.onSite ? 'EN SITIO' : stop.kindLabel.toUpperCase(),
-                          style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 10.5, letterSpacing: .8)),
+                          style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: .8)),
                     ]),
                     const SizedBox(height: 2),
                     Text(client?.name ?? stop.title,
@@ -522,7 +522,7 @@ class _StopTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.navy, decoration: stop.done ? TextDecoration.lineThrough : null)),
                     Text(client != null ? '${stop.title} · ${stop.detail}' : stop.detail,
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate, fontSize: 13)),
+                        maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate, fontSize: 14)),
                     if (stop.type == 'client' && client != null) ...[
                       const SizedBox(height: 6),
                       Pill(label: 'Saldo ${Fmt.money(client.balance)}', color: AppColors.danger, icon: Icons.account_balance_wallet_outlined),

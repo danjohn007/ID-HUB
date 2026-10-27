@@ -79,7 +79,7 @@ class _CollectorHomeScreenState extends State<CollectorHomeScreen> {
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('Corte ${d.cut!['folio']}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                        Text('${d.cut!['payments_count']} cobros · ${Fmt.money(collected)} en efectivo', style: const TextStyle(color: AppColors.slate, fontSize: 13)),
+                        Text('${d.cut!['payments_count']} cobros · ${Fmt.money(collected)} en efectivo', style: const TextStyle(color: AppColors.slate, fontSize: 14)),
                       ]),
                     ),
                     TextButton(onPressed: () => Shell.of(context).go(3), child: const Text('Ver')),

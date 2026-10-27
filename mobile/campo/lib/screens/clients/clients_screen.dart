@@ -130,12 +130,12 @@ class _ClientCard extends StatelessWidget {
             Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.navy)),
             const SizedBox(height: 2),
             Row(children: [
-              Text('#${c.code}', style: const TextStyle(color: AppColors.slate, fontSize: 12, fontWeight: FontWeight.w700)),
+              Text('#${c.code}', style: const TextStyle(color: AppColors.slate, fontSize: 13, fontWeight: FontWeight.w700)),
               if (c.address.isNotEmpty) ...[
                 const SizedBox(width: 6),
                 const Icon(Icons.place_outlined, size: 13, color: AppColors.slate),
                 const SizedBox(width: 2),
-                Expanded(child: Text(c.address, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate, fontSize: 12.5))),
+                Expanded(child: Text(c.address, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate, fontSize: 13.5))),
               ],
             ]),
           ]),
@@ -145,7 +145,7 @@ class _ClientCard extends StatelessWidget {
           StatusChip.of(c.status, dense: true),
           if (c.balance > 0) ...[
             const SizedBox(height: 5),
-            Text(Fmt.money(c.balance), style: const TextStyle(fontSize: 13, color: AppColors.danger, fontWeight: FontWeight.w800)),
+            Text(Fmt.money(c.balance), style: const TextStyle(fontSize: 14, color: AppColors.danger, fontWeight: FontWeight.w800)),
           ],
         ]),
       ]),
